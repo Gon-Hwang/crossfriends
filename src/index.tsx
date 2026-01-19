@@ -516,6 +516,17 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별</label>
+                        <select 
+                            id="signupGender"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            <option value="">선택하세요</option>
+                            <option value="남성">남성</option>
+                            <option value="여성">여성</option>
+                        </select>
+                    </div>
+                    
+                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">이메일</label>
                         <input 
                             id="signupEmail"
@@ -674,17 +685,6 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별</label>
-                        <select 
-                            id="signupGender"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
-                            <option value="">선택하세요</option>
-                            <option value="남성">남성</option>
-                            <option value="여성">여성</option>
-                        </select>
-                    </div>
-                    
-                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">교회 직분</label>
                         <select 
                             id="signupPosition"
@@ -737,6 +737,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -746,6 +747,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -755,6 +757,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -764,6 +767,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -773,6 +777,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -782,6 +787,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -791,6 +797,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -800,6 +807,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -809,6 +817,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                             
@@ -818,6 +827,7 @@ app.get('/', (c) => {
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
                                 </select>
                             </div>
                         </div>

@@ -85,18 +85,19 @@ app.post('/api/users/:id/avatar', async (c) => {
     
     // Generate unique filename
     const ext = file.name.split('.').pop()
-    const filename = `avatars/${userId}-${Date.now()}.${ext}`
+    const filename = `${userId}-${Date.now()}.${ext}`
+    const fullPath = `avatars/${filename}`
     
     // Upload to R2
     const arrayBuffer = await file.arrayBuffer()
-    await R2.put(filename, arrayBuffer, {
+    await R2.put(fullPath, arrayBuffer, {
       httpMetadata: {
         contentType: file.type
       }
     })
     
     // Update user avatar_url in database
-    const avatarUrl = `/api/avatars/${filename}`
+    const avatarUrl = `/api/avatars/avatars/${filename}`
     await DB.prepare(
       'UPDATE users SET avatar_url = ? WHERE id = ?'
     ).bind(avatarUrl, userId).run()
@@ -109,11 +110,11 @@ app.post('/api/users/:id/avatar', async (c) => {
 })
 
 // Get avatar from R2
-app.get('/api/avatars/:filename', async (c) => {
+app.get('/api/avatars/avatars/:filename', async (c) => {
   const { R2 } = c.env
   const filename = c.req.param('filename')
   
-  const object = await R2.get(filename)
+  const object = await R2.get(`avatars/${filename}`)
   if (!object) {
     return c.notFound()
   }
@@ -431,12 +432,12 @@ app.get('/', (c) => {
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
                         <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="showEditProfileModal()">
-                            <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm">
+                            <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span id="userName" class="text-gray-800 font-medium"></span>
+                            <span id="userName" class="text-gray-800 font-medium whitespace-nowrap"></span>
                         </div>
-                        <button onclick="logout()" class="text-gray-500 hover:text-gray-800">
+                        <button onclick="logout()" class="text-gray-500 hover:text-gray-800" title="로그아웃">
                             <i class="fas fa-sign-out-alt"></i>
                         </button>
                     </div>
@@ -1390,7 +1391,17 @@ app.get('/', (c) => {
                     
                     // Update user avatar
                     if (currentUser.avatar_url) {
-                        userAvatarContainer.innerHTML = '<img src="' + currentUser.avatar_url + '" alt="Profile" class="w-full h-full object-cover" />';
+                        // Create image element with proper error handling
+                        const img = document.createElement('img');
+                        img.src = currentUser.avatar_url;
+                        img.alt = 'Profile';
+                        img.className = 'w-full h-full object-cover';
+                        img.onerror = function() {
+                            // If image fails to load, show default icon
+                            userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
+                        };
+                        userAvatarContainer.innerHTML = '';
+                        userAvatarContainer.appendChild(img);
                     } else {
                         userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
                     }

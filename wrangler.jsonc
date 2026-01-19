@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crossfriends",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-01-19",
+  "pages_build_output_dir": "./dist",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "crossfriends-production",
+      "database_id": "placeholder-for-production"
+    }
+  ]
+}

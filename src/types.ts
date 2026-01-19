@@ -1,5 +1,6 @@
 export type Bindings = {
   DB: D1Database;
+  R2: R2Bucket;
 }
 
 export interface User {
@@ -9,8 +10,10 @@ export interface User {
   bio?: string;
   avatar_url?: string;
   church?: string;
+  pastor?: string;
   denomination?: string;
   location?: string;
+  position?: string;
   created_at: string;
   updated_at: string;
 }

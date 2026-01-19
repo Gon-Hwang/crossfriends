@@ -13,5 +13,11 @@
       "database_name": "crossfriends-production",
       "database_id": "placeholder-for-production"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "crossfriends-avatars"
+    }
   ]
 }

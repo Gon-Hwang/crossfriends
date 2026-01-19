@@ -715,7 +715,9 @@ app.get('/', (c) => {
                             <option value="고등부">고등부</option>
                             <option value="대학부">대학부</option>
                             <option value="청년부">청년부</option>
+                            <option value="장년부">장년부</option>
                             <option value="새가족">새가족</option>
+                            <option value="기타">기타</option>
                         </select>
                     </div>
                     

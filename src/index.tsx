@@ -47,6 +47,19 @@ app.post('/api/users', async (c) => {
   return c.json({ id: result.meta.last_row_id, email, name }, 201)
 })
 
+// Update user
+app.put('/api/users/:id', async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  const { name, gender, church, pastor, position } = await c.req.json()
+  
+  await DB.prepare(
+    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ? WHERE id = ?'
+  ).bind(name, gender || null, church || null, pastor || null, position || null, id).run()
+  
+  return c.json({ success: true })
+})
+
 // Upload avatar
 app.post('/api/users/:id/avatar', async (c) => {
   const { DB, R2 } = c.env
@@ -417,7 +430,7 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg">
+                        <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="showEditProfileModal()">
                             <img id="userAvatar" src="" alt="Profile" class="w-8 h-8 rounded-full object-cover bg-blue-600" style="display: none;" />
                             <div id="userAvatarDefault" class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm">
                                 <i class="fas fa-user"></i>
@@ -878,6 +891,147 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- Edit Profile Modal -->
+        <div id="editProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 pb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-user-edit text-blue-600 mr-2"></i>회원정보 수정
+                    </h2>
+                    <button onclick="hideEditProfileModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">이메일</label>
+                        <input 
+                            id="editEmail"
+                            type="email"
+                            disabled
+                            class="w-full p-3 border rounded-lg bg-gray-100 cursor-not-allowed"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">이메일은 변경할 수 없습니다.</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">이름</label>
+                        <input 
+                            id="editName"
+                            type="text"
+                            placeholder="홍길동"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별</label>
+                        <select 
+                            id="editGender"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            <option value="">선택하세요</option>
+                            <option value="남성">남성</option>
+                            <option value="여성">여성</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">프로필 사진</label>
+                        <div class="flex items-center space-x-4">
+                            <div id="editAvatarPreview" class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                <i class="fas fa-user text-gray-400 text-2xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <input 
+                                    id="editAvatar"
+                                    type="file"
+                                    accept="image/*"
+                                    onchange="previewEditAvatar(event)"
+                                    class="hidden"
+                                />
+                                <label 
+                                    for="editAvatar"
+                                    class="cursor-pointer inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-upload mr-2"></i>사진 변경
+                                </label>
+                                <p class="text-xs text-gray-500 mt-2">JPG, PNG (최대 5MB)</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">소속 교회</label>
+                        <input 
+                            id="editChurch"
+                            type="text"
+                            placeholder="예) 서울중앙교회"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">담임목사 이름</label>
+                        <input 
+                            id="editPastor"
+                            type="text"
+                            placeholder="예) 김철수 목사"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 직분</label>
+                        <select 
+                            id="editPosition"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            <option value="">선택하세요</option>
+                            <option value="담임목사">담임목사</option>
+                            <option value="부목사">부목사</option>
+                            <option value="전도사">전도사</option>
+                            <option value="강도사">강도사</option>
+                            <option value="목사">목사</option>
+                            <option value="선교사">선교사</option>
+                            <option value="성가사">성가사</option>
+                            <option value="장로">장로</option>
+                            <option value="권사">권사</option>
+                            <option value="안수집사">안수집사</option>
+                            <option value="집사">집사</option>
+                            <option value="서리집사">서리집사</option>
+                            <option value="감리사">감리사</option>
+                            <option value="순장">순장</option>
+                            <option value="성가대원">성가대원</option>
+                            <option value="성가대지휘자">성가대 지휘자</option>
+                            <option value="찬양팀">찬양팀</option>
+                            <option value="찬양인도자">찬양인도자</option>
+                            <option value="오케스트라단원">오케스트라 단원</option>
+                            <option value="챔버팀">챔버팀</option>
+                            <option value="반주자">반주자</option>
+                            <option value="피아노반주자">피아노 반주자</option>
+                            <option value="오르간반주자">오르간 반주자</option>
+                            <option value="주일학교교사">주일학교 교사</option>
+                            <option value="구역장">구역장</option>
+                            <option value="셀리더">셀리더</option>
+                            <option value="초등부">초등부</option>
+                            <option value="중등부">중등부</option>
+                            <option value="고등부">고등부</option>
+                            <option value="대학부">대학부</option>
+                            <option value="청년부">청년부</option>
+                            <option value="장년부">장년부</option>
+                            <option value="새가족">새가족</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button 
+                    onclick="handleEditProfile()"
+                    class="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
+                    저장하기
+                </button>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script>
             let currentUserId = null;
@@ -983,6 +1137,104 @@ app.get('/', (c) => {
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('loginEmail').value = '';
             }
+
+            // Edit Profile Modal functions
+            function showEditProfileModal() {
+                if (!currentUser) return;
+                
+                document.getElementById('editProfileModal').classList.remove('hidden');
+                
+                // Populate form with current user data
+                document.getElementById('editEmail').value = currentUser.email || '';
+                document.getElementById('editName').value = currentUser.name || '';
+                document.getElementById('editGender').value = currentUser.gender || '';
+                document.getElementById('editChurch').value = currentUser.church || '';
+                document.getElementById('editPastor').value = currentUser.pastor || '';
+                document.getElementById('editPosition').value = currentUser.position || '';
+                
+                // Show current avatar
+                const editAvatarPreview = document.getElementById('editAvatarPreview');
+                if (currentUser.avatar_url) {
+                    editAvatarPreview.innerHTML = '<img src="' + currentUser.avatar_url + '" class="w-full h-full object-cover" />';
+                } else {
+                    editAvatarPreview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+                }
+            }
+
+            function hideEditProfileModal() {
+                document.getElementById('editProfileModal').classList.add('hidden');
+                document.getElementById('editAvatar').value = '';
+            }
+
+            function previewEditAvatar(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('파일 크기는 5MB를 초과할 수 없습니다.');
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById('editAvatarPreview');
+                        preview.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover" />';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            async function handleEditProfile() {
+                const name = document.getElementById('editName').value;
+                const gender = document.getElementById('editGender').value;
+                const church = document.getElementById('editChurch').value;
+                const pastor = document.getElementById('editPastor').value;
+                const position = document.getElementById('editPosition').value;
+                const avatarFile = document.getElementById('editAvatar').files[0];
+
+                if (!name || !gender || !church || !pastor || !position) {
+                    alert('모든 항목을 입력해주세요.');
+                    return;
+                }
+
+                try {
+                    // Update user info (except avatar)
+                    await axios.put('/api/users/' + currentUserId, {
+                        name,
+                        gender,
+                        church,
+                        pastor,
+                        position
+                    });
+
+                    // Upload new avatar if selected
+                    if (avatarFile) {
+                        const formData = new FormData();
+                        formData.append('avatar', avatarFile);
+                        
+                        try {
+                            await axios.post('/api/users/' + currentUserId + '/avatar', formData, {
+                                headers: { 'Content-Type': 'multipart/form-data' }
+                            });
+                        } catch (uploadError) {
+                            console.error('Avatar upload error:', uploadError);
+                        }
+                    }
+
+                    // Refresh user data
+                    const userResponse = await axios.get('/api/users/' + currentUserId);
+                    currentUser = userResponse.data.user;
+                    updateAuthUI();
+                    
+                    alert('회원정보가 수정되었습니다! 👍');
+                    hideEditProfileModal();
+                    loadPosts();
+                } catch (error) {
+                    console.error('Edit profile error:', error);
+                    alert('회원정보 수정에 실패했습니다. 다시 시도해주세요.');
+                }
+            }
+
 
             // Signup handler
             async function handleSignup() {

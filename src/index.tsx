@@ -467,12 +467,6 @@ app.get('/', (c) => {
                                     class="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     rows="3"
                                 ></textarea>
-                                <input 
-                                    id="verseReference"
-                                    type="text"
-                                    placeholder="성경 구절 (예: 시편 23:1)"
-                                    class="w-full mt-2 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                                />
                                 <div class="mt-3 flex justify-end">
                                     <button 
                                         onclick="createPost()"
@@ -1164,7 +1158,6 @@ app.get('/', (c) => {
                 }
 
                 const content = document.getElementById('newPostContent').value;
-                const verseReference = document.getElementById('verseReference').value;
 
                 if (!content) {
                     alert('내용을 입력해주세요.');
@@ -1175,10 +1168,9 @@ app.get('/', (c) => {
                     await axios.post('/api/posts', {
                         user_id: currentUserId,
                         content,
-                        verse_reference: verseReference || null
+                        verse_reference: null
                     });
                     document.getElementById('newPostContent').value = '';
-                    document.getElementById('verseReference').value = '';
                     loadPosts();
                 } catch (error) {
                     console.error('Error creating post:', error);

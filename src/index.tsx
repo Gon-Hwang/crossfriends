@@ -417,14 +417,12 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <div class="relative">
-                            <select id="userSelect" class="bg-gray-100 px-4 py-2 rounded-lg appearance-none pr-8">
-                                <option value="1">John Kim</option>
-                                <option value="2">Sarah Park</option>
-                                <option value="3">David Lee</option>
-                                <option value="4">Grace Choi</option>
-                            </select>
-                            <i class="fas fa-chevron-down absolute right-3 top-3 text-gray-600 pointer-events-none"></i>
+                        <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg">
+                            <img id="userAvatar" src="" alt="Profile" class="w-8 h-8 rounded-full object-cover bg-blue-600" style="display: none;" />
+                            <div id="userAvatarDefault" class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span id="userName" class="text-gray-800 font-medium"></span>
                         </div>
                         <button onclick="logout()" class="text-gray-500 hover:text-gray-800">
                             <i class="fas fa-sign-out-alt"></i>
@@ -1071,9 +1069,10 @@ app.get('/', (c) => {
                     alert('회원가입이 완료되었습니다! 환영합니다! 🎉');
                     hideSignupModal();
                     
-                    // Auto login
+                    // Auto login - Fetch complete user info
+                    const userResponse = await axios.get('/api/users/' + newUserId);
                     currentUserId = newUserId;
-                    currentUser = response.data;
+                    currentUser = userResponse.data.user;
                     updateAuthUI();
                     loadPosts();
                 } catch (error) {
@@ -1128,27 +1127,30 @@ app.get('/', (c) => {
             function updateAuthUI() {
                 const authButtons = document.getElementById('authButtons');
                 const userMenu = document.getElementById('userMenu');
-                const userSelect = document.getElementById('userSelect');
+                const userName = document.getElementById('userName');
+                const userAvatar = document.getElementById('userAvatar');
+                const userAvatarDefault = document.getElementById('userAvatarDefault');
 
                 if (currentUserId) {
                     authButtons.classList.add('hidden');
                     userMenu.classList.remove('hidden');
                     
-                    // Update user select
-                    userSelect.innerHTML = \`<option value="\${currentUserId}">\${currentUser.name}</option>\`;
+                    // Update user name
+                    userName.textContent = currentUser.name;
+                    
+                    // Update user avatar
+                    if (currentUser.avatar_url) {
+                        userAvatar.src = currentUser.avatar_url;
+                        userAvatar.style.display = 'block';
+                        userAvatarDefault.style.display = 'none';
+                    } else {
+                        userAvatar.style.display = 'none';
+                        userAvatarDefault.style.display = 'flex';
+                    }
                 } else {
                     authButtons.classList.remove('hidden');
                     userMenu.classList.add('hidden');
                 }
-            }
-
-            // Update current user
-            const userSelectElement = document.getElementById('userSelect');
-            if (userSelectElement) {
-                userSelectElement.addEventListener('change', (e) => {
-                    currentUserId = parseInt(e.target.value);
-                    loadPosts();
-                });
             }
 
             // Create new post

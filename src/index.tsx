@@ -468,7 +468,7 @@ app.get('/', (c) => {
                     <!-- New Post Card -->
                     <div class="bg-white rounded-lg shadow p-6">
                         <div class="flex items-start space-x-4">
-                            <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white">
+                            <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
                                 <i class="fas fa-user"></i>
                             </div>
                             <div class="flex-1">
@@ -1381,6 +1381,7 @@ app.get('/', (c) => {
                 const userMenu = document.getElementById('userMenu');
                 const userName = document.getElementById('userName');
                 const userAvatarContainer = document.getElementById('userAvatarContainer');
+                const newPostAvatar = document.getElementById('newPostAvatar');
 
                 if (currentUserId) {
                     authButtons.classList.add('hidden');
@@ -1389,7 +1390,7 @@ app.get('/', (c) => {
                     // Update user name
                     userName.textContent = currentUser.name;
                     
-                    // Update user avatar
+                    // Update user avatar in header
                     if (currentUser.avatar_url) {
                         // Create image element with proper error handling
                         const img = document.createElement('img');
@@ -1402,8 +1403,20 @@ app.get('/', (c) => {
                         };
                         userAvatarContainer.innerHTML = '';
                         userAvatarContainer.appendChild(img);
+                        
+                        // Update new post avatar
+                        const postImg = document.createElement('img');
+                        postImg.src = currentUser.avatar_url;
+                        postImg.alt = 'Profile';
+                        postImg.className = 'w-full h-full object-cover';
+                        postImg.onerror = function() {
+                            newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
+                        };
+                        newPostAvatar.innerHTML = '';
+                        newPostAvatar.appendChild(postImg);
                     } else {
                         userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
+                        newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
                     }
                 } else {
                     authButtons.classList.remove('hidden');
@@ -1454,53 +1467,59 @@ app.get('/', (c) => {
 
             // Load comments
             async function loadComments(postId) {
-                const commentsDiv = document.getElementById(\`comments-\${postId}\`);
+                const commentsDiv = document.getElementById('comments-' + postId);
                 if (commentsDiv.classList.contains('hidden')) {
                     try {
-                        const response = await axios.get(\`/api/posts/\${postId}/comments\`);
+                        const response = await axios.get('/api/posts/' + postId + '/comments');
                         const comments = response.data.comments;
                         
                         let html = '<div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-200">';
                         comments.forEach(comment => {
-                            html += \`
-                                <div class="flex space-x-3">
-                                    <div class="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-sm">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="bg-gray-50 rounded-lg p-3">
-                                            <p class="font-semibold text-sm text-gray-800">\${comment.user_name}</p>
-                                            <p class="text-sm text-gray-700 mt-1">\${comment.content}</p>
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-1">\${formatDate(comment.created_at)}</p>
-                                    </div>
-                                </div>
-                            \`;
+                            // Generate avatar HTML for comment
+                            let commentAvatarHtml = '';
+                            if (comment.user_avatar) {
+                                commentAvatarHtml = '<img src="' + comment.user_avatar + '" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=\'<i class=\\'fas fa-user\\'></i>\'" />';
+                            } else {
+                                commentAvatarHtml = '<i class="fas fa-user"></i>';
+                            }
+                            
+                            html += '\\
+                                <div class="flex space-x-3">\\
+                                    <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">' + commentAvatarHtml + '</div>\\
+                                    <div class="flex-1">\\
+                                        <div class="bg-gray-50 rounded-lg p-3">\\
+                                            <p class="font-semibold text-sm text-gray-800">' + comment.user_name + '</p>\\
+                                            <p class="text-sm text-gray-700 mt-1">' + comment.content + '</p>\\
+                                        </div>\\
+                                        <p class="text-xs text-gray-500 mt-1">' + formatDate(comment.created_at) + '</p>\\
+                                    </div>\\
+                                </div>\\
+                            ';
                         });
                         
-                        html += \`
-                            <div class="flex space-x-2 mt-3">
-                                <input 
-                                    id="comment-input-\${postId}"
-                                    type="text"
-                                    placeholder="댓글을 작성하세요..."
-                                    class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                                />
-                                <button 
-                                    id="comment-submit-\${postId}"
-                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                        </div>
-                        \`;
+                        html += '\\
+                            <div class="flex space-x-2 mt-3">\\
+                                <input \\
+                                    id="comment-input-' + postId + '"\\
+                                    type="text"\\
+                                    placeholder="댓글을 작성하세요..."\\
+                                    class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"\\
+                                />\\
+                                <button \\
+                                    id="comment-submit-' + postId + '"\\
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">\\
+                                    <i class="fas fa-paper-plane"></i>\\
+                                </button>\\
+                            </div>\\
+                        </div>\\
+                        ';
                         
                         commentsDiv.innerHTML = html;
                         commentsDiv.classList.remove('hidden');
                         
                         // Add event listeners after HTML is inserted
-                        const submitBtn = document.getElementById(\`comment-submit-\${postId}\`);
-                        const inputField = document.getElementById(\`comment-input-\${postId}\`);
+                        const submitBtn = document.getElementById('comment-submit-' + postId);
+                        const inputField = document.getElementById('comment-input-' + postId);
                         
                         if (submitBtn) {
                             submitBtn.addEventListener('click', () => createComment(postId));
@@ -1546,54 +1565,61 @@ app.get('/', (c) => {
             // Load posts
             async function loadPosts() {
                 try {
-                    const response = await axios.get(\`/api/posts?user_id=\${currentUserId}\`);
+                    const response = await axios.get('/api/posts?user_id=' + currentUserId);
                     const posts = response.data.posts;
                     const feed = document.getElementById('postsFeed');
                     
                     let html = '';
                     posts.forEach(post => {
                         const isLiked = post.is_liked > 0;
-                        html += \`
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <div class="flex items-start space-x-4">
-                                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div class="flex-1">
-                                        <div class="flex justify-between items-start">
-                                            <div>
-                                                <h4 class="font-bold text-gray-800">\${post.user_name}</h4>
-                                                <p class="text-sm text-gray-500">\${post.user_church || ''}</p>
-                                            </div>
-                                            <p class="text-xs text-gray-500">\${formatDate(post.created_at)}</p>
-                                        </div>
-                                        <p class="mt-3 text-gray-800 whitespace-pre-wrap">\${post.content}</p>
-                                        \${post.verse_reference ? \`
-                                            <div class="mt-3 bg-gray-50 border-l-4 border-blue-600 p-3 rounded">
-                                                <p class="text-sm text-blue-600 font-semibold">
-                                                    <i class="fas fa-bible mr-2"></i>\${post.verse_reference}
-                                                </p>
-                                            </div>
-                                        \` : ''}
-                                        <div class="mt-4 flex items-center space-x-6 text-gray-600">
-                                            <button onclick="toggleLike(\${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
-                                                <i class="fas fa-heart \${isLiked ? 'text-red-600' : ''} text-lg"></i>
-                                                <span class="text-sm">\${post.likes_count || 0}</span>
-                                            </button>
-                                            <button onclick="loadComments(\${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
-                                                <i class="fas fa-comment text-lg"></i>
-                                                <span class="text-sm">\${post.comments_count || 0}</span>
-                                            </button>
-                                            <button class="flex items-center space-x-2 hover:text-blue-600 transition">
-                                                <i class="fas fa-share text-lg"></i>
-                                                <span class="text-sm">공유</span>
-                                            </button>
-                                        </div>
-                                        <div id="comments-\${post.id}" class="hidden"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        \`;
+                        
+                        // Generate avatar HTML
+                        let avatarHtml = '';
+                        if (post.user_avatar) {
+                            avatarHtml = '<img src="' + post.user_avatar + '" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=\'<i class=\\'fas fa-user\\'></i>\'" />';
+                        } else {
+                            avatarHtml = '<i class="fas fa-user"></i>';
+                        }
+                        
+                        html += '\\
+                            <div class="bg-white rounded-lg shadow p-6">\\
+                                <div class="flex items-start space-x-4">\\
+                                    <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">' + avatarHtml + '</div>\\
+                                    <div class="flex-1">\\
+                                        <div class="flex justify-between items-start">\\
+                                            <div>\\
+                                                <h4 class="font-bold text-gray-800">' + post.user_name + '</h4>\\
+                                                <p class="text-sm text-gray-500">' + (post.user_church || '') + '</p>\\
+                                            </div>\\
+                                            <p class="text-xs text-gray-500">' + formatDate(post.created_at) + '</p>\\
+                                        </div>\\
+                                        <p class="mt-3 text-gray-800 whitespace-pre-wrap">' + post.content + '</p>\\
+                                        ' + (post.verse_reference ? '\\
+                                            <div class="mt-3 bg-gray-50 border-l-4 border-blue-600 p-3 rounded">\\
+                                                <p class="text-sm text-blue-600 font-semibold">\\
+                                                    <i class="fas fa-bible mr-2"></i>' + post.verse_reference + '\\
+                                                </p>\\
+                                            </div>\\
+                                        ' : '') + '\\
+                                        <div class="mt-4 flex items-center space-x-6 text-gray-600">\\
+                                            <button onclick="toggleLike(' + post.id + ')" class="flex items-center space-x-2 hover:text-red-600 transition">\\
+                                                <i class="fas fa-heart ' + (isLiked ? 'text-red-600' : '') + ' text-lg"></i>\\
+                                                <span class="text-sm">' + (post.likes_count || 0) + '</span>\\
+                                            </button>\\
+                                            <button onclick="loadComments(' + post.id + ')" class="flex items-center space-x-2 hover:text-blue-600 transition">\\
+                                                <i class="fas fa-comment text-lg"></i>\\
+                                                <span class="text-sm">' + (post.comments_count || 0) + '</span>\\
+                                            </button>\\
+                                            <button class="flex items-center space-x-2 hover:text-blue-600 transition">\\
+                                                <i class="fas fa-share text-lg"></i>\\
+                                                <span class="text-sm">공유</span>\\
+                                            </button>\\
+                                        </div>\\
+                                        <div id="comments-' + post.id + '" class="hidden"></div>\\
+                                    </div>\\
+                                </div>\\
+                            </div>\\
+                        ';
                     });
                     
                     feed.innerHTML = html;

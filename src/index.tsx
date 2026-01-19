@@ -431,8 +431,7 @@ app.get('/', (c) => {
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
                         <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="showEditProfileModal()">
-                            <img id="userAvatar" src="" alt="Profile" class="w-8 h-8 rounded-full object-cover bg-blue-600" style="display: none;" />
-                            <div id="userAvatarDefault" class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm">
+                            <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm">
                                 <i class="fas fa-user"></i>
                             </div>
                             <span id="userName" class="text-gray-800 font-medium"></span>
@@ -1380,8 +1379,7 @@ app.get('/', (c) => {
                 const authButtons = document.getElementById('authButtons');
                 const userMenu = document.getElementById('userMenu');
                 const userName = document.getElementById('userName');
-                const userAvatar = document.getElementById('userAvatar');
-                const userAvatarDefault = document.getElementById('userAvatarDefault');
+                const userAvatarContainer = document.getElementById('userAvatarContainer');
 
                 if (currentUserId) {
                     authButtons.classList.add('hidden');
@@ -1392,12 +1390,9 @@ app.get('/', (c) => {
                     
                     // Update user avatar
                     if (currentUser.avatar_url) {
-                        userAvatar.src = currentUser.avatar_url;
-                        userAvatar.style.display = 'block';
-                        userAvatarDefault.style.display = 'none';
+                        userAvatarContainer.innerHTML = '<img src="' + currentUser.avatar_url + '" alt="Profile" class="w-full h-full object-cover" />';
                     } else {
-                        userAvatar.style.display = 'none';
-                        userAvatarDefault.style.display = 'flex';
+                        userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
                     }
                 } else {
                     authButtons.classList.remove('hidden');

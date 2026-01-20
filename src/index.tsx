@@ -535,6 +535,24 @@ app.post('/api/admin/create-fake-users', requireAdmin, async (c) => {
   })
 })
 
+// Admin: Delete fake users
+app.delete('/api/admin/delete-fake-users', requireAdmin, async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // Delete all users with fake email addresses
+    const result = await DB.prepare("DELETE FROM users WHERE email LIKE 'fake%@crossfriends.com'").run()
+    
+    return c.json({
+      success: true,
+      deleted_count: result.meta.changes || 0
+    })
+  } catch (error) {
+    console.error('Error deleting fake users:', error)
+    return c.json({ success: false, error: 'Failed to delete fake users' }, 500)
+  }
+})
+
 // =====================
 // Frontend Route
 // =====================
@@ -2268,6 +2286,9 @@ app.get('/admin', (c) => {
                         <button onclick="createFakeUsers()" class="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition shadow-md">
                             <i class="fas fa-user-plus mr-2"></i>가상 회원 생성
                         </button>
+                        <button onclick="deleteFakeUsers()" class="bg-red-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-600 transition shadow-md">
+                            <i class="fas fa-user-minus mr-2"></i>가상 회원 제거
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2450,6 +2471,32 @@ app.get('/admin', (c) => {
                 } catch (error) {
                     console.error('Failed to create fake users:', error);
                     alert('가상 회원 생성에 실패했습니다.');
+                }
+            }
+
+            // Delete fake users
+            async function deleteFakeUsers() {
+                if (!confirm('모든 가상 회원을 삭제하시겠습니까?\\n\\n이 작업은 되돌릴 수 없습니다.')) {
+                    return;
+                }
+                
+                try {
+                    const response = await axios.delete('/api/admin/delete-fake-users', {
+                        headers: { 'X-Admin-ID': currentAdminId }
+                    });
+                    
+                    if (response.data.success) {
+                        alert(\`\${response.data.deleted_count}명의 가상 회원이 삭제되었습니다!\`);
+                        
+                        // Reload stats and users table
+                        loadStats();
+                        loadUsers();
+                    } else {
+                        alert('가상 회원 삭제에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('Failed to delete fake users:', error);
+                    alert('가상 회원 삭제에 실패했습니다.');
                 }
             }
 

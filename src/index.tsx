@@ -147,6 +147,7 @@ app.get('/api/posts', async (c) => {
       u.name as user_name,
       u.avatar_url as user_avatar,
       u.church as user_church,
+      u.role as user_role,
       (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count,
       (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked
@@ -219,7 +220,8 @@ app.get('/api/posts/:id/comments', async (c) => {
     SELECT 
       c.*,
       u.name as user_name,
-      u.avatar_url as user_avatar
+      u.avatar_url as user_avatar,
+      u.role as user_role
     FROM comments c
     LEFT JOIN users u ON c.user_id = u.id
     WHERE c.post_id = ?
@@ -528,6 +530,74 @@ app.get('/', (c) => {
             .cross-dot.bottom { bottom: -2.5px; left: 50%; transform: translateX(-50%); }
             .cross-dot.left { left: -2.5px; top: 50%; transform: translateY(-50%); }
             .cross-dot.right { right: -2.5px; top: 50%; transform: translateY(-50%); }
+            
+            /* Admin Badge Styles */
+            .admin-badge-container {
+                position: relative;
+            }
+            .admin-badge {
+                position: absolute;
+                bottom: -2px;
+                right: -2px;
+                width: 20px;
+                height: 20px;
+                background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+                border: 2px solid white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                z-index: 10;
+            }
+            .admin-badge i {
+                color: white;
+                font-size: 10px;
+            }
+            .admin-badge-crown {
+                position: absolute;
+                bottom: -2px;
+                right: -2px;
+                width: 22px;
+                height: 22px;
+                background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                border: 2.5px solid white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 6px rgba(251, 191, 36, 0.4);
+                z-index: 10;
+                animation: pulse-crown 2s infinite;
+            }
+            .admin-badge-crown i {
+                color: white;
+                font-size: 11px;
+                filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
+            }
+            @keyframes pulse-crown {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+            .moderator-badge {
+                position: absolute;
+                bottom: -2px;
+                right: -2px;
+                width: 20px;
+                height: 20px;
+                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                border: 2px solid white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                z-index: 10;
+            }
+            .moderator-badge i {
+                color: white;
+                font-size: 10px;
+            }
         </style>
     </head>
     <body class="bg-gray-50">
@@ -559,8 +629,11 @@ app.get('/', (c) => {
                             <span class="hidden md:inline">관리자</span>
                         </button>
                         <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="showEditProfileModal()">
-                            <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
-                                <i class="fas fa-user"></i>
+                            <div class="admin-badge-container">
+                                <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <!-- Admin/Moderator badge will be added here dynamically -->
                             </div>
                             <span id="userName" class="text-gray-800 font-medium whitespace-nowrap"></span>
                         </div>
@@ -595,8 +668,11 @@ app.get('/', (c) => {
                     <!-- New Post Card -->
                     <div class="bg-white rounded-lg shadow p-6">
                         <div class="flex items-start space-x-4">
-                            <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
-                                <i class="fas fa-user"></i>
+                            <div class="admin-badge-container">
+                                <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <!-- Badge will be added here dynamically -->
                             </div>
                             <div class="flex-1">
                                 <textarea 
@@ -1579,9 +1655,38 @@ app.get('/', (c) => {
                         userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
                         newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
                     }
+                    
+                    // Add role badge
+                    addRoleBadge(userAvatarContainer.parentElement, currentUser.role);
+                    addRoleBadge(newPostAvatar.parentElement, currentUser.role);
                 } else {
                     authButtons.classList.remove('hidden');
                     userMenu.classList.add('hidden');
+                }
+            }
+            
+            // Add role badge to avatar container
+            function addRoleBadge(container, role) {
+                if (!container) return;
+                
+                // Remove existing badge
+                const existingBadge = container.querySelector('.admin-badge-crown, .admin-badge, .moderator-badge');
+                if (existingBadge) {
+                    existingBadge.remove();
+                }
+                
+                if (role === 'admin') {
+                    const badge = document.createElement('div');
+                    badge.className = 'admin-badge-crown';
+                    badge.innerHTML = '<i class="fas fa-crown"></i>';
+                    badge.title = '관리자';
+                    container.appendChild(badge);
+                } else if (role === 'moderator') {
+                    const badge = document.createElement('div');
+                    badge.className = 'moderator-badge';
+                    badge.innerHTML = '<i class="fas fa-shield-alt"></i>';
+                    badge.title = '운영자';
+                    container.appendChild(badge);
                 }
             }
 
@@ -1640,9 +1745,20 @@ app.get('/', (c) => {
                                 ? \`<img src="\${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />\`
                                 : '<i class="fas fa-user"></i>';
                             
+                            // Role badge for comments
+                            let roleBadgeHtml = '';
+                            if (comment.user_role === 'admin') {
+                                roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+                            } else if (comment.user_role === 'moderator') {
+                                roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+                            }
+                            
                             commentsHtml += \`
                                 <div class="flex space-x-3">
-                                    <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">\${avatarHtml}</div>
+                                    <div class="admin-badge-container">
+                                        <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">\${avatarHtml}</div>
+                                        \${roleBadgeHtml}
+                                    </div>
                                     <div class="flex-1">
                                         <div class="bg-gray-50 rounded-lg p-3">
                                             <p class="font-semibold text-sm text-gray-800">\${comment.user_name}</p>
@@ -1735,6 +1851,14 @@ app.get('/', (c) => {
                             ? \`<img src="\${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />\`
                             : '<i class="fas fa-user"></i>';
                         
+                        // Role badge HTML
+                        let roleBadgeHtml = '';
+                        if (post.user_role === 'admin') {
+                            roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+                        } else if (post.user_role === 'moderator') {
+                            roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+                        }
+                        
                         const verseHtml = post.verse_reference ? \`
                             <div class="mt-3 bg-gray-50 border-l-4 border-blue-600 p-3 rounded">
                                 <p class="text-sm text-blue-600 font-semibold">
@@ -1746,7 +1870,10 @@ app.get('/', (c) => {
                         postsHtml += \`
                             <div class="bg-white rounded-lg shadow p-6">
                                 <div class="flex items-start space-x-4">
-                                    <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">\${avatarHtml}</div>
+                                    <div class="admin-badge-container">
+                                        <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">\${avatarHtml}</div>
+                                        \${roleBadgeHtml}
+                                    </div>
                                     <div class="flex-1">
                                         <div class="flex justify-between items-start">
                                             <div>

@@ -839,7 +839,7 @@ app.get('/', (c) => {
                 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">이름</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">이름 <span class="text-red-500">*</span></label>
                         <input 
                             id="signupName"
                             type="text"
@@ -849,7 +849,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별 <span class="text-xs text-gray-500">(선택)</span></label>
                         <select 
                             id="signupGender"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -860,7 +860,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">이메일</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">이메일 <span class="text-red-500">*</span></label>
                         <input 
                             id="signupEmail"
                             type="email"
@@ -872,7 +872,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">프로필 사진</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">프로필 사진 <span class="text-xs text-gray-500">(선택)</span></label>
                         <div class="flex items-center space-x-4">
                             <div id="avatarPreview" class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                                 <i class="fas fa-user text-gray-400 text-2xl"></i>
@@ -896,7 +896,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">교단</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">교단 <span class="text-xs text-gray-500">(선택)</span></label>
                         <select 
                             id="signupDenomination"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -964,7 +964,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">소속 교회</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">소속 교회 <span class="text-xs text-gray-500">(선택)</span></label>
                         <input 
                             id="signupChurch"
                             type="text"
@@ -974,7 +974,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">담임목사 이름</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">담임목사 이름 <span class="text-xs text-gray-500">(선택)</span></label>
                         <input 
                             id="signupPastor"
                             type="text"
@@ -984,7 +984,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 위치</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 위치 <span class="text-xs text-gray-500">(선택)</span></label>
                         <div class="grid grid-cols-2 gap-2">
                             <select 
                                 id="signupProvince"
@@ -1020,11 +1020,13 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 직분</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 직분 <span class="text-xs text-gray-500">(선택)</span></label>
                         <select 
                             id="signupPosition"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
+                            <option value="구도자">구도자</option>
+                            <option value="새가족">새가족</option>
                             <option value="담임목사">담임목사</option>
                             <option value="부목사">부목사</option>
                             <option value="전도사">전도사</option>
@@ -1057,7 +1059,7 @@ app.get('/', (c) => {
                             <option value="대학부">대학부</option>
                             <option value="청년부">청년부</option>
                             <option value="장년부">장년부</option>
-                            <option value="새가족">새가족</option>
+                            <option value="잘모름">잘모름</option>
                             <option value="기타">기타</option>
                         </select>
                     </div>
@@ -1065,8 +1067,9 @@ app.get('/', (c) => {
                     <!-- 신앙 고백 질문 섹션 -->
                     <div class="border-t pt-4 mt-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">
-                            <i class="fas fa-cross text-blue-600 mr-2"></i>신앙 고백
+                            <i class="fas fa-cross text-blue-600 mr-2"></i>신앙 고백 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
                         </h3>
+                        <p class="text-sm text-gray-600 mb-4">신앙 고백 질문은 선택사항입니다. 원하시는 질문에만 답변하셔도 됩니다.</p>
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <label class="text-sm text-gray-700 flex-1">1. 당신은 예수님이 창조주 하나님임을 믿습니까?</label>
@@ -1850,18 +1853,10 @@ app.get('/', (c) => {
                     q10: document.getElementById('faith_q10').value
                 };
 
-                // 도→시 2단계 모두 선택 확인 (성별 포함)
-                if (!email || !name || !church || !pastor || !denomination || !province || !city || !gender || !position) {
-                    alert('모든 기본 정보를 입력해주세요.');
+                // 필수 항목만 확인 (이름, 이메일만 필수)
+                if (!email || !name) {
+                    alert('이름과 이메일은 필수 항목입니다.');
                     return;
-                }
-                
-                // 신앙 고백 답변 확인
-                for (let i = 1; i <= 10; i++) {
-                    if (!faithAnswers['q' + i]) {
-                        alert('모든 신앙 고백 질문에 답변해주세요.');
-                        return;
-                    }
                 }
 
                 // Email validation
@@ -1871,8 +1866,8 @@ app.get('/', (c) => {
                     return;
                 }
 
-                // 교회 위치 조합: 도 + 시
-                const location = province + ' ' + city;
+                // 교회 위치 조합: 도 + 시 (둘 다 있을 경우만)
+                const location = (province && city) ? (province + ' ' + city) : '';
 
                 try {
                     // 1. Create user

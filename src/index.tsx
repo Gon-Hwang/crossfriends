@@ -508,7 +508,9 @@ app.post('/api/admin/create-fake-users', requireAdmin, async (c) => {
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
     const name = lastName + firstName
     
-    const email = 'fake' + Date.now() + Math.floor(Math.random() * 10000) + '@crossfriends.com'
+    // 짧은 이메일 형식: fake1@cf.com, fake2@cf.com, ...
+    const randomNum = Math.floor(Math.random() * 999999)
+    const email = `fake${randomNum}@cf.com`
     const church = churches[Math.floor(Math.random() * churches.length)]
     const position = positions[Math.floor(Math.random() * positions.length)]
     const location = locations[Math.floor(Math.random() * locations.length)]
@@ -541,7 +543,7 @@ app.delete('/api/admin/delete-fake-users', requireAdmin, async (c) => {
   
   try {
     // Delete all users with fake email addresses
-    const result = await DB.prepare("DELETE FROM users WHERE email LIKE 'fake%@crossfriends.com'").run()
+    const result = await DB.prepare("DELETE FROM users WHERE email LIKE 'fake%@cf.com'").run()
     
     return c.json({
       success: true,
@@ -2549,6 +2551,11 @@ app.get('/admin', (c) => {
                                     <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold \${roleColor}">
                                         \${roleName}
                                     </span>
+                                    <div class="mt-4 text-xs text-gray-500">
+                                        <p>회원 ID: #\${user.id}</p>
+                                        <p>가입일: \${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                        \${user.updated_at && user.updated_at !== user.created_at ? \`<p>최근 수정: \${new Date(user.updated_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>\` : ''}
+                                    </div>
                                 </div>
                             </div>
                             
@@ -2561,20 +2568,26 @@ app.get('/admin', (c) => {
                                     <div class="grid grid-cols-2 gap-3 text-sm">
                                         <div>
                                             <span class="text-gray-600">이메일:</span>
-                                            <p class="font-medium text-gray-800">\${user.email}</p>
+                                            <p class="font-medium text-gray-800 break-all">\${user.email}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">이름:</span>
+                                            <p class="font-medium text-gray-800">\${user.name}</p>
                                         </div>
                                         <div>
                                             <span class="text-gray-600">성별:</span>
                                             <p class="font-medium text-gray-800">\${user.gender || '-'}</p>
                                         </div>
                                         <div>
-                                            <span class="text-gray-600">가입일:</span>
-                                            <p class="font-medium text-gray-800">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</p>
+                                            <span class="text-gray-600">역할:</span>
+                                            <p class="font-medium text-gray-800">\${roleName}</p>
                                         </div>
-                                        <div>
-                                            <span class="text-gray-600">회원 ID:</span>
-                                            <p class="font-medium text-gray-800">#\${user.id}</p>
+                                        \${user.avatar_url ? \`
+                                        <div class="col-span-2">
+                                            <span class="text-gray-600">프로필 사진:</span>
+                                            <p class="font-medium text-gray-800 break-all text-xs">\${user.avatar_url}</p>
                                         </div>
+                                        \` : ''}
                                     </div>
                                 </div>
                                 
@@ -2584,7 +2597,7 @@ app.get('/admin', (c) => {
                                     </h4>
                                     <div class="grid grid-cols-2 gap-3 text-sm">
                                         <div>
-                                            <span class="text-gray-600">교회:</span>
+                                            <span class="text-gray-600">소속 교회:</span>
                                             <p class="font-medium text-gray-800">\${user.church || '-'}</p>
                                         </div>
                                         <div>
@@ -2596,11 +2609,11 @@ app.get('/admin', (c) => {
                                             <p class="font-medium text-gray-800">\${user.denomination || '-'}</p>
                                         </div>
                                         <div>
-                                            <span class="text-gray-600">직분:</span>
+                                            <span class="text-gray-600">교회 직분:</span>
                                             <p class="font-medium text-gray-800">\${user.position || '-'}</p>
                                         </div>
                                         <div class="col-span-2">
-                                            <span class="text-gray-600">위치:</span>
+                                            <span class="text-gray-600">교회 위치:</span>
                                             <p class="font-medium text-gray-800">\${user.location || '-'}</p>
                                         </div>
                                     </div>

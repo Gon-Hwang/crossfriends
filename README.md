@@ -8,7 +8,8 @@
   - 댓글 및 좋아요 기능
   - 기도 제목 작성 및 응답
   - 사용자 프로필 관리
-  - 친구 관계 관리
+  - **관리자 패널** (회원/게시물 관리, 통계)
+  - 역할 기반 접근 제어 (admin, moderator, user)
 
 ## 🌐 URLs
 - **개발 서버**: https://3000-iqlzv7b987x0tbhluw43c-5c13a017.sandbox.novita.ai
@@ -104,6 +105,29 @@
 
 ## ✅ 최근 구현된 기능
 
+### 🔐 관리자 시스템 (Admin Panel)
+- **역할 기반 접근 제어 (RBAC)**
+  - user: 일반 사용자
+  - moderator: 운영자 (향후 확장 가능)
+  - admin: 최고 관리자
+  
+- **첫 가입자 자동 관리자**: 첫 번째 회원가입자가 자동으로 admin 권한 획득
+
+- **관리자 대시보드** (`/admin`)
+  - 실시간 통계 카드 (회원, 게시물, 댓글, 기도 제목)
+  - 회원 관리: 목록 조회, 역할 변경, 회원 삭제
+  - 게시물 관리: 목록 조회, 게시물 삭제
+  - 깔끔한 테이블 UI with TailwindCSS
+  
+- **관리자 API**
+  - `GET /api/admin/stats` - 전체 통계
+  - `GET /api/admin/users` - 회원 목록 + 활동 통계
+  - `PUT /api/admin/users/:id/role` - 역할 변경
+  - `DELETE /api/admin/users/:id` - 회원 삭제
+  - `GET /api/admin/posts` - 게시물 목록
+  - `DELETE /api/admin/posts/:id` - 게시물 삭제
+  - Middleware를 통한 권한 검증 (X-Admin-ID 헤더)
+
 ### 사용자 인증 시스템
 - **로그인**: 이메일 기반 간단 로그인
   - 이메일만으로 로그인 가능
@@ -147,12 +171,27 @@
 3. "로그인" 버튼 클릭
 
 **테스트 계정:**
-- `john@example.com` (John Kim)
-- `sarah@example.com` (Sarah Park)
-- `david@example.com` (David Lee)
-- `grace@example.com` (Grace Choi)
-- `holofa@pcu.ac.kr` (황성곤)
-- `test@crossfriends.com` (테스트유저)
+- **관리자**: `holofa518@gmail.com` (관리자)
+- `user1@test.com` (김철수 - moderator)
+- `user2@test.com` (이영희 - user)
+- `user3@test.com` (박민수 - user)
+
+#### 관리자 패널 접속
+**관리자 계정으로 로그인 후:**
+1. 우측 상단에 빨간색 "관리자" 버튼 표시됨
+2. "관리자" 버튼 클릭 또는 `/admin` URL 직접 접속
+3. 관리자 대시보드에서 다음 작업 가능:
+   - **통계 확인**: 회원, 게시물, 댓글, 기도 제목 수
+   - **회원 관리**: 역할 변경 (user ↔ moderator ↔ admin), 회원 삭제
+   - **게시물 관리**: 부적절한 게시물 삭제
+4. 일반 사용자는 "관리자" 버튼이 보이지 않으며, `/admin` 접속 시 홈으로 리다이렉트
+
+**관리자 기능:**
+- ✅ 실시간 통계 모니터링
+- ✅ 회원 역할 변경
+- ✅ 회원 삭제 (본인 제외)
+- ✅ 게시물 삭제
+- ✅ 회원별 활동 통계 (게시물, 댓글, 기도 수)
 
 #### 회원가입 방법
 1. 우측 상단의 "회원가입" 버튼 클릭
@@ -166,6 +205,8 @@
 3. 신앙 고백 10가지 질문에 답변
 4. "회원가입 완료" 버튼 클릭
 5. 자동으로 로그인됩니다
+
+**첫 가입자 특전:** 첫 번째 회원가입자는 자동으로 관리자 권한을 받습니다! 🎉
 
 #### 프로필 수정 방법
 1. 로그인 후 우측 상단의 프로필 클릭

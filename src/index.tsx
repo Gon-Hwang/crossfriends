@@ -1784,6 +1784,27 @@ app.get('/', (c) => {
                 }
             }
 
+            // Delete post (Admin only)
+            async function deletePost(postId) {
+                if (!currentUser || currentUser.role !== 'admin') {
+                    alert('권한이 없습니다.');
+                    return;
+                }
+
+                if (!confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+                    return;
+                }
+
+                try {
+                    await axios.delete(\`/api/posts/\${postId}\`);
+                    alert('게시물이 삭제되었습니다.');
+                    loadPosts();
+                } catch (error) {
+                    console.error('Error deleting post:', error);
+                    alert('게시물 삭제에 실패했습니다.');
+                }
+            }
+
             // Load comments
             async function loadComments(postId) {
                 const commentsDiv = document.getElementById(\`comments-\${postId}\`);
@@ -1933,7 +1954,17 @@ app.get('/', (c) => {
                                                 <h4 class="font-bold text-gray-800">\${post.user_name}</h4>
                                                 <p class="text-sm text-gray-500">\${post.user_church || ''}</p>
                                             </div>
-                                            <p class="text-xs text-gray-500">\${formatDate(post.created_at)}</p>
+                                            <div class="flex items-center space-x-2">
+                                                <p class="text-xs text-gray-500">\${formatDate(post.created_at)}</p>
+                                                \${currentUser && currentUser.role === 'admin' ? \`
+                                                    <button 
+                                                        onclick="deletePost(\${post.id})" 
+                                                        class="text-red-500 hover:text-red-700 transition ml-2" 
+                                                        title="게시물 삭제">
+                                                        <i class="fas fa-trash-alt text-sm"></i>
+                                                    </button>
+                                                \` : ''}
+                                            </div>
                                         </div>
                                         <p class="mt-3 text-gray-800 whitespace-pre-wrap">\${post.content}</p>
                                         \${verseHtml}

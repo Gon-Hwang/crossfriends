@@ -2064,6 +2064,37 @@ app.get('/admin', (c) => {
         <title>관리자 패널 - CROSSfriends</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <style>
+            .admin-badge-container {
+                position: relative;
+                display: inline-block;
+            }
+            .admin-badge-crown {
+                position: absolute;
+                bottom: -2px;
+                right: -2px;
+                width: 22px;
+                height: 22px;
+                background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                border: 2.5px solid white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                z-index: 10;
+                animation: pulse-crown 2s infinite;
+            }
+            .admin-badge-crown i {
+                color: white;
+                font-size: 11px;
+                filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
+            }
+            @keyframes pulse-crown {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.1); }
+            }
+        </style>
     </head>
     <body class="bg-gray-100">
         <nav class="bg-white shadow-md">
@@ -2074,7 +2105,15 @@ app.get('/admin', (c) => {
                         관리자 패널
                     </h1>
                     <div class="flex items-center space-x-4">
-                        <span id="adminName" class="text-gray-700"></span>
+                        <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg">
+                            <div class="admin-badge-container">
+                                <div id="adminAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>
+                            </div>
+                            <span id="adminName" class="text-gray-800 font-medium"></span>
+                        </div>
                         <button onclick="goHome()" class="text-gray-600 hover:text-gray-800">
                             <i class="fas fa-home mr-1"></i>홈으로
                         </button>
@@ -2212,7 +2251,25 @@ app.get('/admin', (c) => {
                     return false;
                 }
                 
+                // Update admin name
                 document.getElementById('adminName').textContent = currentAdmin.name;
+                
+                // Update admin avatar
+                const adminAvatarContainer = document.getElementById('adminAvatarContainer');
+                if (currentAdmin.avatar_url) {
+                    const img = document.createElement('img');
+                    img.src = currentAdmin.avatar_url;
+                    img.alt = 'Profile';
+                    img.className = 'w-full h-full object-cover';
+                    img.onerror = function() {
+                        adminAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
+                    };
+                    adminAvatarContainer.innerHTML = '';
+                    adminAvatarContainer.appendChild(img);
+                } else {
+                    adminAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
+                }
+                
                 return true;
             }
 

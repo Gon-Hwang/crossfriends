@@ -56,11 +56,11 @@ app.post('/api/users', async (c) => {
 app.put('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const { name, gender, church, pastor, position } = await c.req.json()
+  const { name, gender, church, pastor, position, faith_answers } = await c.req.json()
   
   await DB.prepare(
-    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ? WHERE id = ?'
-  ).bind(name, gender || null, church || null, pastor || null, position || null, id).run()
+    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, id).run()
   
   return c.json({ success: true })
 })
@@ -1380,9 +1380,120 @@ app.get('/', (c) => {
                             <option value="대학부">대학부</option>
                             <option value="청년부">청년부</option>
                             <option value="장년부">장년부</option>
+                            <option value="구도자">구도자</option>
                             <option value="새가족">새가족</option>
+                            <option value="잘모름">잘모름</option>
                             <option value="기타">기타</option>
                         </select>
+                    </div>
+                    
+                    <!-- 신앙 고백 질문 섹션 -->
+                    <div class="border-t pt-4 mt-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">
+                            <i class="fas fa-cross text-blue-600 mr-2"></i>신앙 고백 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                        </h3>
+                        <p class="text-sm text-gray-600 mb-4">신앙 고백 질문은 선택사항입니다. 원하시는 질문에만 답변하셔도 됩니다.</p>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">1. 당신은 예수님이 창조주 하나님임을 믿습니까?</label>
+                                <select id="edit_faith_q1" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">2. 당신은 예수님이 당신의 죄로 인해 대신 십자가에서 죽으신 것을 믿습니까?</label>
+                                <select id="edit_faith_q2" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">3. 당신은 예수님이 부활하신 것을 믿습니까?</label>
+                                <select id="edit_faith_q3" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">4. 당신은 성경이 하나님의 말씀임을 믿습니까?</label>
+                                <select id="edit_faith_q4" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">5. 당신은 사람들에게 복음을 전해야 한다고 믿습니까?</label>
+                                <select id="edit_faith_q5" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">6. 당신은 십일조를 드리고 있습니까?</label>
+                                <select id="edit_faith_q6" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">7. 당신은 성경을 읽습니까?</label>
+                                <select id="edit_faith_q7" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">8. 정기적으로 예배에 참석합니까?</label>
+                                <select id="edit_faith_q8" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">9. 정기적으로 기도합니까?</label>
+                                <select id="edit_faith_q9" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="text-sm text-gray-700 flex-1">10. 가끔 전도합니까?</label>
+                                <select id="edit_faith_q10" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                    <option value="">선택</option>
+                                    <option value="예">예</option>
+                                    <option value="아니오">아니오</option>
+                                    <option value="잘모름">잘모름</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1729,25 +1840,49 @@ app.get('/', (c) => {
             }
 
             // Edit Profile Modal functions
-            function showEditProfileModal() {
+            async function showEditProfileModal() {
                 if (!currentUser) return;
                 
-                document.getElementById('editProfileModal').classList.remove('hidden');
-                
-                // Populate form with current user data
-                document.getElementById('editEmail').value = currentUser.email || '';
-                document.getElementById('editName').value = currentUser.name || '';
-                document.getElementById('editGender').value = currentUser.gender || '';
-                document.getElementById('editChurch').value = currentUser.church || '';
-                document.getElementById('editPastor').value = currentUser.pastor || '';
-                document.getElementById('editPosition').value = currentUser.position || '';
-                
-                // Show current avatar
-                const editAvatarPreview = document.getElementById('editAvatarPreview');
-                if (currentUser.avatar_url) {
-                    editAvatarPreview.innerHTML = '<img src="' + currentUser.avatar_url + '" class="w-full h-full object-cover" />';
-                } else {
-                    editAvatarPreview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+                try {
+                    // Fetch latest user data to get faith_answers
+                    const response = await axios.get('/api/users/' + currentUserId);
+                    const user = response.data.user;
+                    
+                    document.getElementById('editProfileModal').classList.remove('hidden');
+                    
+                    // Populate form with current user data
+                    document.getElementById('editEmail').value = user.email || '';
+                    document.getElementById('editName').value = user.name || '';
+                    document.getElementById('editGender').value = user.gender || '';
+                    document.getElementById('editChurch').value = user.church || '';
+                    document.getElementById('editPastor').value = user.pastor || '';
+                    document.getElementById('editPosition').value = user.position || '';
+                    
+                    // Parse and populate faith answers
+                    if (user.faith_answers) {
+                        try {
+                            const faithAnswers = JSON.parse(user.faith_answers);
+                            for (let i = 1; i <= 10; i++) {
+                                const element = document.getElementById('edit_faith_q' + i);
+                                if (element && faithAnswers['q' + i]) {
+                                    element.value = faithAnswers['q' + i];
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse faith_answers:', e);
+                        }
+                    }
+                    
+                    // Show current avatar
+                    const editAvatarPreview = document.getElementById('editAvatarPreview');
+                    if (user.avatar_url) {
+                        editAvatarPreview.innerHTML = '<img src="' + user.avatar_url + '" class="w-full h-full object-cover" />';
+                    } else {
+                        editAvatarPreview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+                    }
+                } catch (error) {
+                    console.error('Failed to load user data:', error);
+                    alert('사용자 정보를 불러오는데 실패했습니다.');
                 }
             }
 
@@ -1781,20 +1916,35 @@ app.get('/', (c) => {
                 const pastor = document.getElementById('editPastor').value;
                 const position = document.getElementById('editPosition').value;
                 const avatarFile = document.getElementById('editAvatar').files[0];
+                
+                // 신앙 고백 답변 수집
+                const faithAnswers = {
+                    q1: document.getElementById('edit_faith_q1').value,
+                    q2: document.getElementById('edit_faith_q2').value,
+                    q3: document.getElementById('edit_faith_q3').value,
+                    q4: document.getElementById('edit_faith_q4').value,
+                    q5: document.getElementById('edit_faith_q5').value,
+                    q6: document.getElementById('edit_faith_q6').value,
+                    q7: document.getElementById('edit_faith_q7').value,
+                    q8: document.getElementById('edit_faith_q8').value,
+                    q9: document.getElementById('edit_faith_q9').value,
+                    q10: document.getElementById('edit_faith_q10').value
+                };
 
-                if (!name || !gender || !church || !pastor || !position) {
-                    alert('모든 항목을 입력해주세요.');
+                if (!name) {
+                    alert('이름은 필수 항목입니다.');
                     return;
                 }
 
                 try {
-                    // Update user info (except avatar)
+                    // Update user info including faith_answers
                     await axios.put('/api/users/' + currentUserId, {
                         name,
                         gender,
                         church,
                         pastor,
-                        position
+                        position,
+                        faith_answers: JSON.stringify(faithAnswers)
                     });
 
                     // Upload new avatar if selected

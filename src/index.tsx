@@ -740,6 +740,8 @@ app.get('/', (c) => {
                             id="signupEmail"
                             type="email"
                             placeholder="email@example.com"
+                            list="emailHistory"
+                            autocomplete="email"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
@@ -1076,8 +1078,13 @@ app.get('/', (c) => {
                             id="loginEmail"
                             type="email"
                             placeholder="email@example.com"
+                            list="emailHistory"
+                            autocomplete="email"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
+                        <datalist id="emailHistory">
+                            <!-- Email suggestions will be loaded here -->
+                        </datalist>
                     </div>
                 </div>
                 
@@ -1239,6 +1246,45 @@ app.get('/', (c) => {
         <script>
             let currentUserId = null;
             let currentUser = null;
+
+            // Email History Management
+            function loadEmailHistory() {
+                const history = localStorage.getItem('emailHistory');
+                return history ? JSON.parse(history) : [];
+            }
+
+            function saveEmailToHistory(email) {
+                let history = loadEmailHistory();
+                
+                // Add email to history if not already present
+                if (!history.includes(email)) {
+                    history.unshift(email); // Add to beginning
+                    
+                    // Keep only last 10 emails
+                    if (history.length > 10) {
+                        history = history.slice(0, 10);
+                    }
+                    
+                    localStorage.setItem('emailHistory', JSON.stringify(history));
+                }
+                
+                // Update datalist
+                updateEmailDatalist();
+            }
+
+            function updateEmailDatalist() {
+                const history = loadEmailHistory();
+                const datalist = document.getElementById('emailHistory');
+                
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    history.forEach(email => {
+                        const option = document.createElement('option');
+                        option.value = email;
+                        datalist.appendChild(option);
+                    });
+                }
+            }
 
             // Location data
             // 도 → 시 2단계 교회 위치 데이터
@@ -1524,6 +1570,9 @@ app.get('/', (c) => {
                     alert('회원가입이 완료되었습니다! 환영합니다! 🎉');
                     hideSignupModal();
                     
+                    // Save email to history
+                    saveEmailToHistory(email);
+                    
                     // Auto login - Fetch complete user info
                     const userResponse = await axios.get('/api/users/' + newUserId);
                     currentUserId = newUserId;
@@ -1570,6 +1619,10 @@ app.get('/', (c) => {
                         console.log('사용자 찾음:', user);
                         currentUserId = user.id;
                         currentUser = user;
+                        
+                        // Save email to history
+                        saveEmailToHistory(trimmedEmail);
+                        
                         updateAuthUI();
                         hideLoginModal();
                         loadPosts();
@@ -1927,6 +1980,7 @@ app.get('/', (c) => {
 
             // Initialize
             updateAuthUI();
+            updateEmailDatalist(); // Load email history
             // Don't load posts initially - user needs to login first
         </script>
     </body>

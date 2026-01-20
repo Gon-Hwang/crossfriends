@@ -516,8 +516,24 @@ app.post('/api/admin/create-fake-users', requireAdmin, async (c) => {
     const location = locations[Math.floor(Math.random() * locations.length)]
     const gender = Math.random() > 0.5 ? '남성' : '여성'
     
+    // 랜덤 신앙 고백 생성
+    const answers = ['예', '아니오', '잘모름']
+    const faithAnswers = {
+      q1: answers[Math.floor(Math.random() * answers.length)],
+      q2: answers[Math.floor(Math.random() * answers.length)],
+      q3: answers[Math.floor(Math.random() * answers.length)],
+      q4: answers[Math.floor(Math.random() * answers.length)],
+      q5: answers[Math.floor(Math.random() * answers.length)],
+      q6: answers[Math.floor(Math.random() * answers.length)],
+      q7: answers[Math.floor(Math.random() * answers.length)],
+      q8: answers[Math.floor(Math.random() * answers.length)],
+      q9: answers[Math.floor(Math.random() * answers.length)],
+      q10: answers[Math.floor(Math.random() * answers.length)]
+    }
+    const faithAnswersJson = JSON.stringify(faithAnswers)
+    
     try {
-      const result = await DB.prepare('INSERT INTO users (email, name, church, position, location, gender, role) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(email, name, church, position, location, gender, 'user').run()
+      const result = await DB.prepare('INSERT INTO users (email, name, church, position, location, gender, faith_answers, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(email, name, church, position, location, gender, faithAnswersJson, 'user').run()
       
       createdUsers.push({
         id: result.meta.last_row_id,

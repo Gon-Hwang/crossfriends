@@ -626,7 +626,7 @@ app.get('/', (c) => {
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
                         <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-3 py-2 rounded-lg hover:bg-red-50 transition" title="관리자 패널">
                             <i class="fas fa-shield-alt mr-1"></i>
-                            <span class="hidden md:inline">관리자</span>
+                            <span class="hidden md:inline">관리자 모드</span>
                         </button>
                         <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="showEditProfileModal()">
                             <div class="admin-badge-container">

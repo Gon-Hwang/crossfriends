@@ -2212,7 +2212,7 @@ app.get('/admin', (c) => {
                     return false;
                 }
                 
-                document.getElementById('adminName').textContent = currentAdmin.name + ' (관리자)';
+                document.getElementById('adminName').textContent = currentAdmin.name;
                 return true;
             }
 

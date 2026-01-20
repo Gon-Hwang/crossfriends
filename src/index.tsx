@@ -131,6 +131,23 @@ app.get('/api/avatars/avatars/:filename', async (c) => {
   return new Response(object.body, { headers })
 })
 
+// Get post image from R2
+app.get('/api/images/posts/:filename', async (c) => {
+  const { R2 } = c.env
+  const filename = c.req.param('filename')
+  
+  const object = await R2.get(`posts/${filename}`)
+  if (!object) {
+    return c.notFound()
+  }
+  
+  const headers = new Headers()
+  object.writeHttpMetadata(headers)
+  headers.set('Cache-Control', 'public, max-age=31536000')
+  
+  return new Response(object.body, { headers })
+})
+
 
 // =====================
 // API Routes - Posts
@@ -196,6 +213,55 @@ app.post('/api/posts', async (c) => {
   ).bind(user_id, content, image_url || null, verse_reference || null).run()
   
   return c.json({ id: result.meta.last_row_id, user_id, content }, 201)
+})
+
+// Upload post image
+app.post('/api/posts/:id/image', async (c) => {
+  const { DB, R2 } = c.env
+  const postId = c.req.param('id')
+  
+  try {
+    const formData = await c.req.formData()
+    const file = formData.get('image')
+    
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: 'No file uploaded' }, 400)
+    }
+    
+    // Check file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      return c.json({ error: 'File too large (max 10MB)' }, 400)
+    }
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      return c.json({ error: 'Invalid file type' }, 400)
+    }
+    
+    // Generate unique filename
+    const ext = file.name.split('.').pop()
+    const filename = `${postId}-${Date.now()}.${ext}`
+    const fullPath = `posts/${filename}`
+    
+    // Upload to R2
+    const arrayBuffer = await file.arrayBuffer()
+    await R2.put(fullPath, arrayBuffer, {
+      httpMetadata: {
+        contentType: file.type
+      }
+    })
+    
+    // Update post image_url in database
+    const imageUrl = `/api/images/posts/${filename}`
+    await DB.prepare(
+      'UPDATE posts SET image_url = ? WHERE id = ?'
+    ).bind(imageUrl, postId).run()
+    
+    return c.json({ success: true, image_url: imageUrl })
+  } catch (error) {
+    console.error('Image upload error:', error)
+    return c.json({ error: 'Upload failed' }, 500)
+  }
 })
 
 // Delete post
@@ -806,7 +872,34 @@ app.get('/', (c) => {
                                     class="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     rows="3"
                                 ></textarea>
-                                <div class="mt-3 flex justify-end">
+                                
+                                <!-- Image Preview -->
+                                <div id="postImagePreviewContainer" class="hidden mt-3">
+                                    <div class="relative inline-block">
+                                        <img id="postImagePreview" src="" alt="Preview" class="max-h-48 rounded-lg border">
+                                        <button 
+                                            onclick="removePostImage()"
+                                            class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
+                                            <i class="fas fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3 flex justify-between items-center">
+                                    <div>
+                                        <input 
+                                            id="postImageFile"
+                                            type="file"
+                                            accept="image/*"
+                                            onchange="previewPostImage(event)"
+                                            class="hidden"
+                                        />
+                                        <label 
+                                            for="postImageFile"
+                                            class="cursor-pointer inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                            <i class="fas fa-image mr-2"></i>사진 첨부
+                                        </label>
+                                    </div>
                                     <button 
                                         onclick="createPost()"
                                         class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
@@ -2235,24 +2328,79 @@ app.get('/', (c) => {
                 }
 
                 const content = document.getElementById('newPostContent').value;
+                const imageFile = document.getElementById('postImageFile').files[0];
 
-                if (!content) {
-                    alert('내용을 입력해주세요.');
+                if (!content && !imageFile) {
+                    alert('내용 또는 사진을 입력해주세요.');
                     return;
                 }
 
                 try {
-                    await axios.post('/api/posts', {
+                    // 1. Create post
+                    const response = await axios.post('/api/posts', {
                         user_id: currentUserId,
-                        content,
+                        content: content || '',
                         verse_reference: null
                     });
+
+                    const postId = response.data.id;
+
+                    // 2. Upload image if selected
+                    if (imageFile) {
+                        const formData = new FormData();
+                        formData.append('image', imageFile);
+                        
+                        try {
+                            await axios.post('/api/posts/' + postId + '/image', formData, {
+                                headers: { 'Content-Type': 'multipart/form-data' }
+                            });
+                        } catch (uploadError) {
+                            console.error('Image upload error:', uploadError);
+                            // Continue even if image upload fails
+                        }
+                    }
+
                     document.getElementById('newPostContent').value = '';
+                    removePostImage();
                     loadPosts();
                 } catch (error) {
                     console.error('Error creating post:', error);
                     alert('게시물 작성에 실패했습니다.');
                 }
+            }
+
+            // Preview post image
+            function previewPostImage(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    if (file.size > 10 * 1024 * 1024) {
+                        alert('파일 크기는 10MB를 초과할 수 없습니다.');
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    if (!file.type.startsWith('image/')) {
+                        alert('이미지 파일만 업로드할 수 있습니다.');
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById('postImagePreview');
+                        const container = document.getElementById('postImagePreviewContainer');
+                        preview.src = e.target.result;
+                        container.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // Remove post image
+            function removePostImage() {
+                document.getElementById('postImageFile').value = '';
+                document.getElementById('postImagePreview').src = '';
+                document.getElementById('postImagePreviewContainer').classList.add('hidden');
             }
 
             // Toggle like
@@ -2424,6 +2572,12 @@ app.get('/', (c) => {
                             </div>
                         \` : '';
                         
+                        const imageHtml = post.image_url ? \`
+                            <div class="mt-3">
+                                <img src="\${post.image_url}" alt="Post image" class="w-full rounded-lg max-h-96 object-cover" onerror="this.style.display='none'" />
+                            </div>
+                        \` : '';
+                        
                         postsHtml += \`
                             <div class="bg-white rounded-lg shadow p-6">
                                 <div class="flex items-start space-x-4">
@@ -2450,6 +2604,7 @@ app.get('/', (c) => {
                                             </div>
                                         </div>
                                         <p class="mt-3 text-gray-800 whitespace-pre-wrap">\${post.content}</p>
+                                        \${imageHtml}
                                         \${verseHtml}
                                         <div class="mt-4 flex items-center space-x-6 text-gray-600">
                                             <button onclick="toggleLike(\${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">

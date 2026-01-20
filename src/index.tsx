@@ -479,6 +479,62 @@ app.get('/api/admin/stats', requireAdmin, async (c) => {
   })
 })
 
+// Admin: Create fake users
+app.post('/api/admin/create-fake-users', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { count = 1 } = await c.req.json()
+  
+  // Korean names pool
+  const lastNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '안', '송', '류', '홍']
+  const firstNames = ['민준', '서연', '지훈', '지우', '하은', '도윤', '서준', '수아', '예준', '시우', '하준', '윤서', '민서', '유준', '소율', '지호', '채원', '수빈', '연우', '주원']
+  
+  // Churches pool
+  const churches = [
+    '은혜교회', '사랑교회', '평강교회', '소망교회', '빛과소금교회',
+    '새생명교회', '온누리교회', '영락교회', '명성교회', '충현교회',
+    '광림교회', '금란교회', '강남교회', '분당교회', '안양교회'
+  ]
+  
+  // Positions pool
+  const positions = ['일반 성도', '집사', '권사', '장로', '청년부', '구역장']
+  
+  // Locations pool
+  const locations = ['서울특별시 강남구', '서울특별시 서초구', '경기도 성남시', '경기도 수원시', '인천광역시 남동구']
+  
+  const createdUsers = []
+  
+  for (let i = 0; i < Math.min(count, 50); i++) {
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
+    const name = lastName + firstName
+    
+    const email = 'fake' + Date.now() + Math.floor(Math.random() * 10000) + '@crossfriends.com'
+    const church = churches[Math.floor(Math.random() * churches.length)]
+    const position = positions[Math.floor(Math.random() * positions.length)]
+    const location = locations[Math.floor(Math.random() * locations.length)]
+    const gender = Math.random() > 0.5 ? '남성' : '여성'
+    
+    try {
+      const result = await DB.prepare('INSERT INTO users (email, name, church, position, location, gender, role) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(email, name, church, position, location, gender, 'user').run()
+      
+      createdUsers.push({
+        id: result.meta.last_row_id,
+        name,
+        email,
+        church
+      })
+    } catch (error) {
+      console.error('Error creating fake user:', error)
+    }
+  }
+  
+  return c.json({
+    success: true,
+    count: createdUsers.length,
+    users: createdUsers
+  })
+})
+
 // =====================
 // Frontend Route
 // =====================
@@ -2192,6 +2248,30 @@ app.get('/admin', (c) => {
                 </div>
             </div>
 
+            <!-- Quick Actions -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="text-white">
+                        <h3 class="text-xl font-bold mb-2">
+                            <i class="fas fa-magic mr-2"></i>빠른 작업
+                        </h3>
+                        <p class="text-blue-100 text-sm">테스트를 위한 가상 회원을 생성합니다</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <select id="fakeUserCount" class="bg-white text-gray-800 px-4 py-2 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            <option value="1">1명</option>
+                            <option value="5" selected>5명</option>
+                            <option value="10">10명</option>
+                            <option value="20">20명</option>
+                            <option value="50">50명</option>
+                        </select>
+                        <button onclick="createFakeUsers()" class="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition shadow-md">
+                            <i class="fas fa-user-plus mr-2"></i>가상 회원 생성
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tabs -->
             <div class="bg-white rounded-lg shadow mb-6">
                 <div class="border-b">
@@ -2345,6 +2425,31 @@ app.get('/admin', (c) => {
                     document.getElementById('prayerCount').textContent = response.data.prayers;
                 } catch (error) {
                     console.error('Failed to load stats:', error);
+                }
+            }
+
+            // Create fake users
+            async function createFakeUsers() {
+                const count = parseInt(document.getElementById('fakeUserCount').value);
+                
+                if (!confirm(\`\${count}명의 가상 회원을 생성하시겠습니까?\`)) {
+                    return;
+                }
+                
+                try {
+                    const response = await axios.post('/api/admin/create-fake-users', 
+                        { count },
+                        { headers: { 'X-Admin-ID': currentAdminId } }
+                    );
+                    
+                    alert(\`\${response.data.count}명의 가상 회원이 생성되었습니다!\`);
+                    
+                    // Reload stats and users table
+                    loadStats();
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to create fake users:', error);
+                    alert('가상 회원 생성에 실패했습니다.');
                 }
             }
 

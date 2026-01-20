@@ -1550,9 +1550,12 @@ app.get('/', (c) => {
                     if (user.faith_answers) {
                         try {
                             faithAnswers = JSON.parse(user.faith_answers);
+                            console.log('Parsed faith answers:', faithAnswers);
                         } catch (e) {
                             console.error('Failed to parse faith_answers:', e);
                         }
+                    } else {
+                        console.log('No faith_answers data for user');
                     }
                     
                     const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
@@ -2757,9 +2760,12 @@ app.get('/admin', (c) => {
                     if (user.faith_answers) {
                         try {
                             faithAnswers = JSON.parse(user.faith_answers);
+                            console.log('Parsed faith answers:', faithAnswers);
                         } catch (e) {
                             console.error('Failed to parse faith_answers:', e);
                         }
+                    } else {
+                        console.log('No faith_answers data for user');
                     }
                     
                     const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';

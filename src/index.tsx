@@ -1978,10 +1978,41 @@ app.get('/', (c) => {
                 return date.toLocaleDateString('ko-KR');
             }
 
+            // Auto-login from localStorage
+            async function autoLogin() {
+                const savedUserId = localStorage.getItem('currentUserId');
+                const savedUser = localStorage.getItem('currentUser');
+                
+                if (savedUserId && savedUser) {
+                    try {
+                        // Verify user still exists in database
+                        const response = await axios.get('/api/users/' + savedUserId);
+                        
+                        if (response.data.user) {
+                            // User exists, restore session
+                            currentUserId = parseInt(savedUserId);
+                            currentUser = response.data.user;
+                            updateAuthUI();
+                            loadPosts();
+                            console.log('자동 로그인 성공:', currentUser.name);
+                        } else {
+                            // User doesn't exist, clear localStorage
+                            localStorage.removeItem('currentUserId');
+                            localStorage.removeItem('currentUser');
+                        }
+                    } catch (error) {
+                        // Error fetching user, clear localStorage
+                        console.error('자동 로그인 실패:', error);
+                        localStorage.removeItem('currentUserId');
+                        localStorage.removeItem('currentUser');
+                    }
+                }
+            }
+
             // Initialize
             updateAuthUI();
             updateEmailDatalist(); // Load email history
-            // Don't load posts initially - user needs to login first
+            autoLogin(); // Auto-login if session exists
         </script>
     </body>
     </html>

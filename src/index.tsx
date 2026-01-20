@@ -721,18 +721,34 @@ app.get('/', (c) => {
                             <i class="fas fa-shield-alt mr-1"></i>
                             <span class="hidden md:inline">관리자 모드</span>
                         </button>
-                        <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="showEditProfileModal()">
-                            <div class="admin-badge-container">
-                                <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
-                                    <i class="fas fa-user"></i>
+                        <div class="relative">
+                            <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="toggleProfileMenu()">
+                                <div class="admin-badge-container">
+                                    <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <!-- Admin/Moderator badge will be added here dynamically -->
                                 </div>
-                                <!-- Admin/Moderator badge will be added here dynamically -->
+                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap"></span>
+                                <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
                             </div>
-                            <span id="userName" class="text-gray-800 font-medium whitespace-nowrap"></span>
+                            <!-- Profile Dropdown Menu -->
+                            <div id="profileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                <button onclick="showViewProfileModal(); toggleProfileMenu();" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center">
+                                    <i class="fas fa-user-circle text-blue-600 mr-3"></i>
+                                    <span>내 프로필 보기</span>
+                                </button>
+                                <button onclick="showEditProfileModal(); toggleProfileMenu();" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center">
+                                    <i class="fas fa-user-edit text-green-600 mr-3"></i>
+                                    <span>프로필 수정</span>
+                                </button>
+                                <hr class="my-1">
+                                <button onclick="logout()" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center text-red-600">
+                                    <i class="fas fa-sign-out-alt mr-3"></i>
+                                    <span>로그아웃</span>
+                                </button>
+                            </div>
                         </div>
-                        <button onclick="logout()" class="text-gray-500 hover:text-gray-800" title="로그아웃">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -1194,6 +1210,30 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- View Profile Modal -->
+        <div id="viewProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-user-circle text-blue-600 mr-2"></i>내 프로필
+                    </h2>
+                    <button onclick="hideViewProfileModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div id="viewProfileContent" class="space-y-6">
+                    <!-- Profile details will be loaded here -->
+                </div>
+                
+                <div class="mt-6 flex justify-end">
+                    <button onclick="hideViewProfileModal(); showEditProfileModal();" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-edit mr-2"></i>프로필 수정하기
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Edit Profile Modal -->
         <div id="editProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1478,6 +1518,192 @@ app.get('/', (c) => {
             function hideLoginModal() {
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('loginEmail').value = '';
+            }
+
+            // Profile Menu Toggle
+            function toggleProfileMenu() {
+                const menu = document.getElementById('profileMenu');
+                menu.classList.toggle('hidden');
+            }
+
+            // Close profile menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const profileMenu = document.getElementById('profileMenu');
+                const userMenu = document.getElementById('userMenu');
+                
+                if (profileMenu && userMenu && !userMenu.contains(event.target)) {
+                    profileMenu.classList.add('hidden');
+                }
+            });
+
+            // View Profile Modal functions
+            async function showViewProfileModal() {
+                if (!currentUser) return;
+                
+                try {
+                    // Fetch latest user data
+                    const response = await axios.get('/api/users/' + currentUserId);
+                    const user = response.data.user;
+                    
+                    // Parse faith answers if exists
+                    let faithAnswers = null;
+                    if (user.faith_answers) {
+                        try {
+                            faithAnswers = JSON.parse(user.faith_answers);
+                        } catch (e) {
+                            console.error('Failed to parse faith_answers:', e);
+                        }
+                    }
+                    
+                    const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
+                    const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
+                    
+                    const content = \`
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Profile Section -->
+                            <div class="md:col-span-1">
+                                <div class="bg-gray-50 rounded-lg p-6 text-center">
+                                    <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
+                                        \${user.avatar_url ? \`<img src="\${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />\` : '<i class="fas fa-user"></i>'}
+                                    </div>
+                                    <h3 class="text-xl font-bold text-gray-800 mb-2">\${user.name}</h3>
+                                    <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold \${roleColor}">
+                                        \${roleName}
+                                    </span>
+                                    <div class="mt-4 text-xs text-gray-500">
+                                        <p>회원 ID: #\${user.id}</p>
+                                        <p>가입일: \${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                        \${user.updated_at && user.updated_at !== user.created_at ? \`<p>최근 수정: \${new Date(user.updated_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>\` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Details Section -->
+                            <div class="md:col-span-2 space-y-4">
+                                <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                                    <h4 class="font-semibold text-blue-800 mb-3">
+                                        <i class="fas fa-info-circle mr-2"></i>기본 정보
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <span class="text-gray-600">이메일:</span>
+                                            <p class="font-medium text-gray-800 break-all">\${user.email}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">이름:</span>
+                                            <p class="font-medium text-gray-800">\${user.name}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">성별:</span>
+                                            <p class="font-medium text-gray-800">\${user.gender || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">역할:</span>
+                                            <p class="font-medium text-gray-800">\${roleName}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
+                                    <h4 class="font-semibold text-green-800 mb-3">
+                                        <i class="fas fa-church mr-2"></i>교회 정보
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <span class="text-gray-600">소속 교회:</span>
+                                            <p class="font-medium text-gray-800">\${user.church || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">담임목사:</span>
+                                            <p class="font-medium text-gray-800">\${user.pastor || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">교단:</span>
+                                            <p class="font-medium text-gray-800">\${user.denomination || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">교회 직분:</span>
+                                            <p class="font-medium text-gray-800">\${user.position || '-'}</p>
+                                        </div>
+                                        <div class="col-span-2">
+                                            <span class="text-gray-600">교회 위치:</span>
+                                            <p class="font-medium text-gray-800">\${user.location || '-'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                \${user.bio ? \`
+                                <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                                    <h4 class="font-semibold text-purple-800 mb-2">
+                                        <i class="fas fa-comment-dots mr-2"></i>소개
+                                    </h4>
+                                    <p class="text-sm text-gray-700">\${user.bio}</p>
+                                </div>
+                                \` : ''}
+                                
+                                \${faithAnswers ? \`
+                                <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+                                    <h4 class="font-semibold text-yellow-800 mb-3">
+                                        <i class="fas fa-cross mr-2"></i>신앙 고백
+                                    </h4>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">1. 예수님이 창조주 하나님임을 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q1 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">2. 십자가 대속을 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q2 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">3. 예수님의 부활을 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q3 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">4. 예수님을 주님으로 영접했습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q4 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">5. 성령님이 계십니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q5 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">6. 천국 갈 것을 확신합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q6 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">7. 성경을 진리로 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q7 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">8. 정기적으로 예배에 참석합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q8 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">9. 정기적으로 기도합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q9 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">10. 가끔 전도합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q10 || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                \` : ''}
+                            </div>
+                        </div>
+                    \`;
+                    
+                    document.getElementById('viewProfileContent').innerHTML = content;
+                    document.getElementById('viewProfileModal').classList.remove('hidden');
+                } catch (error) {
+                    console.error('Failed to load profile:', error);
+                    alert('프로필 정보를 불러오는데 실패했습니다.');
+                }
+            }
+
+            function hideViewProfileModal() {
+                document.getElementById('viewProfileModal').classList.add('hidden');
             }
 
             // Edit Profile Modal functions

@@ -963,6 +963,24 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                                 
+                                <!-- Upload Progress -->
+                                <div id="uploadProgressContainer" class="hidden mt-3">
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-sm font-medium text-blue-900">
+                                                <i class="fas fa-cloud-upload-alt mr-2"></i><span id="uploadStatus">업로드 중...</span>
+                                            </span>
+                                            <span id="uploadPercent" class="text-sm font-bold text-blue-600">0%</span>
+                                        </div>
+                                        <div class="w-full bg-blue-200 rounded-full h-2.5">
+                                            <div id="uploadProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                        </div>
+                                        <p class="text-xs text-blue-700 mt-2">
+                                            <i class="fas fa-info-circle mr-1"></i>동영상을 업로드하는 중입니다. 잠시만 기다려주세요.
+                                        </p>
+                                    </div>
+                                </div>
+                                
                                 <div class="mt-3 flex justify-between items-center">
                                     <div class="flex space-x-2">
                                         <input 
@@ -992,6 +1010,7 @@ app.get('/', (c) => {
                                         </label>
                                     </div>
                                     <button 
+                                        id="createPostBtn"
                                         onclick="createPost()"
                                         class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
                                         <i class="fas fa-paper-plane mr-2"></i>게시하기
@@ -2427,6 +2446,13 @@ app.get('/', (c) => {
                     return;
                 }
 
+                // Disable post button
+                const postBtn = document.getElementById('createPostBtn');
+                const originalBtnText = postBtn.innerHTML;
+                postBtn.disabled = true;
+                postBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>업로드 중...';
+                postBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
                 try {
                     // 1. Create post
                     const response = await axios.post('/api/posts', {
@@ -2453,25 +2479,73 @@ app.get('/', (c) => {
 
                     // 3. Upload video if selected
                     if (videoFile) {
+                        // Show progress bar
+                        const progressContainer = document.getElementById('uploadProgressContainer');
+                        const progressBar = document.getElementById('uploadProgressBar');
+                        const progressPercent = document.getElementById('uploadPercent');
+                        const uploadStatus = document.getElementById('uploadStatus');
+                        
+                        progressContainer.classList.remove('hidden');
+                        
                         const formData = new FormData();
                         formData.append('video', videoFile);
                         
                         try {
                             await axios.post('/api/posts/' + postId + '/video', formData, {
-                                headers: { 'Content-Type': 'multipart/form-data' }
+                                headers: { 'Content-Type': 'multipart/form-data' },
+                                onUploadProgress: function(progressEvent) {
+                                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                                    progressBar.style.width = percentCompleted + '%';
+                                    progressPercent.textContent = percentCompleted + '%';
+                                    
+                                    if (percentCompleted === 100) {
+                                        uploadStatus.textContent = '처리 중...';
+                                    }
+                                }
                             });
+                            
+                            uploadStatus.textContent = '업로드 완료!';
+                            uploadStatus.innerHTML = '<i class="fas fa-check-circle mr-2"></i>업로드 완료!';
+                            
+                            // Hide progress bar after 1 second
+                            setTimeout(function() {
+                                progressContainer.classList.add('hidden');
+                                progressBar.style.width = '0%';
+                                progressPercent.textContent = '0%';
+                                uploadStatus.textContent = '업로드 중...';
+                            }, 1000);
                         } catch (uploadError) {
                             console.error('Video upload error:', uploadError);
+                            uploadStatus.textContent = '업로드 실패';
+                            uploadStatus.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>업로드 실패';
+                            
+                            setTimeout(function() {
+                                progressContainer.classList.add('hidden');
+                                progressBar.style.width = '0%';
+                                progressPercent.textContent = '0%';
+                                uploadStatus.textContent = '업로드 중...';
+                            }, 2000);
                         }
                     }
 
                     document.getElementById('newPostContent').value = '';
                     removePostImage();
                     removePostVideo();
-                    loadPosts();
+                    
+                    // Re-enable button
+                    postBtn.disabled = false;
+                    postBtn.innerHTML = originalBtnText;
+                    postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    
+                    await loadPosts();
                 } catch (error) {
                     console.error('Error creating post:', error);
                     alert('게시물 작성에 실패했습니다.');
+                    
+                    // Re-enable button
+                    postBtn.disabled = false;
+                    postBtn.innerHTML = originalBtnText;
+                    postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 }
             }
 

@@ -18,7 +18,7 @@ app.use('/static/*', serveStatic({ root: './public' }))
 // Get all users
 app.get('/api/users', async (c) => {
   const { DB } = c.env
-  const { results } = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, denomination, location, created_at FROM users ORDER BY created_at DESC').all()
+  const { results } = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, denomination, location, role, created_at FROM users ORDER BY created_at DESC').all()
   return c.json({ users: results })
 })
 
@@ -26,7 +26,7 @@ app.get('/api/users', async (c) => {
 app.get('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, created_at FROM users WHERE id = ?').bind(id).first()
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.json({ error: 'User not found' }, 404)
@@ -40,11 +40,16 @@ app.post('/api/users', async (c) => {
   const { DB } = c.env
   const { email, name, bio, church, pastor, denomination, location, position, gender, faith_answers } = await c.req.json()
   
-  const result = await DB.prepare(
-    'INSERT INTO users (email, name, bio, church, pastor, denomination, location, position, gender, faith_answers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(email, name, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null).run()
+  // Check if this is the first user (will become admin)
+  const userCountResult = await DB.prepare('SELECT COUNT(*) as count FROM users').first()
+  const userCount = userCountResult?.count || 0
+  const role = userCount === 0 ? 'admin' : 'user'
   
-  return c.json({ id: result.meta.last_row_id, email, name }, 201)
+  const result = await DB.prepare(
+    'INSERT INTO users (email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(email, name, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role).run()
+  
+  return c.json({ id: result.meta.last_row_id, email, name, role }, 201)
 })
 
 // Update user
@@ -355,6 +360,124 @@ app.post('/api/prayers/:id/responses', async (c) => {
 })
 
 // =====================
+// Admin API Routes
+// =====================
+
+// Middleware: Check if user is admin
+const requireAdmin = async (c: any, next: any) => {
+  const adminId = c.req.header('X-Admin-ID')
+  
+  if (!adminId) {
+    return c.json({ error: 'Unauthorized - Admin ID required' }, 401)
+  }
+  
+  const { DB } = c.env
+  const user = await DB.prepare('SELECT role FROM users WHERE id = ?').bind(adminId).first()
+  
+  if (!user || user.role !== 'admin') {
+    return c.json({ error: 'Forbidden - Admin access required' }, 403)
+  }
+  
+  await next()
+}
+
+// Admin: Get all users with statistics
+app.get('/api/admin/users', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { results } = await DB.prepare(`
+    SELECT 
+      u.id, u.email, u.name, u.church, u.denomination, u.location, u.role, u.created_at,
+      (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as post_count,
+      (SELECT COUNT(*) FROM comments WHERE user_id = u.id) as comment_count,
+      (SELECT COUNT(*) FROM prayer_requests WHERE user_id = u.id) as prayer_count
+    FROM users u
+    ORDER BY u.created_at DESC
+  `).all()
+  
+  return c.json({ users: results })
+})
+
+// Admin: Update user role
+app.put('/api/admin/users/:id/role', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  const { role } = await c.req.json()
+  
+  if (!['user', 'admin', 'moderator'].includes(role)) {
+    return c.json({ error: 'Invalid role' }, 400)
+  }
+  
+  await DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind(role, id).run()
+  
+  return c.json({ success: true, id, role })
+})
+
+// Admin: Delete user
+app.delete('/api/admin/users/:id', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  
+  // Delete user's data first (foreign key constraints)
+  await DB.prepare('DELETE FROM prayer_responses WHERE user_id = ?').bind(id).run()
+  await DB.prepare('DELETE FROM prayer_requests WHERE user_id = ?').bind(id).run()
+  await DB.prepare('DELETE FROM comments WHERE user_id = ?').bind(id).run()
+  await DB.prepare('DELETE FROM likes WHERE user_id = ?').bind(id).run()
+  await DB.prepare('DELETE FROM posts WHERE user_id = ?').bind(id).run()
+  await DB.prepare('DELETE FROM friendships WHERE user_id = ? OR friend_id = ?').bind(id, id).run()
+  await DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run()
+  
+  return c.json({ success: true, deleted_user_id: id })
+})
+
+// Admin: Get all posts with details
+app.get('/api/admin/posts', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { results } = await DB.prepare(`
+    SELECT 
+      p.*,
+      u.name as user_name,
+      u.email as user_email,
+      (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
+      (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count
+    FROM posts p
+    LEFT JOIN users u ON p.user_id = u.id
+    ORDER BY p.created_at DESC
+  `).all()
+  
+  return c.json({ posts: results })
+})
+
+// Admin: Delete post
+app.delete('/api/admin/posts/:id', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  
+  // Delete related data first
+  await DB.prepare('DELETE FROM comments WHERE post_id = ?').bind(id).run()
+  await DB.prepare('DELETE FROM likes WHERE post_id = ?').bind(id).run()
+  await DB.prepare('DELETE FROM posts WHERE id = ?').bind(id).run()
+  
+  return c.json({ success: true, deleted_post_id: id })
+})
+
+// Admin: Get statistics
+app.get('/api/admin/stats', requireAdmin, async (c) => {
+  const { DB } = c.env
+  
+  const userCount = await DB.prepare('SELECT COUNT(*) as count FROM users').first()
+  const postCount = await DB.prepare('SELECT COUNT(*) as count FROM posts').first()
+  const commentCount = await DB.prepare('SELECT COUNT(*) as count FROM comments').first()
+  const prayerCount = await DB.prepare('SELECT COUNT(*) as count FROM prayer_requests').first()
+  
+  return c.json({
+    users: userCount?.count || 0,
+    posts: postCount?.count || 0,
+    comments: commentCount?.count || 0,
+    prayers: prayerCount?.count || 0
+  })
+})
+
+// =====================
 // Frontend Route
 // =====================
 
@@ -431,6 +554,10 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
+                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-3 py-2 rounded-lg hover:bg-red-50 transition" title="관리자 패널">
+                            <i class="fas fa-shield-alt mr-1"></i>
+                            <span class="hidden md:inline">관리자</span>
+                        </button>
                         <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="showEditProfileModal()">
                             <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
                                 <i class="fas fa-user"></i>
@@ -1386,8 +1513,15 @@ app.get('/', (c) => {
             function logout() {
                 currentUserId = null;
                 currentUser = null;
+                localStorage.removeItem('currentUserId');
+                localStorage.removeItem('currentUser');
                 updateAuthUI();
                 document.getElementById('postsFeed').innerHTML = '<div class="text-center text-gray-500 py-10">로그인하여 게시물을 확인하세요</div>';
+            }
+
+            // Go to admin panel
+            function goToAdmin() {
+                window.location.href = '/admin';
             }
 
             // Update UI based on auth state
@@ -1397,6 +1531,7 @@ app.get('/', (c) => {
                 const userName = document.getElementById('userName');
                 const userAvatarContainer = document.getElementById('userAvatarContainer');
                 const newPostAvatar = document.getElementById('newPostAvatar');
+                const adminPanelBtn = document.getElementById('adminPanelBtn');
 
                 if (currentUserId) {
                     authButtons.classList.add('hidden');
@@ -1404,6 +1539,17 @@ app.get('/', (c) => {
                     
                     // Update user name
                     userName.textContent = currentUser.name;
+                    
+                    // Show admin panel button if user is admin
+                    if (currentUser.role === 'admin') {
+                        adminPanelBtn.classList.remove('hidden');
+                    } else {
+                        adminPanelBtn.classList.add('hidden');
+                    }
+                    
+                    // Save to localStorage for admin panel access
+                    localStorage.setItem('currentUserId', currentUserId);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
                     
                     // Update user avatar in header
                     if (currentUser.avatar_url) {
@@ -1660,5 +1806,369 @@ app.get('/', (c) => {
     </html>
   `)
 })
+
+// =====================
+// Admin Frontend Route
+// =====================
+
+app.get('/admin', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>관리자 패널 - CROSSfriends</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-100">
+        <nav class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 py-3">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-shield-alt text-red-600 mr-2"></i>
+                        관리자 패널
+                    </h1>
+                    <div class="flex items-center space-x-4">
+                        <span id="adminName" class="text-gray-700"></span>
+                        <button onclick="goHome()" class="text-gray-600 hover:text-gray-800">
+                            <i class="fas fa-home mr-1"></i>홈으로
+                        </button>
+                        <button onclick="logout()" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-sign-out-alt mr-1"></i>로그아웃
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">총 회원 수</p>
+                            <p id="userCount" class="text-3xl font-bold text-blue-600">0</p>
+                        </div>
+                        <i class="fas fa-users text-blue-600 text-4xl opacity-20"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">총 게시물</p>
+                            <p id="postCount" class="text-3xl font-bold text-green-600">0</p>
+                        </div>
+                        <i class="fas fa-file-alt text-green-600 text-4xl opacity-20"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">총 댓글</p>
+                            <p id="commentCount" class="text-3xl font-bold text-purple-600">0</p>
+                        </div>
+                        <i class="fas fa-comments text-purple-600 text-4xl opacity-20"></i>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">기도 제목</p>
+                            <p id="prayerCount" class="text-3xl font-bold text-yellow-600">0</p>
+                        </div>
+                        <i class="fas fa-praying-hands text-yellow-600 text-4xl opacity-20"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white rounded-lg shadow mb-6">
+                <div class="border-b">
+                    <nav class="flex space-x-4 px-4">
+                        <button onclick="showTab('users')" id="tab-users" class="py-4 px-2 border-b-2 border-blue-600 text-blue-600 font-medium">
+                            <i class="fas fa-users mr-2"></i>회원 관리
+                        </button>
+                        <button onclick="showTab('posts')" id="tab-posts" class="py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-file-alt mr-2"></i>게시물 관리
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Users Tab -->
+                <div id="content-users" class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이름</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">교회</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">역할</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">게시물</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">가입일</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Users will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Posts Tab -->
+                <div id="content-posts" class="p-6 hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">내용</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">좋아요</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">댓글</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성일</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="postsTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Posts will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script>
+            let currentAdminId = null;
+            let currentAdmin = null;
+
+            // Check admin authentication
+            function checkAuth() {
+                const adminId = localStorage.getItem('currentUserId');
+                const admin = localStorage.getItem('currentUser');
+                
+                if (!adminId || !admin) {
+                    alert('로그인이 필요합니다.');
+                    window.location.href = '/';
+                    return false;
+                }
+                
+                currentAdminId = adminId;
+                currentAdmin = JSON.parse(admin);
+                
+                if (currentAdmin.role !== 'admin') {
+                    alert('관리자 권한이 필요합니다.');
+                    window.location.href = '/';
+                    return false;
+                }
+                
+                document.getElementById('adminName').textContent = currentAdmin.name + ' (관리자)';
+                return true;
+            }
+
+            // Navigate to home
+            function goHome() {
+                window.location.href = '/';
+            }
+
+            // Logout
+            function logout() {
+                localStorage.removeItem('currentUserId');
+                localStorage.removeItem('currentUser');
+                window.location.href = '/';
+            }
+
+            // Tab switching
+            function showTab(tab) {
+                // Update tab buttons
+                document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                    btn.classList.remove('border-blue-600', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                });
+                document.getElementById('tab-' + tab).classList.remove('border-transparent', 'text-gray-500');
+                document.getElementById('tab-' + tab).classList.add('border-blue-600', 'text-blue-600');
+                
+                // Update content
+                document.querySelectorAll('[id^="content-"]').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById('content-' + tab).classList.remove('hidden');
+                
+                // Load data
+                if (tab === 'users') loadUsers();
+                if (tab === 'posts') loadPosts();
+            }
+
+            // Load statistics
+            async function loadStats() {
+                try {
+                    const response = await axios.get('/api/admin/stats', {
+                        headers: { 'X-Admin-ID': currentAdminId }
+                    });
+                    
+                    document.getElementById('userCount').textContent = response.data.users;
+                    document.getElementById('postCount').textContent = response.data.posts;
+                    document.getElementById('commentCount').textContent = response.data.comments;
+                    document.getElementById('prayerCount').textContent = response.data.prayers;
+                } catch (error) {
+                    console.error('Failed to load stats:', error);
+                }
+            }
+
+            // Load users
+            async function loadUsers() {
+                try {
+                    const response = await axios.get('/api/admin/users', {
+                        headers: { 'X-Admin-ID': currentAdminId }
+                    });
+                    
+                    const tbody = document.getElementById('usersTableBody');
+                    tbody.innerHTML = '';
+                    
+                    response.data.users.forEach(user => {
+                        const roleColor = user.role === 'admin' ? 'text-red-600' : user.role === 'moderator' ? 'text-yellow-600' : 'text-gray-600';
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = \`
+                            <td class="px-4 py-3 text-sm">\${user.id}</td>
+                            <td class="px-4 py-3 text-sm font-medium">\${user.name}</td>
+                            <td class="px-4 py-3 text-sm">\${user.email}</td>
+                            <td class="px-4 py-3 text-sm">\${user.church || '-'}</td>
+                            <td class="px-4 py-3 text-sm \${roleColor} font-semibold">\${user.role || 'user'}</td>
+                            <td class="px-4 py-3 text-sm">\${user.post_count}</td>
+                            <td class="px-4 py-3 text-sm">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</td>
+                            <td class="px-4 py-3 text-sm">
+                                <button onclick="changeRole(\${user.id}, '\${user.role}')" class="text-blue-600 hover:text-blue-800 mr-2" title="역할 변경">
+                                    <i class="fas fa-user-cog"></i>
+                                </button>
+                                \${user.id !== parseInt(currentAdminId) ? \`
+                                    <button onclick="deleteUser(\${user.id}, '\${user.name}')" class="text-red-600 hover:text-red-800" title="삭제">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                \` : ''}
+                            </td>
+                        \`;
+                        tbody.appendChild(tr);
+                    });
+                } catch (error) {
+                    console.error('Failed to load users:', error);
+                    alert('회원 목록을 불러오는데 실패했습니다.');
+                }
+            }
+
+            // Load posts
+            async function loadPosts() {
+                try {
+                    const response = await axios.get('/api/admin/posts', {
+                        headers: { 'X-Admin-ID': currentAdminId }
+                    });
+                    
+                    const tbody = document.getElementById('postsTableBody');
+                    tbody.innerHTML = '';
+                    
+                    response.data.posts.forEach(post => {
+                        const tr = document.createElement('tr');
+                        const contentPreview = post.content.length > 50 ? post.content.substring(0, 50) + '...' : post.content;
+                        tr.innerHTML = \`
+                            <td class="px-4 py-3 text-sm">\${post.id}</td>
+                            <td class="px-4 py-3 text-sm">\${post.user_name}<br><span class="text-xs text-gray-500">\${post.user_email}</span></td>
+                            <td class="px-4 py-3 text-sm">\${contentPreview}</td>
+                            <td class="px-4 py-3 text-sm">\${post.likes_count || 0}</td>
+                            <td class="px-4 py-3 text-sm">\${post.comments_count || 0}</td>
+                            <td class="px-4 py-3 text-sm">\${new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
+                            <td class="px-4 py-3 text-sm">
+                                <button onclick="deletePost(\${post.id})" class="text-red-600 hover:text-red-800" title="삭제">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        \`;
+                        tbody.appendChild(tr);
+                    });
+                } catch (error) {
+                    console.error('Failed to load posts:', error);
+                    alert('게시물 목록을 불러오는데 실패했습니다.');
+                }
+            }
+
+            // Change user role
+            async function changeRole(userId, currentRole) {
+                const roles = ['user', 'moderator', 'admin'];
+                const newRole = prompt(\`역할을 선택하세요 (현재: \${currentRole})\n\n사용 가능한 역할:\n- user (일반 사용자)\n- moderator (운영자)\n- admin (관리자)\`, currentRole);
+                
+                if (!newRole || !roles.includes(newRole)) {
+                    return;
+                }
+                
+                try {
+                    await axios.put(\`/api/admin/users/\${userId}/role\`, 
+                        { role: newRole },
+                        { headers: { 'X-Admin-ID': currentAdminId } }
+                    );
+                    
+                    alert('역할이 변경되었습니다.');
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to change role:', error);
+                    alert('역할 변경에 실패했습니다.');
+                }
+            }
+
+            // Delete user
+            async function deleteUser(userId, userName) {
+                if (!confirm(\`정말로 "\${userName}" 회원을 삭제하시겠습니까?\\n\\n이 작업은 되돌릴 수 없으며, 해당 회원의 모든 데이터(게시물, 댓글 등)가 삭제됩니다.\`)) {
+                    return;
+                }
+                
+                try {
+                    await axios.delete(\`/api/admin/users/\${userId}\`, {
+                        headers: { 'X-Admin-ID': currentAdminId }
+                    });
+                    
+                    alert('회원이 삭제되었습니다.');
+                    loadStats();
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to delete user:', error);
+                    alert('회원 삭제에 실패했습니다.');
+                }
+            }
+
+            // Delete post
+            async function deletePost(postId) {
+                if (!confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+                    return;
+                }
+                
+                try {
+                    await axios.delete(\`/api/admin/posts/\${postId}\`, {
+                        headers: { 'X-Admin-ID': currentAdminId }
+                    });
+                    
+                    alert('게시물이 삭제되었습니다.');
+                    loadStats();
+                    loadPosts();
+                } catch (error) {
+                    console.error('Failed to delete post:', error);
+                    alert('게시물 삭제에 실패했습니다.');
+                }
+            }
+
+            // Initialize
+            if (checkAuth()) {
+                loadStats();
+                loadUsers();
+            }
+        </script>
+    </body>
+    </html>
+  `)
+})
+
 
 export default app

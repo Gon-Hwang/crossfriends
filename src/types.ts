@@ -14,6 +14,7 @@ export interface User {
   denomination?: string;
   location?: string;
   position?: string;
+  role?: 'user' | 'admin' | 'moderator';
   created_at: string;
   updated_at: string;
 }

@@ -167,9 +167,21 @@ app.get('/api/posts', async (c) => {
       u.role as user_role,
       (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count,
-      (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked
+      (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked,
+      sp.id as shared_post_id,
+      sp.content as shared_content,
+      sp.image_url as shared_image_url,
+      sp.video_url as shared_video_url,
+      sp.verse_reference as shared_verse_reference,
+      sp.created_at as shared_created_at,
+      su.name as shared_user_name,
+      su.avatar_url as shared_user_avatar,
+      su.church as shared_user_church,
+      su.role as shared_user_role
     FROM posts p
     LEFT JOIN users u ON p.user_id = u.id
+    LEFT JOIN posts sp ON p.shared_post_id = sp.id
+    LEFT JOIN users su ON sp.user_id = su.id
     ORDER BY p.created_at DESC
   `).bind(currentUserId || 0).all()
   
@@ -206,11 +218,11 @@ app.get('/api/posts/:id', async (c) => {
 // Create new post
 app.post('/api/posts', async (c) => {
   const { DB } = c.env
-  const { user_id, content, image_url, verse_reference } = await c.req.json()
+  const { user_id, content, image_url, verse_reference, shared_post_id } = await c.req.json()
   
   const result = await DB.prepare(
-    'INSERT INTO posts (user_id, content, image_url, verse_reference) VALUES (?, ?, ?, ?)'
-  ).bind(user_id, content, image_url || null, verse_reference || null).run()
+    'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id) VALUES (?, ?, ?, ?, ?)'
+  ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null).run()
   
   return c.json({ id: result.meta.last_row_id, user_id, content }, 201)
 })
@@ -886,10 +898,6 @@ app.get('/', (c) => {
                                     <i class="fas fa-user-circle text-blue-600 mr-3"></i>
                                     <span>내 프로필 보기</span>
                                 </button>
-                                <button onclick="showEditProfileModal(); toggleProfileMenu();" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center">
-                                    <i class="fas fa-user-edit text-green-600 mr-3"></i>
-                                    <span>프로필 수정</span>
-                                </button>
                                 <hr class="my-1">
                                 <button onclick="logout()" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center text-red-600">
                                     <i class="fas fa-sign-out-alt mr-3"></i>
@@ -906,8 +914,8 @@ app.get('/', (c) => {
         <div class="max-w-7xl mx-auto px-4 py-6">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Left Sidebar -->
-                <div class="lg:col-span-1 space-y-4">
-                    <div class="bg-white rounded-lg shadow p-6">
+                <div class="lg:col-span-1">
+                    <div class="sticky top-20 bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
                         <h3 class="text-lg font-bold mb-4 text-gray-800">
                             <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
                         </h3>
@@ -923,7 +931,7 @@ app.get('/', (c) => {
                 <!-- Main Feed -->
                 <div class="lg:col-span-2 space-y-4">
                     <!-- New Post Card -->
-                    <div class="bg-white rounded-lg shadow p-6">
+                    <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
                         <div class="flex items-start space-x-4">
                             <div class="admin-badge-container">
                                 <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
@@ -961,6 +969,11 @@ app.get('/', (c) => {
                                             <i class="fas fa-times text-xs"></i>
                                         </button>
                                     </div>
+                                </div>
+                                
+                                <!-- Shared Post Card Preview (액자 안의 액자 - 첨부파일처럼) -->
+                                <div id="sharedPostPreview" class="hidden mt-3">
+                                    <!-- Shared post card will be inserted here -->
                                 </div>
                                 
                                 <!-- Upload Progress -->
@@ -1052,7 +1065,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별 <span class="text-red-500">*</span></label>
                         <select 
                             id="signupGender"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -1075,7 +1088,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">프로필 사진 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">프로필 사진 <span class="text-red-500">*</span></label>
                         <div class="flex items-center space-x-4">
                             <div id="avatarPreview" class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                                 <i class="fas fa-user text-gray-400 text-2xl"></i>
@@ -2206,9 +2219,19 @@ app.get('/', (c) => {
                     q10: document.getElementById('faith_q10').value
                 };
 
-                // 필수 항목만 확인 (이름, 이메일만 필수)
+                // 필수 항목 확인 (이름, 성별, 이메일, 프로필 사진)
                 if (!email || !name) {
                     alert('이름과 이메일은 필수 항목입니다.');
+                    return;
+                }
+                
+                if (!gender) {
+                    alert('성별을 선택해주세요.');
+                    return;
+                }
+                
+                if (!avatarFile) {
+                    alert('프로필 사진을 업로드해주세요.');
                     return;
                 }
 
@@ -2440,9 +2463,13 @@ app.get('/', (c) => {
                 const content = document.getElementById('newPostContent').value;
                 const imageFile = document.getElementById('postImageFile').files[0];
                 const videoFile = document.getElementById('postVideoFile').files[0];
+                
+                // Get shared post ID if exists
+                const sharedPostPreview = document.getElementById('sharedPostPreview');
+                const sharedPostId = sharedPostPreview.dataset.sharedPostId || null;
 
-                if (!content && !imageFile && !videoFile) {
-                    alert('내용, 사진 또는 동영상을 입력해주세요.');
+                if (!content && !imageFile && !videoFile && !sharedPostId) {
+                    alert('내용, 사진, 동영상 또는 공유할 포스팅을 입력해주세요.');
                     return;
                 }
 
@@ -2454,11 +2481,12 @@ app.get('/', (c) => {
                 postBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
                 try {
-                    // 1. Create post
+                    // 1. Create post with shared_post_id
                     const response = await axios.post('/api/posts', {
                         user_id: currentUserId,
                         content: content || '',
-                        verse_reference: null
+                        verse_reference: null,
+                        shared_post_id: sharedPostId
                     });
 
                     const postId = response.data.id;
@@ -2531,6 +2559,7 @@ app.get('/', (c) => {
                     document.getElementById('newPostContent').value = '';
                     removePostImage();
                     removePostVideo();
+                    removeSharedPost(); // Clear shared post preview
                     
                     // Re-enable button
                     postBtn.disabled = false;
@@ -2651,6 +2680,136 @@ app.get('/', (c) => {
                     console.error('Error deleting post:', error);
                     alert('게시물 삭제에 실패했습니다.');
                 }
+            }
+
+            // Share post - creates new post with quoted original post
+            async function sharePost(postId) {
+                if (!currentUserId) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                }
+
+                try {
+                    // Get the original post details
+                    const response = await axios.get(\`/api/posts/\${postId}?user_id=\${currentUserId}\`);
+                    const post = response.data.post;
+                    
+                    // Scroll to new post area
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    // Focus textarea but don't clear it (user can write their opinion)
+                    const textarea = document.getElementById('newPostContent');
+                    textarea.focus();
+                    
+                    // Clear any existing image/video previews (shared post will replace them)
+                    const postImagePreviewContainer = document.getElementById('postImagePreviewContainer');
+                    const postVideoPreviewContainer = document.getElementById('postVideoPreviewContainer');
+                    postImagePreviewContainer.classList.add('hidden');
+                    postVideoPreviewContainer.classList.add('hidden');
+                    
+                    // Create shared post card preview (액자 안의 액자 - 첨부파일처럼)
+                    const sharedPostPreview = document.getElementById('sharedPostPreview');
+                    
+                    const avatarHtml = post.user_avatar 
+                        ? \`<img src="\${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />\`
+                        : '<i class="fas fa-user"></i>';
+                    
+                    // Role badge for shared post
+                    let roleBadgeHtml = '';
+                    if (post.user_role === 'admin') {
+                        roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+                    } else if (post.user_role === 'moderator') {
+                        roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+                    }
+                    
+                    const verseHtml = post.verse_reference ? \`
+                        <div class="mt-2 bg-blue-50 border-l-4 border-blue-600 p-2 rounded text-xs">
+                            <p class="text-blue-600 font-semibold">
+                                <i class="fas fa-bible mr-1"></i>\${post.verse_reference}
+                            </p>
+                        </div>
+                    \` : '';
+                    
+                    const imageHtml = post.image_url ? \`
+                        <div class="mt-2">
+                            <img src="\${post.image_url}" alt="Post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
+                        </div>
+                    \` : '';
+                    
+                    const videoHtml = post.video_url ? \`
+                        <div class="mt-2">
+                            <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
+                                <source src="\${post.video_url}" type="video/mp4">
+                                동영상을 재생할 수 없습니다.
+                            </video>
+                        </div>
+                    \` : '';
+                    
+                    // Create the shared post card (inner frame) - looks like an attachment
+                    const sharedCardHtml = \`
+                        <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-gray-400 p-4 relative shadow-sm">
+                            <div class="absolute top-2 right-2 z-10">
+                                <button 
+                                    onclick="removeSharedPost()"
+                                    class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition shadow-md">
+                                    <i class="fas fa-times text-xs"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-300">
+                                <i class="fas fa-quote-left text-blue-600 text-sm"></i>
+                                <span class="text-xs font-bold text-gray-700">공유된 포스팅</span>
+                            </div>
+                            <div class="flex items-start space-x-3">
+                                <div class="admin-badge-container">
+                                    <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                                        \${avatarHtml}
+                                    </div>
+                                    \${roleBadgeHtml}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2 flex-wrap">
+                                        <h4 class="font-bold text-sm text-gray-800">\${post.user_name}</h4>
+                                        <span class="text-xs text-gray-500">•</span>
+                                        <p class="text-xs text-gray-500">\${formatDate(post.created_at)}</p>
+                                    </div>
+                                    <p class="text-xs text-gray-600 mb-2">\${post.user_church || ''}</p>
+                                    <p class="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">\${post.content}</p>
+                                    \${imageHtml}
+                                    \${videoHtml}
+                                    \${verseHtml}
+                                </div>
+                            </div>
+                        </div>
+                    \`;
+                    
+                    sharedPostPreview.innerHTML = sharedCardHtml;
+                    sharedPostPreview.classList.remove('hidden');
+                    
+                    // Store the shared post ID for later use
+                    sharedPostPreview.dataset.sharedPostId = postId;
+                    
+                    // Show success message
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+                    successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>포스팅이 공유되었습니다. 의견을 작성하고 게시하세요!';
+                    document.body.appendChild(successMsg);
+                    
+                    setTimeout(() => {
+                        successMsg.remove();
+                    }, 3000);
+                    
+                } catch (error) {
+                    console.error('Error sharing post:', error);
+                    alert('포스팅 공유에 실패했습니다.');
+                }
+            }
+            
+            // Remove shared post preview
+            function removeSharedPost() {
+                const sharedPostPreview = document.getElementById('sharedPostPreview');
+                sharedPostPreview.innerHTML = '';
+                sharedPostPreview.classList.add('hidden');
+                delete sharedPostPreview.dataset.sharedPostId;
             }
 
             // Load comments
@@ -2804,14 +2963,81 @@ app.get('/', (c) => {
                             </div>
                         \` : '';
                         
+                        // Shared post card (액자 안의 액자)
+                        let sharedPostHtml = '';
+                        if (post.shared_post_id) {
+                            const sharedAvatarHtml = post.shared_user_avatar 
+                                ? \`<img src="\${post.shared_user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />\`
+                                : '<i class="fas fa-user"></i>';
+                            
+                            let sharedRoleBadgeHtml = '';
+                            if (post.shared_user_role === 'admin') {
+                                sharedRoleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+                            } else if (post.shared_user_role === 'moderator') {
+                                sharedRoleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+                            }
+                            
+                            const sharedVerseHtml = post.shared_verse_reference ? \`
+                                <div class="mt-2 bg-blue-50 border-l-4 border-blue-600 p-2 rounded text-xs">
+                                    <p class="text-blue-600 font-semibold">
+                                        <i class="fas fa-bible mr-1"></i>\${post.shared_verse_reference}
+                                    </p>
+                                </div>
+                            \` : '';
+                            
+                            const sharedImageHtml = post.shared_image_url ? \`
+                                <div class="mt-2 max-w-full">
+                                    <img src="\${post.shared_image_url}" alt="Shared post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
+                                </div>
+                            \` : '';
+                            
+                            const sharedVideoHtml = post.shared_video_url ? \`
+                                <div class="mt-2 max-w-full">
+                                    <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
+                                        <source src="\${post.shared_video_url}" type="video/mp4">
+                                        동영상을 재생할 수 없습니다.
+                                    </video>
+                                </div>
+                            \` : '';
+                            
+                            sharedPostHtml = \`
+                                <div class="mt-3 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-gray-400 p-4 shadow-sm max-w-full overflow-hidden">
+                                    <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-300">
+                                        <i class="fas fa-quote-left text-blue-600 text-sm"></i>
+                                        <span class="text-xs font-bold text-gray-700">공유된 포스팅</span>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="admin-badge-container flex-shrink-0">
+                                            <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                                                \${sharedAvatarHtml}
+                                            </div>
+                                            \${sharedRoleBadgeHtml}
+                                        </div>
+                                        <div class="flex-1 min-w-0 overflow-hidden">
+                                            <div class="flex items-center space-x-2 flex-wrap">
+                                                <h4 class="font-bold text-sm text-gray-800 truncate">\${post.shared_user_name}</h4>
+                                                <span class="text-xs text-gray-500 flex-shrink-0">•</span>
+                                                <p class="text-xs text-gray-500 flex-shrink-0">\${formatDate(post.shared_created_at)}</p>
+                                            </div>
+                                            <p class="text-xs text-gray-600 mb-2 truncate">\${post.shared_user_church || ''}</p>
+                                            <p class="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">\${post.shared_content}</p>
+                                            \${sharedImageHtml}
+                                            \${sharedVideoHtml}
+                                            \${sharedVerseHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                            \`;
+                        }
+                        
                         postsHtml += \`
-                            <div class="bg-white rounded-lg shadow p-6">
+                            <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1 overflow-hidden">
                                 <div class="flex items-start space-x-4">
                                     <div class="admin-badge-container">
                                         <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">\${avatarHtml}</div>
                                         \${roleBadgeHtml}
                                     </div>
-                                    <div class="flex-1">
+                                    <div class="flex-1 min-w-0">
                                         <div class="flex justify-between items-start">
                                             <div>
                                                 <h4 class="font-bold text-gray-800">\${post.user_name}</h4>
@@ -2833,6 +3059,7 @@ app.get('/', (c) => {
                                         \${imageHtml}
                                         \${videoHtml}
                                         \${verseHtml}
+                                        \${sharedPostHtml}
                                         <div class="mt-4 flex items-center space-x-6 text-gray-600">
                                             <button onclick="toggleLike(\${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
                                                 <i class="fas fa-heart \${isLiked ? 'text-red-600' : ''} text-lg"></i>
@@ -2842,7 +3069,7 @@ app.get('/', (c) => {
                                                 <i class="fas fa-comment text-lg"></i>
                                                 <span class="text-sm">\${post.comments_count || 0}</span>
                                             </button>
-                                            <button class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                            <button onclick="sharePost(\${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
                                                 <i class="fas fa-share text-lg"></i>
                                                 <span class="text-sm">공유</span>
                                             </button>

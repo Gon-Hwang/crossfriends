@@ -2500,6 +2500,169 @@ app.get('/admin', (c) => {
                 }
             }
 
+            // Show user detail modal
+            async function showUserDetail(userId) {
+                try {
+                    const response = await axios.get(\`/api/users/\${userId}\`);
+                    const user = response.data.user;
+                    
+                    // Parse faith answers if exists
+                    let faithAnswers = null;
+                    if (user.faith_answers) {
+                        try {
+                            faithAnswers = JSON.parse(user.faith_answers);
+                        } catch (e) {
+                            console.error('Failed to parse faith_answers:', e);
+                        }
+                    }
+                    
+                    const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
+                    const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
+                    
+                    const content = \`
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Profile Section -->
+                            <div class="md:col-span-1">
+                                <div class="bg-gray-50 rounded-lg p-6 text-center">
+                                    <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
+                                        \${user.avatar_url ? \`<img src="\${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />\` : '<i class="fas fa-user"></i>'}
+                                    </div>
+                                    <h3 class="text-xl font-bold text-gray-800 mb-2">\${user.name}</h3>
+                                    <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold \${roleColor}">
+                                        \${roleName}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Details Section -->
+                            <div class="md:col-span-2 space-y-4">
+                                <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                                    <h4 class="font-semibold text-blue-800 mb-3">
+                                        <i class="fas fa-info-circle mr-2"></i>기본 정보
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <span class="text-gray-600">이메일:</span>
+                                            <p class="font-medium text-gray-800">\${user.email}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">성별:</span>
+                                            <p class="font-medium text-gray-800">\${user.gender || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">가입일:</span>
+                                            <p class="font-medium text-gray-800">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">회원 ID:</span>
+                                            <p class="font-medium text-gray-800">#\${user.id}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
+                                    <h4 class="font-semibold text-green-800 mb-3">
+                                        <i class="fas fa-church mr-2"></i>교회 정보
+                                    </h4>
+                                    <div class="grid grid-cols-2 gap-3 text-sm">
+                                        <div>
+                                            <span class="text-gray-600">교회:</span>
+                                            <p class="font-medium text-gray-800">\${user.church || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">담임목사:</span>
+                                            <p class="font-medium text-gray-800">\${user.pastor || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">교단:</span>
+                                            <p class="font-medium text-gray-800">\${user.denomination || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">직분:</span>
+                                            <p class="font-medium text-gray-800">\${user.position || '-'}</p>
+                                        </div>
+                                        <div class="col-span-2">
+                                            <span class="text-gray-600">위치:</span>
+                                            <p class="font-medium text-gray-800">\${user.location || '-'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                \${user.bio ? \`
+                                <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                                    <h4 class="font-semibold text-purple-800 mb-2">
+                                        <i class="fas fa-comment-dots mr-2"></i>소개
+                                    </h4>
+                                    <p class="text-sm text-gray-700">\${user.bio}</p>
+                                </div>
+                                \` : ''}
+                                
+                                \${faithAnswers ? \`
+                                <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+                                    <h4 class="font-semibold text-yellow-800 mb-3">
+                                        <i class="fas fa-cross mr-2"></i>신앙 고백
+                                    </h4>
+                                    <div class="space-y-2 text-sm">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">1. 예수님이 창조주 하나님임을 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q1 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">2. 십자가 대속을 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q2 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">3. 예수님의 부활을 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q3 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">4. 예수님을 주님으로 영접했습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q4 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">5. 성령님이 계십니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q5 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">6. 천국 갈 것을 확신합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q6 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">7. 성경을 진리로 믿습니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q7 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">8. 정기적으로 예배에 참석합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q8 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">9. 정기적으로 기도합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q9 || '-'}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-gray-700">10. 가끔 전도합니까?</span>
+                                            <span class="font-semibold text-gray-800">\${faithAnswers.q10 || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                \` : ''}
+                            </div>
+                        </div>
+                    \`;
+                    
+                    document.getElementById('userDetailContent').innerHTML = content;
+                    document.getElementById('userDetailModal').classList.remove('hidden');
+                } catch (error) {
+                    console.error('Failed to load user detail:', error);
+                    alert('회원 정보를 불러오는데 실패했습니다.');
+                }
+            }
+            
+            // Hide user detail modal
+            function hideUserDetailModal() {
+                document.getElementById('userDetailModal').classList.add('hidden');
+            }
+
             // Load users
             async function loadUsers() {
                 try {
@@ -2515,7 +2678,11 @@ app.get('/admin', (c) => {
                         const tr = document.createElement('tr');
                         tr.innerHTML = \`
                             <td class="px-4 py-3 text-sm">\${user.id}</td>
-                            <td class="px-4 py-3 text-sm font-medium">\${user.name}</td>
+                            <td class="px-4 py-3 text-sm font-medium">
+                                <button onclick="showUserDetail(\${user.id})" class="text-blue-600 hover:text-blue-800 hover:underline">
+                                    \${user.name}
+                                </button>
+                            </td>
                             <td class="px-4 py-3 text-sm">\${user.email}</td>
                             <td class="px-4 py-3 text-sm">\${user.church || '-'}</td>
                             <td class="px-4 py-3 text-sm \${roleColor} font-semibold">\${user.role || 'user'}</td>

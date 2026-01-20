@@ -22,6 +22,43 @@
 - **배포**: Cloudflare Pages + Workers
 - **프로세스 관리**: PM2
 
+## 🎨 색상 시스템 (7 Colors)
+
+CROSSfriends는 일관된 디자인을 위해 **7가지 색상 체계**를 사용합니다.
+
+### 색상 팔레트
+
+| 색상 | 용도 | HEX 코드 | CSS 변수 |
+|------|------|---------|---------|
+| **Primary** (파란색) | 주요 버튼, 링크, 브랜드 | `#3B82F6` | `--color-primary` |
+| **Accent** (빨간색) | 관리자 기능, 삭제, 경고 | `#DC2626` | `--color-accent` |
+| **Success** (초록색) | 성공 메시지, 완료 상태 | `#16A34A` | `--color-success` |
+| **Warning** (노란색) | 경고 메시지, 주의사항 | `#CA8A04` | `--color-warning` |
+| **Info** (청록색) | 정보 메시지, 팁 | `#0891B2` | `--color-info` |
+| **Neutral** (회색) | 텍스트, 배경, 테두리 | `#6B7280` | `--color-neutral` |
+
+### 색상 사용 예시
+
+- **Primary**: 로그인 버튼, 게시하기 버튼, 링크
+- **Accent**: 관리자 패널, 삭제 버튼, 십자가 아이콘
+- **Success**: 회원가입 완료 메시지
+- **Warning**: 관리자 왕관 배지 (황금)
+- **Info**: 정보 알림, 도움말
+- **Neutral**: 일반 텍스트, 카드 배경
+
+### CSS 변수 사용
+
+```css
+/* 색상 시스템 사용 예 */
+.primary-button {
+    background-color: var(--color-primary);
+}
+
+.accent-text {
+    color: var(--color-accent);
+}
+```
+
 ## 📊 데이터 모델
 
 ### 사용자 (Users)

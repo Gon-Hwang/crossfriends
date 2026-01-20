@@ -495,6 +495,23 @@ app.get('/', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
         <style>
+            /* CROSSfriends Color System - 7 Colors */
+            :root {
+                --color-primary: #3B82F6;
+                --color-primary-dark: #2563EB;
+                --color-primary-light: #60A5FA;
+                --color-accent: #DC2626;
+                --color-accent-dark: #B91C1C;
+                --color-accent-light: #EF4444;
+                --color-success: #16A34A;
+                --color-warning: #CA8A04;
+                --color-warning-light: #FACC15;
+                --color-info: #0891B2;
+                --color-neutral: #6B7280;
+                --color-neutral-light: #9CA3AF;
+                --color-neutral-dark: #374151;
+            }
+            
             .cross-icon {
                 position: relative;
                 display: inline-block;
@@ -505,7 +522,7 @@ app.get('/', (c) => {
             .cross-icon::after {
                 content: '';
                 position: absolute;
-                background-color: #dc2626;
+                background-color: var(--color-accent);
             }
             .cross-icon::before {
                 width: 2.5px;
@@ -523,7 +540,7 @@ app.get('/', (c) => {
                 position: absolute;
                 width: 7px;
                 height: 7px;
-                background-color: #dc2626;
+                background-color: var(--color-accent);
                 border-radius: 50%;
             }
             .cross-dot.top { top: -2.5px; left: 50%; transform: translateX(-50%); }
@@ -560,7 +577,7 @@ app.get('/', (c) => {
                 right: -2px;
                 width: 22px;
                 height: 22px;
-                background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-warning) 100%);
                 border: 2.5px solid white;
                 border-radius: 50%;
                 display: flex;
@@ -585,7 +602,7 @@ app.get('/', (c) => {
                 right: -2px;
                 width: 20px;
                 height: 20px;
-                background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
                 border: 2px solid white;
                 border-radius: 50%;
                 display: flex;
@@ -2065,6 +2082,15 @@ app.get('/admin', (c) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
+            /* CROSSfriends Color System */
+            :root {
+                --color-primary: #3B82F6;
+                --color-primary-dark: #2563EB;
+                --color-accent: #DC2626;
+                --color-warning: #CA8A04;
+                --color-warning-light: #FACC15;
+            }
+            
             .admin-badge-container {
                 position: relative;
                 display: inline-block;
@@ -2075,7 +2101,7 @@ app.get('/admin', (c) => {
                 right: -2px;
                 width: 22px;
                 height: 22px;
-                background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-warning) 100%);
                 border: 2.5px solid white;
                 border-radius: 50%;
                 display: flex;

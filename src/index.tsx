@@ -26,7 +26,7 @@ app.get('/api/users', async (c) => {
 app.get('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at FROM users WHERE id = ?').bind(id).first()
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.json({ error: 'User not found' }, 404)

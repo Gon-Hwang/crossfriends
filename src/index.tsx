@@ -264,6 +264,72 @@ app.post('/api/posts/:id/image', async (c) => {
   }
 })
 
+// Upload post video
+app.post('/api/posts/:id/video', async (c) => {
+  const { DB, R2 } = c.env
+  const postId = c.req.param('id')
+  
+  try {
+    const formData = await c.req.formData()
+    const file = formData.get('video')
+    
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: 'No file uploaded' }, 400)
+    }
+    
+    // Check file size (100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      return c.json({ error: 'File too large (max 100MB)' }, 400)
+    }
+    
+    // Check file type
+    if (!file.type.startsWith('video/')) {
+      return c.json({ error: 'Invalid file type' }, 400)
+    }
+    
+    // Generate unique filename
+    const ext = file.name.split('.').pop()
+    const filename = `${postId}-${Date.now()}.${ext}`
+    const fullPath = `videos/${filename}`
+    
+    // Upload to R2
+    const arrayBuffer = await file.arrayBuffer()
+    await R2.put(fullPath, arrayBuffer, {
+      httpMetadata: {
+        contentType: file.type
+      }
+    })
+    
+    // Update post video_url in database
+    const videoUrl = `/api/videos/posts/${filename}`
+    await DB.prepare(
+      'UPDATE posts SET video_url = ? WHERE id = ?'
+    ).bind(videoUrl, postId).run()
+    
+    return c.json({ success: true, video_url: videoUrl })
+  } catch (error) {
+    console.error('Video upload error:', error)
+    return c.json({ error: 'Upload failed' }, 500)
+  }
+})
+
+// Get post video from R2
+app.get('/api/videos/posts/:filename', async (c) => {
+  const { R2 } = c.env
+  const filename = c.req.param('filename')
+  
+  const object = await R2.get(`videos/${filename}`)
+  if (!object) {
+    return c.notFound()
+  }
+  
+  const headers = new Headers()
+  object.writeHttpMetadata(headers)
+  headers.set('Cache-Control', 'public, max-age=31536000')
+  
+  return new Response(object.body, { headers })
+})
+
 // Delete post
 app.delete('/api/posts/:id', async (c) => {
   const { DB } = c.env
@@ -885,8 +951,20 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                                 
+                                <!-- Video Preview -->
+                                <div id="postVideoPreviewContainer" class="hidden mt-3">
+                                    <div class="relative inline-block">
+                                        <video id="postVideoPreview" controls class="max-h-48 rounded-lg border"></video>
+                                        <button 
+                                            onclick="removePostVideo()"
+                                            class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
+                                            <i class="fas fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
                                 <div class="mt-3 flex justify-between items-center">
-                                    <div>
+                                    <div class="flex space-x-2">
                                         <input 
                                             id="postImageFile"
                                             type="file"
@@ -898,6 +976,19 @@ app.get('/', (c) => {
                                             for="postImageFile"
                                             class="cursor-pointer inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
                                             <i class="fas fa-image mr-2"></i>사진 첨부
+                                        </label>
+                                        
+                                        <input 
+                                            id="postVideoFile"
+                                            type="file"
+                                            accept="video/*"
+                                            onchange="previewPostVideo(event)"
+                                            class="hidden"
+                                        />
+                                        <label 
+                                            for="postVideoFile"
+                                            class="cursor-pointer inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition">
+                                            <i class="fas fa-video mr-2"></i>동영상 첨부
                                         </label>
                                     </div>
                                     <button 
@@ -2329,9 +2420,10 @@ app.get('/', (c) => {
 
                 const content = document.getElementById('newPostContent').value;
                 const imageFile = document.getElementById('postImageFile').files[0];
+                const videoFile = document.getElementById('postVideoFile').files[0];
 
-                if (!content && !imageFile) {
-                    alert('내용 또는 사진을 입력해주세요.');
+                if (!content && !imageFile && !videoFile) {
+                    alert('내용, 사진 또는 동영상을 입력해주세요.');
                     return;
                 }
 
@@ -2356,12 +2448,26 @@ app.get('/', (c) => {
                             });
                         } catch (uploadError) {
                             console.error('Image upload error:', uploadError);
-                            // Continue even if image upload fails
+                        }
+                    }
+
+                    // 3. Upload video if selected
+                    if (videoFile) {
+                        const formData = new FormData();
+                        formData.append('video', videoFile);
+                        
+                        try {
+                            await axios.post('/api/posts/' + postId + '/video', formData, {
+                                headers: { 'Content-Type': 'multipart/form-data' }
+                            });
+                        } catch (uploadError) {
+                            console.error('Video upload error:', uploadError);
                         }
                     }
 
                     document.getElementById('newPostContent').value = '';
                     removePostImage();
+                    removePostVideo();
                     loadPosts();
                 } catch (error) {
                     console.error('Error creating post:', error);
@@ -2401,6 +2507,43 @@ app.get('/', (c) => {
                 document.getElementById('postImageFile').value = '';
                 document.getElementById('postImagePreview').src = '';
                 document.getElementById('postImagePreviewContainer').classList.add('hidden');
+            }
+
+            // Preview post video
+            function previewPostVideo(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    if (file.size > 100 * 1024 * 1024) {
+                        alert('파일 크기는 100MB를 초과할 수 없습니다.');
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    if (!file.type.startsWith('video/')) {
+                        alert('동영상 파일만 업로드할 수 있습니다.');
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    // Hide image preview if shown
+                    document.getElementById('postImagePreviewContainer').classList.add('hidden');
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const preview = document.getElementById('postVideoPreview');
+                        const container = document.getElementById('postVideoPreviewContainer');
+                        preview.src = e.target.result;
+                        container.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // Remove post video
+            function removePostVideo() {
+                document.getElementById('postVideoFile').value = '';
+                document.getElementById('postVideoPreview').src = '';
+                document.getElementById('postVideoPreviewContainer').classList.add('hidden');
             }
 
             // Toggle like
@@ -2578,6 +2721,15 @@ app.get('/', (c) => {
                             </div>
                         \` : '';
                         
+                        const videoHtml = post.video_url ? \`
+                            <div class="mt-3">
+                                <video controls class="w-full rounded-lg max-h-96" controlsList="nodownload">
+                                    <source src="\${post.video_url}" type="video/mp4">
+                                    동영상을 재생할 수 없습니다.
+                                </video>
+                            </div>
+                        \` : '';
+                        
                         postsHtml += \`
                             <div class="bg-white rounded-lg shadow p-6">
                                 <div class="flex items-start space-x-4">
@@ -2605,6 +2757,7 @@ app.get('/', (c) => {
                                         </div>
                                         <p class="mt-3 text-gray-800 whitespace-pre-wrap">\${post.content}</p>
                                         \${imageHtml}
+                                        \${videoHtml}
                                         \${verseHtml}
                                         <div class="mt-4 flex items-center space-x-6 text-gray-600">
                                             <button onclick="toggleLike(\${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">

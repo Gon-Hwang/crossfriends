@@ -1787,14 +1787,23 @@ app.get('/', (c) => {
                 const typingArea = document.getElementById('typingArea');
                 const toggleIcon = document.getElementById('typingToggleIcon');
                 
+                console.log('Toggle clicked', typingArea, toggleIcon);
+                
+                if (!typingArea || !toggleIcon) {
+                    console.error('Elements not found:', { typingArea, toggleIcon });
+                    return;
+                }
+                
                 if (typingArea.classList.contains('hidden')) {
                     typingArea.classList.remove('hidden');
                     toggleIcon.classList.remove('fa-chevron-down');
                     toggleIcon.classList.add('fa-chevron-up');
+                    console.log('Opened typing area');
                 } else {
                     typingArea.classList.add('hidden');
                     toggleIcon.classList.remove('fa-chevron-up');
                     toggleIcon.classList.add('fa-chevron-down');
+                    console.log('Closed typing area');
                 }
             }
 
@@ -1968,8 +1977,6 @@ app.get('/', (c) => {
                 setTimeout(() => {
                     typingInput.value = '';
                     typingInput.focus();
-                }, 2000);
-            }
                 }, 2000);
             }
 

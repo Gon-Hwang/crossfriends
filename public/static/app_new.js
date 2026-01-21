@@ -2065,7 +2065,13 @@ async function loadPosts() {
             }
             
             postsHtml += `
-                <div class="${post.content && post.content.startsWith('[기도부탁]') ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300' : 'bg-white border-gray-300'} rounded-xl shadow-md border-2 p-6 transition-all duration-300 hover:shadow-xl ${post.content && post.content.startsWith('[기도부탁]') ? 'hover:border-purple-500' : 'hover:border-gray-500'} hover:-translate-y-1 overflow-hidden">
+                <div class="${post.content && post.content.startsWith('[기도부탁]') ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300' : 'bg-white border-gray-300'} rounded-xl shadow-md border-2 p-6 transition-all duration-300 hover:shadow-xl ${post.content && post.content.startsWith('[기도부탁]') ? 'hover:border-purple-500' : 'hover:border-gray-500'} hover:-translate-y-1 overflow-hidden relative">
+                    ${post.content && post.content.startsWith('[기도부탁]') ? `
+                        <div class="absolute bottom-4 right-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center space-x-1.5 text-xs font-semibold">
+                            <i class="fas fa-praying-hands"></i>
+                            <span>기도부탁</span>
+                        </div>
+                    ` : ''}
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
                             <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">${avatarHtml}</div>

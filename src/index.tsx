@@ -1382,33 +1382,43 @@ app.get('/', (c) => {
                             </div>
                             
                             <!-- Typing Toggle Button -->
-                            <button 
-                                id="typingToggleBtn"
-                                onclick="toggleTypingArea()"
-                                class="w-full mt-2 py-2 px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-blue-800 font-semibold">
-                                <i class="fas fa-keyboard text-blue-600"></i>
-                                <span>말씀 타이핑</span>
-                                <i id="typingToggleIcon" class="fas fa-chevron-down text-sm"></i>
-                            </button>
-                            
-                            <!-- Typing Input Area (Initially Hidden) -->
-                            <div id="typingArea" class="mt-4 pt-4 border-t-2 border-gray-200 hidden">
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="text-sm font-semibold text-gray-700">
-                                        <i class="fas fa-keyboard text-blue-600 mr-1"></i>말씀 타이핑
-                                    </label>
-                                    <button onclick="resetTyping()" class="text-xs text-gray-500 hover:text-gray-700 underline">
-                                        <i class="fas fa-redo mr-1"></i>초기화
-                                    </button>
+                            <div class="relative">
+                                <button 
+                                    id="typingToggleBtn"
+                                    onclick="toggleTypingArea()"
+                                    class="w-full mt-2 py-2 px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-blue-800 font-semibold">
+                                    <i class="fas fa-keyboard text-blue-600"></i>
+                                    <span>말씀 타이핑</span>
+                                    <i id="typingToggleIcon" class="fas fa-chevron-down text-sm"></i>
+                                </button>
+                                
+                                <!-- Typing Input Area (Initially Hidden) -->
+                                <div id="typingArea" class="mt-4 pt-4 border-t-2 border-gray-200 hidden">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <label class="text-sm font-semibold text-gray-700">
+                                            <i class="fas fa-keyboard text-blue-600 mr-1"></i>말씀 타이핑
+                                        </label>
+                                        <button onclick="resetTyping()" class="text-xs text-gray-500 hover:text-gray-700 underline">
+                                            <i class="fas fa-redo mr-1"></i>초기화
+                                        </button>
+                                    </div>
+                                    <textarea 
+                                        id="typingInput"
+                                        placeholder="위 성경구절을 입력하고 Enter를 누르세요..."
+                                        class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-sm"
+                                        rows="3"
+                                        onkeydown="handleTypingEnter(event)"
+                                    ></textarea>
+                                    <div id="typingResult" class="mt-2 text-sm hidden"></div>
                                 </div>
-                                <textarea 
-                                    id="typingInput"
-                                    placeholder="위 성경구절을 입력하고 Enter를 누르세요..."
-                                    class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-sm"
-                                    rows="3"
-                                    onkeydown="handleTypingEnter(event)"
-                                ></textarea>
-                                <div id="typingResult" class="mt-2 text-sm hidden"></div>
+                                
+                                <!-- Login Required Overlay for Typing -->
+                                <div id="typingLoginOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 backdrop-blur-sm rounded-lg flex items-center justify-center cursor-not-allowed z-10" title="로그인 필요">
+                                    <div class="text-center">
+                                        <i class="fas fa-lock text-5xl text-gray-400 mb-3"></i>
+                                        <p class="text-lg font-semibold text-gray-600">로그인 필요</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     

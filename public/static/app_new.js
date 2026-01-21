@@ -2089,7 +2089,7 @@ async function loadPosts() {
                                     ` : ''}
                                 </div>
                             </div>
-                            <p class="mt-3 text-gray-800 whitespace-pre-wrap">${post.content}</p>
+                            <p class="mt-3 text-gray-800 whitespace-pre-wrap">${post.content.replace('[기도부탁] ', '')}</p>
                             ${imageHtml}
                             ${videoHtml}
                             ${verseHtml}

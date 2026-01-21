@@ -1261,7 +1261,25 @@ function logout() {
     currentUser = null;
     localStorage.removeItem('currentUserId');
     localStorage.removeItem('currentUser');
+    
+    // Reset scores
+    typingScore = 0;
+    videoScore = 0;
+    
+    // Reset avatar to default
+    const userAvatarContainer = document.getElementById('userAvatarContainer');
+    const newPostAvatar = document.getElementById('newPostAvatar');
+    if (userAvatarContainer) {
+        userAvatarContainer.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+    }
+    if (newPostAvatar) {
+        newPostAvatar.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+    }
+    
+    // Update UI
     updateAuthUI();
+    updateTypingScoreDisplay();
+    
     document.getElementById('postsFeed').innerHTML = '<div class="text-center text-gray-500 py-10">로그인하여 게시물을 확인하세요</div>';
 }
 
@@ -1281,10 +1299,16 @@ function updateAuthUI() {
     const typingToggleBtn = document.getElementById('typingToggleBtn');
     const typingLoginOverlay = document.getElementById('typingLoginOverlay');
     const videoLoginOverlay = document.getElementById('videoLoginOverlay');
+    const scriptureScoreBtn = document.getElementById('scriptureScoreBtn');
 
     if (currentUserId) {
         authButtons.classList.add('hidden');
         userMenu.classList.remove('hidden');
+        
+        // Show scripture score button when logged in
+        if (scriptureScoreBtn) {
+            scriptureScoreBtn.classList.remove('hidden');
+        }
         
         // Remove tooltip from typing button when logged in
         if (typingToggleBtn) {
@@ -1350,6 +1374,11 @@ function updateAuthUI() {
     } else {
         authButtons.classList.remove('hidden');
         userMenu.classList.add('hidden');
+        
+        // Hide scripture score button when not logged in
+        if (scriptureScoreBtn) {
+            scriptureScoreBtn.classList.add('hidden');
+        }
         
         // Add tooltip to typing button when not logged in
         if (typingToggleBtn) {

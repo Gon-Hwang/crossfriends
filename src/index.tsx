@@ -1323,7 +1323,7 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-2 rounded-lg border-2 border-blue-300">
+                        <div id="scriptureScoreBtn" class="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-2 rounded-lg border-2 border-blue-300">
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-bible text-blue-600"></i>
                                 <span class="text-sm font-semibold text-blue-800">성경 점수:</span>

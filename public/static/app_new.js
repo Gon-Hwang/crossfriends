@@ -74,13 +74,23 @@ function startVideoTracking() {
         clearInterval(videoCheckInterval);
     }
     
-    let saveProgressCounter = 0; // Counter to save progress every 10 seconds
-    
     videoCheckInterval = setInterval(() => {
         if (player && player.getCurrentTime) {
             const currentTime = player.getCurrentTime();
             
-            // Update max watched time
+            // 스킵 감지: 현재 시간이 마지막 체크 시간보다 2초 이상 앞으로 점프한 경우
+            if (lastCheckedTime > 0 && currentTime > lastCheckedTime + 2) {
+                detectSkip();
+                return;
+            }
+            
+            // 스킵 감지: 현재 시간이 maxWatchedTime보다 1초 이상 앞인 경우
+            if (currentTime > maxWatchedTime + 1) {
+                detectSkip();
+                return;
+            }
+            
+            // Update max watched time (only if no skip)
             if (currentTime > maxWatchedTime) {
                 maxWatchedTime = currentTime;
             }
@@ -89,38 +99,8 @@ function startVideoTracking() {
             
             // Update progress bar
             updateVideoProgress();
-            
-            // Save progress every 10 seconds
-            saveProgressCounter++;
-            if (saveProgressCounter >= 10) {
-                saveProgressCounter = 0;
-                saveVideoProgress();
-            }
         }
     }, 1000);
-}
-
-// Save video progress to API
-async function saveVideoProgress() {
-    if (!currentUserId || !videoDuration || videoDuration === 0) {
-        return; // Don't save if not logged in or video not loaded
-    }
-    
-    if (completedVideos.has(CURRENT_VIDEO_ID)) {
-        return; // Don't save if already completed
-    }
-    
-    const progress = Math.min((maxWatchedTime / videoDuration) * 100, 100);
-    
-    try {
-        await axios.post(`/api/users/${currentUserId}/videos/${CURRENT_VIDEO_ID}/progress`, {
-            progress: Math.round(progress),
-            max_watched: Math.round(progress)
-        });
-        console.log(`Progress saved: ${Math.round(progress)}%`);
-    } catch (error) {
-        console.error('Failed to save video progress:', error);
-    }
 }
 
 // Stop tracking video progress
@@ -284,16 +264,16 @@ function showVideoCompletionReward(points, totalScore) {
     const resultDiv = document.getElementById('videoCompletionResult');
     
     resultDiv.innerHTML = `
-        <div class="bg-blue-50 border-2 border-blue-600 rounded-lg p-4">
+        <div class="bg-green-50 border-2 border-green-600 rounded-lg p-4">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-check-circle text-blue-600 text-xl"></i>
-                    <span class="font-bold text-blue-600">설교 시청 완료! 🎉</span>
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    <span class="font-bold text-green-600">설교 시청 완료! 🎉</span>
                 </div>
                 <span class="text-sm text-gray-600">시청률: <strong>${Math.round((maxWatchedTime / videoDuration) * 100)}%</strong></span>
             </div>
             <div class="text-sm text-gray-700">
-                <p class="mb-1">획득 점수: <strong class="text-blue-600">+${points}점</strong></p>
+                <p class="mb-1">획득 점수: <strong class="text-green-600">+${points}점</strong></p>
                 <p>총 성경 점수: <strong class="text-blue-600">${totalScore}점</strong></p>
             </div>
             <p class="text-xs text-gray-500 mt-2">
@@ -314,10 +294,13 @@ function showVideoAlreadyCompleted() {
     
     resultDiv.innerHTML = `
         <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-info-circle text-gray-600 text-base"></i>
-                <span class="text-sm text-gray-700">이미 시청 완료한 설교입니다</span>
+            <div class="flex items-center space-x-2 mb-2">
+                <i class="fas fa-info-circle text-gray-600 text-lg"></i>
+                <span class="font-semibold text-gray-700">이미 시청 완료한 설교입니다</span>
             </div>
+            <p class="text-xs text-gray-500">
+                <i class="fas fa-check mr-1"></i>이 설교는 이미 점수를 받으셨습니다 (중복 지급 불가)
+            </p>
         </div>
     `;
     
@@ -329,8 +312,8 @@ function showVideoAlreadyCompleted() {
 // =====================
 let typingScore = 0;
 let videoScore = 0;
+let prayerScore = 0;
 let completedVerses = new Set(); // Track completed verses
-let isPrayerRequest = false; // Track if post is prayer request
 
 // Load user scores from API
 async function loadUserScores() {
@@ -339,6 +322,9 @@ async function loadUserScores() {
         // Fallback to localStorage if not logged in
         const savedScore = localStorage.getItem('typingScore');
         typingScore = savedScore ? parseInt(savedScore) : 0;
+        
+        const savedPrayerScore = localStorage.getItem('prayerScore');
+        prayerScore = savedPrayerScore ? parseInt(savedPrayerScore) : 0;
         
         const savedVerses = localStorage.getItem('completedVerses');
         if (savedVerses) {
@@ -360,36 +346,11 @@ async function loadUserScores() {
         
         typingScore = data.typing_score || 0;
         videoScore = data.video_score || 0;
+        prayerScore = data.prayer_score || 0;
         
-        // Load completed verses from server
-        completedVerses = new Set();
-        if (data.completed_verses && Array.isArray(data.completed_verses)) {
-            data.completed_verses.forEach(verse => {
-                completedVerses.add(verse);
-            });
-        }
-        
-        // Load completed videos (handle both old and new formats)
-        completedVideos = new Set();
+        // Load completed videos
         if (data.completed_videos && Array.isArray(data.completed_videos)) {
-            data.completed_videos.forEach(video => {
-                if (typeof video === 'string') {
-                    // Old format: just video ID
-                    if (video === CURRENT_VIDEO_ID) {
-                        completedVideos.add(video);
-                    }
-                } else if (video.video_id) {
-                    // New format: object with progress info
-                    if (video.video_id === CURRENT_VIDEO_ID) {
-                        if (video.completed) {
-                            completedVideos.add(video.video_id);
-                        } else {
-                            // Restore progress for incomplete video
-                            maxWatchedTime = (video.max_watched || 0) / 100 * videoDuration;
-                        }
-                    }
-                }
-            });
+            completedVideos = new Set(data.completed_videos);
         }
         
         updateTypingScoreDisplay();
@@ -397,9 +358,6 @@ async function loadUserScores() {
         // Check if current video is already completed
         if (completedVideos.has(CURRENT_VIDEO_ID)) {
             showVideoAlreadyCompleted();
-        } else {
-            // Show current progress if any
-            updateVideoProgress();
         }
     } catch (error) {
         console.error('Failed to load user scores:', error);
@@ -419,10 +377,7 @@ async function saveTypingScore(score) {
     }
     
     try {
-        await axios.post(`/api/users/${currentUserId}/scores/typing`, { 
-            score,
-            completed_verses: [...completedVerses]
-        });
+        await axios.post(`/api/users/${currentUserId}/scores/typing`, { score });
     } catch (error) {
         console.error('Failed to save typing score:', error);
     }
@@ -485,6 +440,8 @@ function updateTypingScoreDisplay() {
     const totalScore = typingScore + videoScore;
     const scoreElement = document.getElementById('typingScore');
     const scoreUserElement = document.getElementById('typingScoreUser');
+    const prayerScoreElement = document.getElementById('prayerScore');
+    const prayerScoreUserElement = document.getElementById('prayerScoreUser');
     
     if (scoreElement) {
         scoreElement.textContent = totalScore;
@@ -492,7 +449,126 @@ function updateTypingScoreDisplay() {
     if (scoreUserElement) {
         scoreUserElement.textContent = totalScore;
     }
+    if (prayerScoreElement) {
+        prayerScoreElement.textContent = prayerScore;
+    }
+    if (prayerScoreUserElement) {
+        prayerScoreUserElement.textContent = prayerScore;
+    }
 }
+
+// Add prayer points for a post (10 points per click)
+async function addPrayerForPost(postId) {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        showLoginModal();
+        return;
+    }
+    
+    const pointsToAdd = 10;
+    
+    try {
+        const response = await axios.post(`/api/users/${currentUserId}/scores/prayer`, {
+            points: pointsToAdd
+        });
+        
+        prayerScore = response.data.prayer_score;
+        updateTypingScoreDisplay();
+        
+        // Save to localStorage as backup
+        localStorage.setItem('prayerScore', prayerScore.toString());
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-20 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+        successMsg.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도하셨습니다! +10점';
+        document.body.appendChild(successMsg);
+        
+        setTimeout(() => {
+            successMsg.remove();
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Failed to add prayer points:', error);
+        alert('기도 점수 추가에 실패했습니다.');
+    }
+}
+
+// Add prayer points (10 points per click) - kept for backward compatibility
+async function addPrayerPoints() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    const pointsToAdd = 10;
+    
+    try {
+        const response = await axios.post(`/api/users/${currentUserId}/scores/prayer`, {
+            points: pointsToAdd
+        });
+        
+        prayerScore = response.data.prayer_score;
+        updateTypingScoreDisplay();
+        
+        // Save to localStorage as backup
+        localStorage.setItem('prayerScore', prayerScore.toString());
+        
+        // Show success animation
+        const btn = document.getElementById('prayerBtn');
+        if (btn) {
+            btn.classList.add('animate-pulse');
+            
+            // Show floating +10 animation
+            showFloatingScore(btn, '+10');
+            
+            setTimeout(() => {
+                btn.classList.remove('animate-pulse');
+            }, 500);
+        }
+        
+    } catch (error) {
+        console.error('Failed to add prayer points:', error);
+        alert('기도 점수 추가에 실패했습니다.');
+    }
+}
+
+// Show floating score animation
+function showFloatingScore(element, text) {
+    const floatingDiv = document.createElement('div');
+    floatingDiv.textContent = text;
+    floatingDiv.style.cssText = `
+        position: fixed;
+        left: ${element.getBoundingClientRect().left + element.offsetWidth / 2}px;
+        top: ${element.getBoundingClientRect().top}px;
+        color: #9333ea;
+        font-weight: bold;
+        font-size: 24px;
+        pointer-events: none;
+        z-index: 9999;
+        animation: floatUp 1s ease-out forwards;
+    `;
+    
+    // Add animation keyframes if not exists
+    if (!document.getElementById('floatUpStyle')) {
+        const style = document.createElement('style');
+        style.id = 'floatUpStyle';
+        style.textContent = `
+            @keyframes floatUp {
+                0% { opacity: 1; transform: translateY(0); }
+                100% { opacity: 0; transform: translateY(-50px); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(floatingDiv);
+    
+    setTimeout(() => {
+        floatingDiv.remove();
+    }, 1000);
+}
+
 
 // Calculate similarity between two strings (accuracy)
 function calculateAccuracy(original, typed) {
@@ -575,7 +651,7 @@ function checkTyping() {
             completedVerses.add(verseId);
         }
     } else {
-        bonusMessage = '<p class="text-sm text-gray-600 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 타이핑 완료한 구절입니다</p>';
+        bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 완료한 구절입니다 (점수 미지급)</p>';
     }
     
     // Update total score only if points earned
@@ -592,13 +668,13 @@ function checkTyping() {
     let resultMessage = '다시 도전해보세요!';
     
     if (accuracy === 100) {
-        resultColor = 'text-blue-600';
+        resultColor = 'text-green-600';
         resultIcon = 'fa-check-circle';
-        resultMessage = '완벽합니다! 🎉';
+        resultMessage = isAlreadyCompleted ? '완벽합니다! (이미 완료)' : '완벽합니다! 🎉';
     } else if (accuracy >= 90) {
         resultColor = 'text-blue-600';
         resultIcon = 'fa-smile';
-        resultMessage = '훌륭합니다! 😊';
+        resultMessage = isAlreadyCompleted ? '훌륭합니다! (이미 완료)' : '훌륭합니다! 😊';
     } else if (accuracy >= 70) {
         resultColor = 'text-yellow-600';
         resultIcon = 'fa-meh';
@@ -863,8 +939,8 @@ async function showViewProfileModal() {
                         </div>
                     </div>
                     
-                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                        <h4 class="font-semibold text-blue-800 mb-3">
+                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
+                        <h4 class="font-semibold text-green-800 mb-3">
                             <i class="fas fa-church mr-2"></i>교회 정보
                         </h4>
                         <div class="grid grid-cols-2 gap-3 text-sm">
@@ -1270,25 +1346,7 @@ function logout() {
     currentUser = null;
     localStorage.removeItem('currentUserId');
     localStorage.removeItem('currentUser');
-    
-    // Reset scores
-    typingScore = 0;
-    videoScore = 0;
-    
-    // Reset avatar to default
-    const userAvatarContainer = document.getElementById('userAvatarContainer');
-    const newPostAvatar = document.getElementById('newPostAvatar');
-    if (userAvatarContainer) {
-        userAvatarContainer.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
-    }
-    if (newPostAvatar) {
-        newPostAvatar.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
-    }
-    
-    // Update UI
     updateAuthUI();
-    updateTypingScoreDisplay();
-    
     document.getElementById('postsFeed').innerHTML = '<div class="text-center text-gray-500 py-10">로그인하여 게시물을 확인하세요</div>';
 }
 
@@ -1306,32 +1364,14 @@ function updateAuthUI() {
     const newPostAvatar = document.getElementById('newPostAvatar');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
     const typingToggleBtn = document.getElementById('typingToggleBtn');
-    const typingLoginOverlay = document.getElementById('typingLoginOverlay');
-    const videoLoginOverlay = document.getElementById('videoLoginOverlay');
-    const scriptureScoreBtn = document.getElementById('scriptureScoreBtn');
 
     if (currentUserId) {
         authButtons.classList.add('hidden');
         userMenu.classList.remove('hidden');
         
-        // Show scripture score button when logged in
-        if (scriptureScoreBtn) {
-            scriptureScoreBtn.classList.remove('hidden');
-        }
-        
         // Remove tooltip from typing button when logged in
         if (typingToggleBtn) {
             typingToggleBtn.removeAttribute('title');
-        }
-        
-        // Hide typing login overlay when logged in
-        if (typingLoginOverlay) {
-            typingLoginOverlay.classList.add('hidden');
-        }
-        
-        // Hide video login overlay when logged in
-        if (videoLoginOverlay) {
-            videoLoginOverlay.classList.add('hidden');
         }
         
         // Update user name
@@ -1384,24 +1424,9 @@ function updateAuthUI() {
         authButtons.classList.remove('hidden');
         userMenu.classList.add('hidden');
         
-        // Hide scripture score button when not logged in
-        if (scriptureScoreBtn) {
-            scriptureScoreBtn.classList.add('hidden');
-        }
-        
         // Add tooltip to typing button when not logged in
         if (typingToggleBtn) {
             typingToggleBtn.setAttribute('title', '로그인 필요');
-        }
-        
-        // Show typing login overlay when not logged in
-        if (typingLoginOverlay) {
-            typingLoginOverlay.classList.remove('hidden');
-        }
-        
-        // Show video login overlay when not logged in
-        if (videoLoginOverlay) {
-            videoLoginOverlay.classList.remove('hidden');
         }
     }
 }
@@ -1428,58 +1453,6 @@ function addRoleBadge(container, role) {
         badge.innerHTML = '<i class="fas fa-shield-alt"></i>';
         badge.title = '운영자';
         container.appendChild(badge);
-    }
-}
-
-// Toggle prayer request mode
-function togglePrayerRequest() {
-    isPrayerRequest = !isPrayerRequest;
-    
-    const btn = document.getElementById('prayerRequestBtn');
-    const textarea = document.getElementById('newPostContent');
-    const postCard = document.getElementById('newPostCard');
-    
-    console.log('togglePrayerRequest called, isPrayerRequest:', isPrayerRequest);
-    console.log('postCard element:', postCard);
-    
-    if (isPrayerRequest) {
-        // Activate prayer request mode
-        btn.classList.remove('bg-purple-100', 'text-purple-700', 'border-transparent');
-        btn.classList.add('bg-purple-600', 'text-white', 'border-purple-700');
-        btn.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도부탁 활성';
-        
-        // Change post card background to purple gradient
-        if (postCard) {
-            console.log('Changing card to purple background');
-            postCard.classList.remove('bg-white', 'border-gray-300', 'hover:border-gray-500');
-            postCard.classList.add('bg-gradient-to-br', 'from-purple-50', 'to-pink-50', 'border-purple-300', 'hover:border-purple-500');
-            console.log('Card classes after:', postCard.className);
-        } else {
-            console.error('postCard element not found!');
-        }
-        
-        // Change textarea placeholder
-        if (textarea) {
-            textarea.placeholder = '기도제목을 작성해주세요... (예: 가족의 건강을 위해 기도부탁드립니다)';
-        }
-    } else {
-        // Deactivate prayer request mode
-        btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-700');
-        btn.classList.add('bg-purple-100', 'text-purple-700', 'border-transparent');
-        btn.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도부탁';
-        
-        // Reset post card background to white
-        if (postCard) {
-            console.log('Resetting card to white background');
-            postCard.classList.remove('bg-gradient-to-br', 'from-purple-50', 'to-pink-50', 'border-purple-300', 'hover:border-purple-500');
-            postCard.classList.add('bg-white', 'border-gray-300', 'hover:border-gray-500');
-            console.log('Card classes after:', postCard.className);
-        }
-        
-        // Reset textarea placeholder
-        if (textarea) {
-            textarea.placeholder = '오늘 하루 어떠셨나요?';
-        }
     }
 }
 
@@ -1512,16 +1485,10 @@ async function createPost() {
     postBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
-        // Prepare content with prayer tag if enabled
-        let finalContent = content || '';
-        if (isPrayerRequest) {
-            finalContent = '[기도부탁] ' + finalContent;
-        }
-        
         // 1. Create post with shared_post_id
         const response = await axios.post('/api/posts', {
             user_id: currentUserId,
-            content: finalContent,
+            content: content || '',
             verse_reference: null,
             shared_post_id: sharedPostId
         });
@@ -1597,11 +1564,6 @@ async function createPost() {
         removePostImage();
         removePostVideo();
         removeSharedPost(); // Clear shared post preview
-        
-        // Reset prayer request mode
-        if (isPrayerRequest) {
-            togglePrayerRequest();
-        }
         
         // Re-enable button
         postBtn.disabled = false;
@@ -1832,7 +1794,7 @@ async function sharePost(postId) {
         
         // Show success message
         const successMsg = document.createElement('div');
-        successMsg.className = 'fixed top-20 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+        successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
         successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>포스팅이 공유되었습니다. 의견을 작성하고 게시하세요!';
         document.body.appendChild(successMsg);
         
@@ -2073,7 +2035,7 @@ async function loadPosts() {
             }
             
             postsHtml += `
-                <div class="${post.content && post.content.startsWith('[기도부탁]') ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300' : 'bg-white border-gray-300'} rounded-xl shadow-md border-2 p-6 transition-all duration-300 hover:shadow-xl ${post.content && post.content.startsWith('[기도부탁]') ? 'hover:border-purple-500' : 'hover:border-gray-500'} hover:-translate-y-1 overflow-hidden relative">
+                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1 overflow-hidden">
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
                             <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">${avatarHtml}</div>
@@ -2097,39 +2059,28 @@ async function loadPosts() {
                                     ` : ''}
                                 </div>
                             </div>
-                            <p class="mt-3 text-gray-800 whitespace-pre-wrap">${post.content.replace('[기도부탁] ', '')}</p>
+                            <p class="mt-3 text-gray-800 whitespace-pre-wrap">${post.content}</p>
                             ${imageHtml}
                             ${videoHtml}
                             ${verseHtml}
                             ${sharedPostHtml}
-                            <div class="mt-4 flex items-center justify-between text-gray-600">
-                                <div class="flex items-center space-x-6">
-                                    ${post.content && post.content.startsWith('[기도부탁]') ? `
-                                        <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="기도하였으면 눌러 주세요">
-                                            <i class="fas fa-praying-hands ${isLiked ? 'text-purple-600' : ''} text-lg"></i>
-                                            <span class="text-sm">${post.likes_count || 0} 기도</span>
-                                        </button>
-                                    ` : `
-                                        <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">
-                                            <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
-                                            <span class="text-sm">${post.likes_count || 0}</span>
-                                        </button>
-                                    `}
-                                    <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
-                                        <i class="fas fa-comment text-lg"></i>
-                                        <span class="text-sm">${post.comments_count || 0}</span>
-                                    </button>
-                                    <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
-                                        <i class="fas fa-share text-lg"></i>
-                                        <span class="text-sm">공유</span>
-                                    </button>
-                                </div>
-                                ${post.content && post.content.startsWith('[기도부탁]') ? `
-                                    <div class="bg-purple-600 text-white px-4 py-2 rounded-lg shadow-md flex items-center space-x-2 text-sm font-semibold border-2 border-purple-700">
-                                        <i class="fas fa-praying-hands"></i>
-                                        <span>기도부탁</span>
-                                    </div>
-                                ` : ''}
+                            <div class="mt-4 flex items-center space-x-6 text-gray-600">
+                                <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
+                                    <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
+                                    <span class="text-sm">${post.likes_count || 0}</span>
+                                </button>
+                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                    <i class="fas fa-comment text-lg"></i>
+                                    <span class="text-sm">${post.comments_count || 0}</span>
+                                </button>
+                                <button onclick="addPrayerForPost(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="이 게시물을 위해 기도하기 (+10점)">
+                                    <i class="fas fa-praying-hands text-lg"></i>
+                                    <span class="text-sm">기도</span>
+                                </button>
+                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                    <i class="fas fa-share text-lg"></i>
+                                    <span class="text-sm">공유</span>
+                                </button>
                             </div>
                             <div id="comments-${post.id}" class="hidden"></div>
                         </div>

@@ -1480,7 +1480,7 @@ app.get('/', (c) => {
                 <!-- Main Feed -->
                 <div class="lg:col-span-2 space-y-4">
                     <!-- New Post Card -->
-                    <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
+                    <div id="newPostCard" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
                         <div class="flex items-start space-x-4">
                             <div class="admin-badge-container">
                                 <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">

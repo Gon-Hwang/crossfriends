@@ -1429,12 +1429,19 @@ function togglePrayerRequest() {
     
     const btn = document.getElementById('prayerRequestBtn');
     const textarea = document.getElementById('newPostContent');
+    const postCard = document.getElementById('newPostCard');
     
     if (isPrayerRequest) {
         // Activate prayer request mode
         btn.classList.remove('bg-purple-100', 'text-purple-700', 'border-transparent');
         btn.classList.add('bg-purple-600', 'text-white', 'border-purple-700');
         btn.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도부탁 활성';
+        
+        // Change post card background to purple gradient
+        if (postCard) {
+            postCard.classList.remove('bg-white', 'border-gray-300', 'hover:border-gray-500');
+            postCard.classList.add('bg-gradient-to-br', 'from-purple-50', 'to-pink-50', 'border-purple-300', 'hover:border-purple-500');
+        }
         
         // Change textarea placeholder
         if (textarea) {
@@ -1445,6 +1452,12 @@ function togglePrayerRequest() {
         btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-700');
         btn.classList.add('bg-purple-100', 'text-purple-700', 'border-transparent');
         btn.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도부탁';
+        
+        // Reset post card background to white
+        if (postCard) {
+            postCard.classList.remove('bg-gradient-to-br', 'from-purple-50', 'to-pink-50', 'border-purple-300', 'hover:border-purple-500');
+            postCard.classList.add('bg-white', 'border-gray-300', 'hover:border-gray-500');
+        }
         
         // Reset textarea placeholder
         if (textarea) {

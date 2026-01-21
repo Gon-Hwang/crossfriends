@@ -284,16 +284,16 @@ function showVideoCompletionReward(points, totalScore) {
     const resultDiv = document.getElementById('videoCompletionResult');
     
     resultDiv.innerHTML = `
-        <div class="bg-green-50 border-2 border-green-600 rounded-lg p-4">
+        <div class="bg-blue-50 border-2 border-blue-600 rounded-lg p-4">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
-                    <span class="font-bold text-green-600">설교 시청 완료! 🎉</span>
+                    <i class="fas fa-check-circle text-blue-600 text-xl"></i>
+                    <span class="font-bold text-blue-600">설교 시청 완료! 🎉</span>
                 </div>
                 <span class="text-sm text-gray-600">시청률: <strong>${Math.round((maxWatchedTime / videoDuration) * 100)}%</strong></span>
             </div>
             <div class="text-sm text-gray-700">
-                <p class="mb-1">획득 점수: <strong class="text-green-600">+${points}점</strong></p>
+                <p class="mb-1">획득 점수: <strong class="text-blue-600">+${points}점</strong></p>
                 <p>총 성경 점수: <strong class="text-blue-600">${totalScore}점</strong></p>
             </div>
             <p class="text-xs text-gray-500 mt-2">
@@ -592,7 +592,7 @@ function checkTyping() {
     let resultMessage = '다시 도전해보세요!';
     
     if (accuracy === 100) {
-        resultColor = 'text-green-600';
+        resultColor = 'text-blue-600';
         resultIcon = 'fa-check-circle';
         resultMessage = '완벽합니다! 🎉';
     } else if (accuracy >= 90) {
@@ -863,8 +863,8 @@ async function showViewProfileModal() {
                         </div>
                     </div>
                     
-                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
-                        <h4 class="font-semibold text-green-800 mb-3">
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                        <h4 class="font-semibold text-blue-800 mb-3">
                             <i class="fas fa-church mr-2"></i>교회 정보
                         </h4>
                         <div class="grid grid-cols-2 gap-3 text-sm">
@@ -1832,7 +1832,7 @@ async function sharePost(postId) {
         
         // Show success message
         const successMsg = document.createElement('div');
-        successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+        successMsg.className = 'fixed top-20 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
         successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>포스팅이 공유되었습니다. 의견을 작성하고 게시하세요!';
         document.body.appendChild(successMsg);
         

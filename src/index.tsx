@@ -955,10 +955,10 @@ app.get('/admin', (c) => {
                     </div>
                 </div>
                 
-                <div class="bg-green-500 text-white rounded-xl shadow-lg p-6">
+                <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-green-100 text-sm">총 게시물</p>
+                            <p class="text-blue-100 text-sm">총 게시물</p>
                             <p class="text-3xl font-bold" id="totalPosts">0</p>
                         </div>
                         <i class="fas fa-file-alt text-4xl opacity-50"></i>

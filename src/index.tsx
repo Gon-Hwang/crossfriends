@@ -2282,7 +2282,7 @@ app.get('/', (c) => {
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/app_new.js"></script>
+        <script src="/static/app_new.js?v=1769019838"></script>
     </body>
     </html>
   `)

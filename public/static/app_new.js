@@ -333,6 +333,7 @@ function showVideoAlreadyCompleted() {
 let typingScore = 0;
 let videoScore = 0;
 let completedVerses = new Set(); // Track completed verses
+let isPrayerRequest = false; // Track if post is prayer request
 
 // Load user scores from API
 async function loadUserScores() {
@@ -1422,6 +1423,36 @@ function addRoleBadge(container, role) {
     }
 }
 
+// Toggle prayer request mode
+function togglePrayerRequest() {
+    isPrayerRequest = !isPrayerRequest;
+    
+    const btn = document.getElementById('prayerRequestBtn');
+    const textarea = document.getElementById('newPostContent');
+    
+    if (isPrayerRequest) {
+        // Activate prayer request mode
+        btn.classList.remove('bg-purple-100', 'text-purple-700', 'border-transparent');
+        btn.classList.add('bg-purple-600', 'text-white', 'border-purple-700');
+        btn.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도부탁 활성';
+        
+        // Change textarea placeholder
+        if (textarea) {
+            textarea.placeholder = '기도제목을 작성해주세요... (예: 가족의 건강을 위해 기도부탁드립니다)';
+        }
+    } else {
+        // Deactivate prayer request mode
+        btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-700');
+        btn.classList.add('bg-purple-100', 'text-purple-700', 'border-transparent');
+        btn.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도부탁';
+        
+        // Reset textarea placeholder
+        if (textarea) {
+            textarea.placeholder = '오늘 하루 어떠셨나요?';
+        }
+    }
+}
+
 // Create new post
 async function createPost() {
     if (!currentUserId) {
@@ -1451,10 +1482,16 @@ async function createPost() {
     postBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
+        // Prepare content with prayer tag if enabled
+        let finalContent = content || '';
+        if (isPrayerRequest) {
+            finalContent = '[기도부탁] ' + finalContent;
+        }
+        
         // 1. Create post with shared_post_id
         const response = await axios.post('/api/posts', {
             user_id: currentUserId,
-            content: content || '',
+            content: finalContent,
             verse_reference: null,
             shared_post_id: sharedPostId
         });
@@ -1530,6 +1567,11 @@ async function createPost() {
         removePostImage();
         removePostVideo();
         removeSharedPost(); // Clear shared post preview
+        
+        // Reset prayer request mode
+        if (isPrayerRequest) {
+            togglePrayerRequest();
+        }
         
         // Re-enable button
         postBtn.disabled = false;

@@ -858,16 +858,21 @@ app.get('/', (c) => {
         <nav class="bg-white shadow-md sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold text-gray-800 flex items-center" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
-                        <span>CROSS</span>
-                        <div class="cross-icon mx-3">
-                            <div class="cross-dot top"></div>
-                            <div class="cross-dot bottom"></div>
-                            <div class="cross-dot left"></div>
-                            <div class="cross-dot right"></div>
-                        </div>
-                        <span>friends</span>
-                    </h1>
+                    <div class="flex flex-col">
+                        <h1 class="text-2xl font-bold text-gray-800 flex items-center" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
+                            <span>CROSS</span>
+                            <div class="cross-icon mx-3">
+                                <div class="cross-dot top"></div>
+                                <div class="cross-dot bottom"></div>
+                                <div class="cross-dot left"></div>
+                                <div class="cross-dot right"></div>
+                            </div>
+                            <span>friends</span>
+                        </h1>
+                        <p class="text-xs text-gray-500 mt-1 ml-1" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                            기독교인들을 위한 행복하고 재미있는 소셜 미디어
+                        </p>
+                    </div>
                     <div class="flex items-center space-x-4" id="authButtons">
                         <button onclick="showLoginModal()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                             로그인

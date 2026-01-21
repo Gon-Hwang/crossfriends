@@ -74,6 +74,8 @@ function startVideoTracking() {
         clearInterval(videoCheckInterval);
     }
     
+    let saveProgressCounter = 0; // Counter to save progress every 10 seconds
+    
     videoCheckInterval = setInterval(() => {
         if (player && player.getCurrentTime) {
             const currentTime = player.getCurrentTime();
@@ -99,8 +101,38 @@ function startVideoTracking() {
             
             // Update progress bar
             updateVideoProgress();
+            
+            // Save progress every 10 seconds
+            saveProgressCounter++;
+            if (saveProgressCounter >= 10) {
+                saveProgressCounter = 0;
+                saveVideoProgress();
+            }
         }
     }, 1000);
+}
+
+// Save video progress to API
+async function saveVideoProgress() {
+    if (!currentUserId || !videoDuration || videoDuration === 0) {
+        return; // Don't save if not logged in or video not loaded
+    }
+    
+    if (isSkipDetected || completedVideos.has(CURRENT_VIDEO_ID)) {
+        return; // Don't save if skipped or already completed
+    }
+    
+    const progress = Math.min((maxWatchedTime / videoDuration) * 100, 100);
+    
+    try {
+        await axios.post(`/api/users/${currentUserId}/videos/${CURRENT_VIDEO_ID}/progress`, {
+            progress: Math.round(progress),
+            max_watched: Math.round(progress)
+        });
+        console.log(`Progress saved: ${Math.round(progress)}%`);
+    } catch (error) {
+        console.error('Failed to save video progress:', error);
+    }
 }
 
 // Stop tracking video progress
@@ -343,9 +375,27 @@ async function loadUserScores() {
         typingScore = data.typing_score || 0;
         videoScore = data.video_score || 0;
         
-        // Load completed videos
+        // Load completed videos (handle both old and new formats)
+        completedVideos = new Set();
         if (data.completed_videos && Array.isArray(data.completed_videos)) {
-            completedVideos = new Set(data.completed_videos);
+            data.completed_videos.forEach(video => {
+                if (typeof video === 'string') {
+                    // Old format: just video ID
+                    if (video === CURRENT_VIDEO_ID) {
+                        completedVideos.add(video);
+                    }
+                } else if (video.video_id) {
+                    // New format: object with progress info
+                    if (video.video_id === CURRENT_VIDEO_ID) {
+                        if (video.completed) {
+                            completedVideos.add(video.video_id);
+                        } else {
+                            // Restore progress for incomplete video
+                            maxWatchedTime = (video.max_watched || 0) / 100 * videoDuration;
+                        }
+                    }
+                }
+            });
         }
         
         updateTypingScoreDisplay();
@@ -353,6 +403,9 @@ async function loadUserScores() {
         // Check if current video is already completed
         if (completedVideos.has(CURRENT_VIDEO_ID)) {
             showVideoAlreadyCompleted();
+        } else {
+            // Show current progress if any
+            updateVideoProgress();
         }
     } catch (error) {
         console.error('Failed to load user scores:', error);

@@ -506,75 +506,169 @@ app.post('/api/prayers/:id/responses', async (c) => {
 })
 
 // =====================
-// Revenue Calculator API
+// User Scores API Routes
 // =====================
 
-// 수익 계산 API
-app.get('/api/revenue/calculate', (c) => {
-  const subscribers = parseInt(c.req.query('subscribers') || '0')
+// Get user scores
+app.get('/api/users/:id/scores', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
   
-  // 가격 플랜 정의
-  const plans = [
-    { name: '무료', price: 0, limit: 100 },
-    { name: '베이직', price: 9900, limit: 1000 },
-    { name: '프로', price: 29900, limit: 10000 },
-    { name: '엔터프라이즈', price: 99900, limit: Infinity }
-  ]
+  const user = await DB.prepare(
+    'SELECT typing_score, video_score, completed_videos FROM users WHERE id = ?'
+  ).bind(userId).first()
   
-  // 월간 구독료 수익 계산 (예: 30% 유료 전환율 가정)
-  const conversionRate = 0.3
-  const paidSubscribers = Math.floor(subscribers * conversionRate)
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404)
+  }
   
-  // 플랜별 분포 (예시)
-  const basicRatio = 0.6
-  const proRatio = 0.3
-  const enterpriseRatio = 0.1
+  // Parse completed_videos JSON
+  let completedVideos = []
+  try {
+    completedVideos = JSON.parse(user.completed_videos || '[]')
+  } catch (e) {
+    completedVideos = []
+  }
   
-  const basicUsers = Math.floor(paidSubscribers * basicRatio)
-  const proUsers = Math.floor(paidSubscribers * proRatio)
-  const enterpriseUsers = Math.floor(paidSubscribers * enterpriseRatio)
-  
-  const monthlyRevenue = 
-    (basicUsers * plans[1].price) +
-    (proUsers * plans[2].price) +
-    (enterpriseUsers * plans[3].price)
-  
-  const yearlyRevenue = monthlyRevenue * 12
-  
-  // 추가 수익원 (광고, 후원 등 - 월간 회원 수 기반)
-  const additionalRevenue = subscribers * 100 // 회원당 월 100원
-  const totalMonthlyRevenue = monthlyRevenue + additionalRevenue
-  const totalYearlyRevenue = totalMonthlyRevenue * 12
+  const totalScore = (user.typing_score || 0) + (user.video_score || 0)
   
   return c.json({
-    subscribers,
-    conversion: {
-      rate: conversionRate,
-      paid: paidSubscribers,
-      free: subscribers - paidSubscribers
-    },
-    distribution: {
-      basic: basicUsers,
-      pro: proUsers,
-      enterprise: enterpriseUsers
-    },
-    revenue: {
-      monthly: {
-        subscription: monthlyRevenue,
-        additional: additionalRevenue,
-        total: totalMonthlyRevenue
-      },
-      yearly: {
-        subscription: yearlyRevenue,
-        additional: additionalRevenue * 12,
-        total: totalYearlyRevenue
-      }
-    },
-    forecast: {
-      '3months': totalMonthlyRevenue * 3,
-      '6months': totalMonthlyRevenue * 6,
-      '1year': totalYearlyRevenue
+    typing_score: user.typing_score || 0,
+    video_score: user.video_score || 0,
+    total_score: totalScore,
+    completed_videos: completedVideos
+  })
+})
+
+// Update typing score
+app.post('/api/users/:id/scores/typing', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { score } = await c.req.json()
+  
+  await DB.prepare(
+    'UPDATE users SET typing_score = ? WHERE id = ?'
+  ).bind(score, userId).run()
+  
+  return c.json({ success: true, typing_score: score })
+})
+
+// Update video score and completed videos (when fully completed)
+app.post('/api/users/:id/scores/video', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { score, video_id } = await c.req.json()
+  
+  // Get current completed videos
+  const user = await DB.prepare(
+    'SELECT completed_videos, video_score FROM users WHERE id = ?'
+  ).bind(userId).first()
+  
+  let completedVideos = []
+  try {
+    completedVideos = JSON.parse(user?.completed_videos || '[]')
+  } catch (e) {
+    completedVideos = []
+  }
+  
+  // Find if this video already exists
+  const existingIndex = completedVideos.findIndex((v: any) => 
+    typeof v === 'string' ? v === video_id : v.video_id === video_id
+  )
+  
+  if (existingIndex >= 0) {
+    // Update existing entry to completed
+    completedVideos[existingIndex] = {
+      video_id,
+      progress: 100,
+      max_watched: 100,
+      completed: true,
+      completed_at: new Date().toISOString()
     }
+  } else {
+    // Add new completed video
+    completedVideos.push({
+      video_id,
+      progress: 100,
+      max_watched: 100,
+      completed: true,
+      completed_at: new Date().toISOString()
+    })
+  }
+  
+  await DB.prepare(
+    'UPDATE users SET video_score = ?, completed_videos = ? WHERE id = ?'
+  ).bind(score, JSON.stringify(completedVideos), userId).run()
+  
+  return c.json({ 
+    success: true, 
+    video_score: score,
+    completed_videos: completedVideos
+  })
+})
+
+// Update video progress (for tracking ongoing progress)
+app.post('/api/users/:id/videos/:videoId/progress', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const videoId = c.req.param('videoId')
+  const { progress, max_watched } = await c.req.json()
+  
+  // Get current completed videos
+  const user = await DB.prepare(
+    'SELECT completed_videos FROM users WHERE id = ?'
+  ).bind(userId).first()
+  
+  let completedVideos = []
+  try {
+    completedVideos = JSON.parse(user?.completed_videos || '[]')
+  } catch (e) {
+    completedVideos = []
+  }
+  
+  // Find if this video already exists
+  const existingIndex = completedVideos.findIndex((v: any) => 
+    typeof v === 'string' ? v === videoId : v.video_id === videoId
+  )
+  
+  if (existingIndex >= 0) {
+    // Update existing entry
+    const existing = completedVideos[existingIndex]
+    if (typeof existing === 'string') {
+      // Old format, convert to new format
+      completedVideos[existingIndex] = {
+        video_id: videoId,
+        progress,
+        max_watched,
+        completed: true,
+        completed_at: new Date().toISOString()
+      }
+    } else {
+      // Update progress
+      existing.progress = progress
+      existing.max_watched = Math.max(existing.max_watched || 0, max_watched)
+      existing.updated_at = new Date().toISOString()
+    }
+  } else {
+    // Add new progress entry
+    completedVideos.push({
+      video_id: videoId,
+      progress,
+      max_watched,
+      completed: false,
+      started_at: new Date().toISOString()
+    })
+  }
+  
+  await DB.prepare(
+    'UPDATE users SET completed_videos = ? WHERE id = ?'
+  ).bind(JSON.stringify(completedVideos), userId).run()
+  
+  return c.json({ 
+    success: true,
+    video_id: videoId,
+    progress,
+    max_watched
   })
 })
 
@@ -635,6 +729,17 @@ app.put('/api/admin/users/:id/role', requireAdmin, async (c) => {
 app.delete('/api/admin/users/:id', requireAdmin, async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
+  
+  // Check if the user to be deleted is an admin
+  const userToDelete = await DB.prepare('SELECT role FROM users WHERE id = ?').bind(id).first()
+  
+  if (!userToDelete) {
+    return c.json({ error: 'User not found' }, 404)
+  }
+  
+  if (userToDelete.role === 'admin') {
+    return c.json({ error: '관리자 계정은 삭제할 수 없습니다.' }, 403)
+  }
   
   // Delete user's data first (foreign key constraints)
   await DB.prepare('DELETE FROM prayer_responses WHERE user_id = ?').bind(id).run()
@@ -792,423 +897,240 @@ app.delete('/api/admin/delete-fake-users', requireAdmin, async (c) => {
 // Frontend Routes
 // =====================
 
-// 수익 계산기 페이지
-app.get('/revenue', (c) => {
+// Admin Panel
+app.get('/admin', (c) => {
   return c.html(`
     <!DOCTYPE html>
     <html lang="ko">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>수익 계산기 - CROSSfriends</title>
+        <title>관리자 패널 - CROSSfriends</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     </head>
-    <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-        <!-- Header -->
-        <nav class="bg-white shadow-md">
+    <body class="bg-gray-50">
+        <nav class="bg-red-600 text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <div class="flex items-center space-x-4">
-                        <a href="/" class="text-gray-600 hover:text-blue-600 transition">
-                            <i class="fas fa-home mr-2"></i>홈으로
-                        </a>
-                        <h1 class="text-2xl font-bold text-blue-600">
-                            <i class="fas fa-calculator mr-2"></i>수익 계산기
-                        </h1>
-                    </div>
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-shield-alt mr-2"></i>관리자 패널
+                    </h1>
+                    <a href="/" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                        <i class="fas fa-home mr-2"></i>홈으로
+                    </a>
                 </div>
             </div>
         </nav>
 
-        <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 py-8">
-            <!-- Input Card -->
-            <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">
-                    <i class="fas fa-users text-blue-600 mr-3"></i>회원 가입자 별 수익 예상
-                </h2>
-                <p class="text-gray-600 mb-8">
-                    예상 회원 수를 입력하면 월간 및 연간 수익을 자동으로 계산해드립니다.
-                </p>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-3">
-                            <i class="fas fa-user-plus mr-2 text-blue-600"></i>예상 가입자 수
-                        </label>
-                        <input 
-                            id="subscribersInput"
-                            type="number"
-                            min="0"
-                            step="100"
-                            value="1000"
-                            placeholder="가입자 수를 입력하세요"
-                            class="w-full p-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition"
-                        />
-                        <p class="text-sm text-gray-500 mt-2">
-                            <i class="fas fa-info-circle mr-1"></i>100명 단위로 입력하세요
-                        </p>
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-blue-100 text-sm">총 회원</p>
+                            <p class="text-3xl font-bold" id="totalUsers">0</p>
+                        </div>
+                        <i class="fas fa-users text-4xl opacity-50"></i>
                     </div>
-                    
-                    <div class="flex items-end">
-                        <button 
-                            onclick="calculateRevenue()"
-                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition transform hover:scale-105 shadow-lg text-lg font-semibold">
-                            <i class="fas fa-chart-line mr-2"></i>수익 계산하기
+                </div>
+                
+                <div class="bg-green-500 text-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-green-100 text-sm">총 게시물</p>
+                            <p class="text-3xl font-bold" id="totalPosts">0</p>
+                        </div>
+                        <i class="fas fa-file-alt text-4xl opacity-50"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-purple-500 text-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-purple-100 text-sm">총 댓글</p>
+                            <p class="text-3xl font-bold" id="totalComments">0</p>
+                        </div>
+                        <i class="fas fa-comments text-4xl opacity-50"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-orange-500 text-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-orange-100 text-sm">기도 제목</p>
+                            <p class="text-3xl font-bold" id="totalPrayers">0</p>
+                        </div>
+                        <i class="fas fa-praying-hands text-4xl opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Table -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-users text-red-600 mr-2"></i>회원 관리
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button onclick="createFakeUsers()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-user-plus mr-2"></i>테스트 사용자 생성
+                        </button>
+                        <button onclick="deleteFakeUsers()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                            <i class="fas fa-trash mr-2"></i>테스트 사용자 삭제
                         </button>
                     </div>
                 </div>
-                
-                <!-- Quick Buttons -->
-                <div class="flex flex-wrap gap-3">
-                    <span class="text-sm text-gray-600 font-medium">빠른 선택:</span>
-                    <button onclick="setSubscribers(500)" class="px-4 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition text-sm font-medium">500명</button>
-                    <button onclick="setSubscribers(1000)" class="px-4 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition text-sm font-medium">1,000명</button>
-                    <button onclick="setSubscribers(5000)" class="px-4 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition text-sm font-medium">5,000명</button>
-                    <button onclick="setSubscribers(10000)" class="px-4 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition text-sm font-medium">10,000명</button>
-                    <button onclick="setSubscribers(50000)" class="px-4 py-2 bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 rounded-lg transition text-sm font-medium">50,000명</button>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">ID</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">이메일</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">이름</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">교회</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">역할</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">게시물</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">가입일</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody" class="divide-y divide-gray-200">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Results Section -->
-            <div id="resultsSection" class="hidden">
-                <!-- Summary Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white">
-                        <div class="flex items-center justify-between mb-4">
-                            <i class="fas fa-users text-4xl opacity-80"></i>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-semibold">총 회원</span>
-                        </div>
-                        <p class="text-3xl font-bold mb-1" id="totalSubscribers">0</p>
-                        <p class="text-blue-100 text-sm">전체 가입자</p>
-                    </div>
-                    
-                    <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-xl p-6 text-white">
-                        <div class="flex items-center justify-between mb-4">
-                            <i class="fas fa-crown text-4xl opacity-80"></i>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-semibold">유료 회원</span>
-                        </div>
-                        <p class="text-3xl font-bold mb-1" id="paidSubscribers">0</p>
-                        <p class="text-green-100 text-sm">30% 전환율 기준</p>
-                    </div>
-                    
-                    <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white">
-                        <div class="flex items-center justify-between mb-4">
-                            <i class="fas fa-won-sign text-4xl opacity-80"></i>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-semibold">월 수익</span>
-                        </div>
-                        <p class="text-3xl font-bold mb-1" id="monthlyRevenue">₩0</p>
-                        <p class="text-purple-100 text-sm">월간 예상 수익</p>
-                    </div>
-                    
-                    <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 text-white">
-                        <div class="flex items-center justify-between mb-4">
-                            <i class="fas fa-calendar-alt text-4xl opacity-80"></i>
-                            <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm font-semibold">연 수익</span>
-                        </div>
-                        <p class="text-3xl font-bold mb-1" id="yearlyRevenue">₩0</p>
-                        <p class="text-orange-100 text-sm">연간 예상 수익</p>
-                    </div>
-                </div>
 
-                <!-- Charts Section -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <!-- Revenue Breakdown Chart -->
-                    <div class="bg-white rounded-2xl shadow-xl p-6">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">
-                            <i class="fas fa-chart-pie text-blue-600 mr-2"></i>수익 구성
-                        </h3>
-                        <canvas id="revenueChart" class="w-full" style="max-height: 300px;"></canvas>
-                    </div>
-                    
-                    <!-- User Distribution Chart -->
-                    <div class="bg-white rounded-2xl shadow-xl p-6">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">
-                            <i class="fas fa-chart-bar text-green-600 mr-2"></i>플랜별 회원 분포
-                        </h3>
-                        <canvas id="distributionChart" class="w-full" style="max-height: 300px;"></canvas>
-                    </div>
-                </div>
-
-                <!-- Forecast Timeline -->
-                <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">
-                        <i class="fas fa-chart-line text-purple-600 mr-2"></i>예상 수익 추이
-                    </h3>
-                    <canvas id="forecastChart" class="w-full" style="max-height: 300px;"></canvas>
-                </div>
-
-                <!-- Detailed Breakdown -->
-                <div class="bg-white rounded-2xl shadow-xl p-6">
-                    <h3 class="text-xl font-bold text-gray-800 mb-6">
-                        <i class="fas fa-list-alt text-indigo-600 mr-2"></i>상세 분석
-                    </h3>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Monthly Breakdown -->
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-4 flex items-center">
-                                <i class="fas fa-calendar-day text-purple-600 mr-2"></i>월간 수익 상세
-                            </h4>
-                            <div class="space-y-3">
-                                <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                                    <span class="text-gray-600">구독료 수익</span>
-                                    <span class="font-bold text-purple-600" id="monthlySubscription">₩0</span>
-                                </div>
-                                <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                                    <span class="text-gray-600">광고/추가 수익</span>
-                                    <span class="font-bold text-blue-600" id="monthlyAdditional">₩0</span>
-                                </div>
-                                <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border-2 border-green-200">
-                                    <span class="font-semibold text-gray-700">월 총 수익</span>
-                                    <span class="font-bold text-green-600 text-lg" id="monthlyTotal">₩0</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Yearly Breakdown -->
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-4 flex items-center">
-                                <i class="fas fa-calendar-check text-orange-600 mr-2"></i>연간 수익 상세
-                            </h4>
-                            <div class="space-y-3">
-                                <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                                    <span class="text-gray-600">구독료 수익</span>
-                                    <span class="font-bold text-orange-600" id="yearlySubscription">₩0</span>
-                                </div>
-                                <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                                    <span class="text-gray-600">광고/추가 수익</span>
-                                    <span class="font-bold text-blue-600" id="yearlyAdditional">₩0</span>
-                                </div>
-                                <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg border-2 border-green-200">
-                                    <span class="font-semibold text-gray-700">연 총 수익</span>
-                                    <span class="font-bold text-green-600 text-lg" id="yearlyTotal">₩0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Plan Distribution -->
-                    <div class="mt-6">
-                        <h4 class="font-semibold text-gray-700 mb-4 flex items-center">
-                            <i class="fas fa-layer-group text-blue-600 mr-2"></i>플랜별 회원 분포
-                        </h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-600">베이직 (₩9,900)</span>
-                                    <i class="fas fa-star text-blue-500"></i>
-                                </div>
-                                <p class="text-2xl font-bold text-blue-600" id="basicUsers">0명</p>
-                                <p class="text-xs text-gray-500 mt-1">60% 비율</p>
-                            </div>
-                            
-                            <div class="p-4 bg-purple-50 rounded-lg border-2 border-purple-200">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-600">프로 (₩29,900)</span>
-                                    <i class="fas fa-gem text-purple-500"></i>
-                                </div>
-                                <p class="text-2xl font-bold text-purple-600" id="proUsers">0명</p>
-                                <p class="text-xs text-gray-500 mt-1">30% 비율</p>
-                            </div>
-                            
-                            <div class="p-4 bg-orange-50 rounded-lg border-2 border-orange-200">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-gray-600">엔터프라이즈 (₩99,900)</span>
-                                    <i class="fas fa-crown text-orange-500"></i>
-                                </div>
-                                <p class="text-2xl font-bold text-orange-600" id="enterpriseUsers">0명</p>
-                                <p class="text-xs text-gray-500 mt-1">10% 비율</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <script>
-            let revenueChart = null;
-            let distributionChart = null;
-            let forecastChart = null;
+            let adminId = localStorage.getItem('currentUserId');
 
-            function formatCurrency(value) {
-                return '₩' + value.toLocaleString('ko-KR');
-            }
-
-            function setSubscribers(count) {
-                document.getElementById('subscribersInput').value = count;
-                calculateRevenue();
-            }
-
-            async function calculateRevenue() {
-                const subscribers = parseInt(document.getElementById('subscribersInput').value) || 0;
-                
-                if (subscribers < 0) {
-                    alert('가입자 수는 0 이상이어야 합니다.');
-                    return;
-                }
-
+            async function loadStats() {
                 try {
-                    const response = await axios.get('/api/revenue/calculate', {
-                        params: { subscribers }
+                    const response = await axios.get('/api/admin/stats', {
+                        headers: { 'X-Admin-ID': adminId }
                     });
                     
-                    const data = response.data;
-                    
-                    // Update summary cards
-                    document.getElementById('totalSubscribers').textContent = data.subscribers.toLocaleString() + '명';
-                    document.getElementById('paidSubscribers').textContent = data.conversion.paid.toLocaleString() + '명';
-                    document.getElementById('monthlyRevenue').textContent = formatCurrency(data.revenue.monthly.total);
-                    document.getElementById('yearlyRevenue').textContent = formatCurrency(data.revenue.yearly.total);
-                    
-                    // Update detailed breakdown
-                    document.getElementById('monthlySubscription').textContent = formatCurrency(data.revenue.monthly.subscription);
-                    document.getElementById('monthlyAdditional').textContent = formatCurrency(data.revenue.monthly.additional);
-                    document.getElementById('monthlyTotal').textContent = formatCurrency(data.revenue.monthly.total);
-                    
-                    document.getElementById('yearlySubscription').textContent = formatCurrency(data.revenue.yearly.subscription);
-                    document.getElementById('yearlyAdditional').textContent = formatCurrency(data.revenue.yearly.additional);
-                    document.getElementById('yearlyTotal').textContent = formatCurrency(data.revenue.yearly.total);
-                    
-                    // Update plan distribution
-                    document.getElementById('basicUsers').textContent = data.distribution.basic.toLocaleString() + '명';
-                    document.getElementById('proUsers').textContent = data.distribution.pro.toLocaleString() + '명';
-                    document.getElementById('enterpriseUsers').textContent = data.distribution.enterprise.toLocaleString() + '명';
-                    
-                    // Show results section
-                    document.getElementById('resultsSection').classList.remove('hidden');
-                    
-                    // Update charts
-                    updateCharts(data);
-                    
-                    // Scroll to results
-                    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    
+                    document.getElementById('totalUsers').textContent = response.data.users;
+                    document.getElementById('totalPosts').textContent = response.data.posts;
+                    document.getElementById('totalComments').textContent = response.data.comments;
+                    document.getElementById('totalPrayers').textContent = response.data.prayers;
                 } catch (error) {
-                    console.error('수익 계산 오류:', error);
-                    alert('수익 계산 중 오류가 발생했습니다.');
+                    console.error('Failed to load stats:', error);
+                    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                        alert('관리자 권한이 필요합니다.');
+                        window.location.href = '/';
+                    }
                 }
             }
 
-            function updateCharts(data) {
-                // Revenue Breakdown Chart
-                if (revenueChart) revenueChart.destroy();
-                
-                const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-                revenueChart = new Chart(revenueCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['구독료 수익', '광고/추가 수익'],
-                        datasets: [{
-                            data: [data.revenue.monthly.subscription, data.revenue.monthly.additional],
-                            backgroundColor: ['#8B5CF6', '#3B82F6'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 20,
-                                    font: { size: 12 }
+            async function loadUsers() {
+                try {
+                    const response = await axios.get('/api/admin/users', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    
+                    const tbody = document.getElementById('usersTableBody');
+                    tbody.innerHTML = response.data.users.map(user => \`
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm">\${user.id}</td>
+                            <td class="px-4 py-3 text-sm">\${user.email}</td>
+                            <td class="px-4 py-3 text-sm font-semibold">\${user.name}</td>
+                            <td class="px-4 py-3 text-sm">\${user.church || '-'}</td>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="px-2 py-1 rounded-full text-xs \${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">
+                                    \${user.role}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-sm">\${user.post_count}</td>
+                            <td class="px-4 py-3 text-sm">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</td>
+                            <td class="px-4 py-3 text-sm">
+                                \${user.role === 'admin' 
+                                    ? '<span class="text-gray-400" title="관리자는 삭제할 수 없습니다"><i class="fas fa-lock"></i></span>' 
+                                    : \`<button onclick="deleteUser(\${user.id}, '\${user.role}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>\`
                                 }
-                            }
-                        }
-                    }
-                });
-
-                // User Distribution Chart
-                if (distributionChart) distributionChart.destroy();
-                
-                const distCtx = document.getElementById('distributionChart').getContext('2d');
-                distributionChart = new Chart(distCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['베이직', '프로', '엔터프라이즈'],
-                        datasets: [{
-                            label: '회원 수',
-                            data: [data.distribution.basic, data.distribution.pro, data.distribution.enterprise],
-                            backgroundColor: ['#3B82F6', '#8B5CF6', '#F59E0B'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value.toLocaleString() + '명';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Forecast Chart
-                if (forecastChart) forecastChart.destroy();
-                
-                const forecastCtx = document.getElementById('forecastChart').getContext('2d');
-                forecastChart = new Chart(forecastCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['현재', '3개월', '6개월', '1년'],
-                        datasets: [{
-                            label: '예상 누적 수익',
-                            data: [0, data.forecast['3months'], data.forecast['6months'], data.forecast['1year']],
-                            borderColor: '#8B5CF6',
-                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return formatCurrency(value);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
+                            </td>
+                        </tr>
+                    \`).join('');
+                } catch (error) {
+                    console.error('Failed to load users:', error);
+                }
             }
 
-            // Auto-calculate on page load with default value
-            window.addEventListener('DOMContentLoaded', () => {
-                calculateRevenue();
-            });
 
-            // Allow Enter key to trigger calculation
-            document.getElementById('subscribersInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    calculateRevenue();
+            async function createFakeUsers() {
+                const count = prompt('생성할 테스트 사용자 수를 입력하세요 (최대 50명):', '10');
+                if (!count) return;
+                
+                try {
+                    const response = await axios.post('/api/admin/create-fake-users', 
+                        { count: parseInt(count) },
+                        { headers: { 'X-Admin-ID': adminId } }
+                    );
+                    alert(\`\${response.data.count}명의 테스트 사용자가 생성되었습니다.\`);
+                    loadStats();
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to create fake users:', error);
+                    alert('테스트 사용자 생성에 실패했습니다.');
                 }
-            });
+            }
+
+            async function deleteFakeUsers() {
+                if (!confirm('모든 테스트 사용자를 삭제하시겠습니까?')) return;
+                
+                try {
+                    const response = await axios.delete('/api/admin/delete-fake-users', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    alert(\`\${response.data.deleted_count}명의 테스트 사용자가 삭제되었습니다.\`);
+                    loadStats();
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to delete fake users:', error);
+                    alert('테스트 사용자 삭제에 실패했습니다.');
+                }
+            }
+
+            async function deleteUser(userId, userRole) {
+                if (userRole === 'admin') {
+                    alert('관리자 계정은 삭제할 수 없습니다.');
+                    return;
+                }
+                
+                if (!confirm('이 사용자를 삭제하시겠습니까?')) return;
+                
+                try {
+                    await axios.delete(\`/api/admin/users/\${userId}\`, {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    alert('사용자가 삭제되었습니다.');
+                    loadStats();
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to delete user:', error);
+                    if (error.response && error.response.status === 403) {
+                        alert(error.response.data.error || '관리자 계정은 삭제할 수 없습니다.');
+                    } else {
+                        alert('사용자 삭제에 실패했습니다.');
+                    }
+                }
+            }
+
+
+            // Initialize
+            if (!adminId) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/';
+            } else {
+                loadStats();
+                loadUsers();
+            }
         </script>
     </body>
     </html>
@@ -1386,9 +1308,6 @@ app.get('/', (c) => {
                         </p>
                     </div>
                     <div class="flex items-center space-x-4" id="authButtons">
-                        <a href="/revenue" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition shadow-md">
-                            <i class="fas fa-calculator mr-2"></i>수익 계산기
-                        </a>
                         <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-2 rounded-lg border-2 border-blue-300">
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-bible text-blue-600"></i>
@@ -1404,9 +1323,6 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <a href="/revenue" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition shadow-md">
-                            <i class="fas fa-calculator mr-2"></i>수익 계산기
-                        </a>
                         <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-2 rounded-lg border-2 border-blue-300">
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-bible text-blue-600"></i>
@@ -2339,7 +2255,7 @@ app.get('/', (c) => {
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="/static/app.js"></script>
+        <script src="/static/app_new.js"></script>
     </body>
     </html>
   `)

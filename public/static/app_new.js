@@ -1291,6 +1291,7 @@ function updateAuthUI() {
     const newPostAvatar = document.getElementById('newPostAvatar');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
     const typingToggleBtn = document.getElementById('typingToggleBtn');
+    const videoLoginOverlay = document.getElementById('videoLoginOverlay');
 
     if (currentUserId) {
         authButtons.classList.add('hidden');
@@ -1299,6 +1300,11 @@ function updateAuthUI() {
         // Remove tooltip from typing button when logged in
         if (typingToggleBtn) {
             typingToggleBtn.removeAttribute('title');
+        }
+        
+        // Hide video login overlay when logged in
+        if (videoLoginOverlay) {
+            videoLoginOverlay.classList.add('hidden');
         }
         
         // Update user name
@@ -1354,6 +1360,11 @@ function updateAuthUI() {
         // Add tooltip to typing button when not logged in
         if (typingToggleBtn) {
             typingToggleBtn.setAttribute('title', '로그인 필요');
+        }
+        
+        // Show video login overlay when not logged in
+        if (videoLoginOverlay) {
+            videoLoginOverlay.classList.remove('hidden');
         }
     }
 }

@@ -1432,6 +1432,13 @@ app.get('/', (c) => {
                             <!-- YouTube Embedded Video -->
                             <div class="relative w-full" style="padding-bottom: 56.25%;">
                                 <div id="sermonPlayer" class="absolute top-0 left-0 w-full h-full rounded-lg"></div>
+                                <!-- Login Required Overlay -->
+                                <div id="videoLoginOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-black bg-opacity-70 rounded-lg flex items-center justify-center cursor-not-allowed z-10" title="로그인 필요">
+                                    <div class="text-center text-white">
+                                        <i class="fas fa-lock text-5xl mb-3"></i>
+                                        <p class="text-lg font-semibold">로그인 필요</p>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Video Progress Indicator -->

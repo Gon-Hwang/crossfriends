@@ -364,6 +364,14 @@ async function loadUserScores() {
         typingScore = data.typing_score || 0;
         videoScore = data.video_score || 0;
         
+        // Load completed verses from server
+        completedVerses = new Set();
+        if (data.completed_verses && Array.isArray(data.completed_verses)) {
+            data.completed_verses.forEach(verse => {
+                completedVerses.add(verse);
+            });
+        }
+        
         // Load completed videos (handle both old and new formats)
         completedVideos = new Set();
         if (data.completed_videos && Array.isArray(data.completed_videos)) {
@@ -414,7 +422,10 @@ async function saveTypingScore(score) {
     }
     
     try {
-        await axios.post(`/api/users/${currentUserId}/scores/typing`, { score });
+        await axios.post(`/api/users/${currentUserId}/scores/typing`, { 
+            score,
+            completed_verses: [...completedVerses]
+        });
     } catch (error) {
         console.error('Failed to save typing score:', error);
     }

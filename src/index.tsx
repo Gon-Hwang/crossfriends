@@ -515,7 +515,7 @@ app.get('/api/users/:id/scores', async (c) => {
   const userId = c.req.param('id')
   
   const user = await DB.prepare(
-    'SELECT typing_score, video_score, completed_videos FROM users WHERE id = ?'
+    'SELECT typing_score, video_score, completed_videos, completed_verses FROM users WHERE id = ?'
   ).bind(userId).first()
   
   if (!user) {
@@ -530,13 +530,22 @@ app.get('/api/users/:id/scores', async (c) => {
     completedVideos = []
   }
   
+  // Parse completed_verses JSON
+  let completedVerses = []
+  try {
+    completedVerses = JSON.parse(user.completed_verses || '[]')
+  } catch (e) {
+    completedVerses = []
+  }
+  
   const totalScore = (user.typing_score || 0) + (user.video_score || 0)
   
   return c.json({
     typing_score: user.typing_score || 0,
     video_score: user.video_score || 0,
     total_score: totalScore,
-    completed_videos: completedVideos
+    completed_videos: completedVideos,
+    completed_verses: completedVerses
   })
 })
 
@@ -544,11 +553,20 @@ app.get('/api/users/:id/scores', async (c) => {
 app.post('/api/users/:id/scores/typing', async (c) => {
   const { DB } = c.env
   const userId = c.req.param('id')
-  const { score } = await c.req.json()
+  const { score, completed_verses } = await c.req.json()
   
-  await DB.prepare(
-    'UPDATE users SET typing_score = ? WHERE id = ?'
-  ).bind(score, userId).run()
+  // Prepare SQL update
+  if (completed_verses !== undefined) {
+    // Update both score and completed verses
+    await DB.prepare(
+      'UPDATE users SET typing_score = ?, completed_verses = ? WHERE id = ?'
+    ).bind(score, JSON.stringify(completed_verses), userId).run()
+  } else {
+    // Update only score
+    await DB.prepare(
+      'UPDATE users SET typing_score = ? WHERE id = ?'
+    ).bind(score, userId).run()
+  }
   
   return c.json({ success: true, typing_score: score })
 })

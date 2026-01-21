@@ -1005,8 +1005,9 @@ app.get('/', (c) => {
                                         />
                                         <label 
                                             for="postImageFile"
-                                            class="cursor-pointer inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-                                            <i class="fas fa-image mr-2"></i>사진 첨부
+                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                                            title="사진 첨부">
+                                            <i class="fas fa-image"></i>
                                         </label>
                                         
                                         <input 
@@ -1018,8 +1019,9 @@ app.get('/', (c) => {
                                         />
                                         <label 
                                             for="postVideoFile"
-                                            class="cursor-pointer inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition">
-                                            <i class="fas fa-video mr-2"></i>동영상 첨부
+                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
+                                            title="동영상 첨부">
+                                            <i class="fas fa-video"></i>
                                         </label>
                                     </div>
                                     <button 

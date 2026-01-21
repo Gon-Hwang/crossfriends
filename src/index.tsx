@@ -1469,10 +1469,6 @@ app.get('/', (c) => {
                             
                             <!-- Video Completion Result -->
                             <div id="videoCompletionResult" class="mt-3 hidden"></div>
-                            
-                            <div class="mt-3 text-xs text-gray-500 text-center">
-                                <i class="fas fa-info-circle mr-1"></i>매일 새로운 설교 말씀이 업데이트됩니다
-                            </div>
                         </div>
                     </div>
                 </div>

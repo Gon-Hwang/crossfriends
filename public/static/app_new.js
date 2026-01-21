@@ -1431,6 +1431,9 @@ function togglePrayerRequest() {
     const textarea = document.getElementById('newPostContent');
     const postCard = document.getElementById('newPostCard');
     
+    console.log('togglePrayerRequest called, isPrayerRequest:', isPrayerRequest);
+    console.log('postCard element:', postCard);
+    
     if (isPrayerRequest) {
         // Activate prayer request mode
         btn.classList.remove('bg-purple-100', 'text-purple-700', 'border-transparent');
@@ -1439,8 +1442,12 @@ function togglePrayerRequest() {
         
         // Change post card background to purple gradient
         if (postCard) {
+            console.log('Changing card to purple background');
             postCard.classList.remove('bg-white', 'border-gray-300', 'hover:border-gray-500');
             postCard.classList.add('bg-gradient-to-br', 'from-purple-50', 'to-pink-50', 'border-purple-300', 'hover:border-purple-500');
+            console.log('Card classes after:', postCard.className);
+        } else {
+            console.error('postCard element not found!');
         }
         
         // Change textarea placeholder
@@ -1455,8 +1462,10 @@ function togglePrayerRequest() {
         
         // Reset post card background to white
         if (postCard) {
+            console.log('Resetting card to white background');
             postCard.classList.remove('bg-gradient-to-br', 'from-purple-50', 'to-pink-50', 'border-purple-300', 'hover:border-purple-500');
             postCard.classList.add('bg-white', 'border-gray-300', 'hover:border-gray-500');
+            console.log('Card classes after:', postCard.className);
         }
         
         // Reset textarea placeholder

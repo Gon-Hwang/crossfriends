@@ -515,7 +515,7 @@ app.get('/api/users/:id/scores', async (c) => {
   const userId = c.req.param('id')
   
   const user = await DB.prepare(
-    'SELECT typing_score, video_score, completed_videos, completed_verses FROM users WHERE id = ?'
+    'SELECT typing_score, video_score, prayer_score, completed_videos, completed_verses FROM users WHERE id = ?'
   ).bind(userId).first()
   
   if (!user) {
@@ -538,11 +538,12 @@ app.get('/api/users/:id/scores', async (c) => {
     completedVerses = []
   }
   
-  const totalScore = (user.typing_score || 0) + (user.video_score || 0)
+  const totalScore = (user.typing_score || 0) + (user.video_score || 0) + (user.prayer_score || 0)
   
   return c.json({
     typing_score: user.typing_score || 0,
     video_score: user.video_score || 0,
+    prayer_score: user.prayer_score || 0,
     total_score: totalScore,
     completed_videos: completedVideos,
     completed_verses: completedVerses
@@ -687,6 +688,32 @@ app.post('/api/users/:id/videos/:videoId/progress', async (c) => {
     video_id: videoId,
     progress,
     max_watched
+  })
+})
+
+// Add prayer points
+app.post('/api/users/:id/scores/prayer', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { points } = await c.req.json()
+  
+  // Get current prayer score
+  const user = await DB.prepare(
+    'SELECT prayer_score FROM users WHERE id = ?'
+  ).bind(userId).first()
+  
+  const currentScore = user?.prayer_score || 0
+  const newScore = currentScore + points
+  
+  // Update prayer score
+  await DB.prepare(
+    'UPDATE users SET prayer_score = ? WHERE id = ?'
+  ).bind(newScore, userId).run()
+  
+  return c.json({ 
+    success: true, 
+    prayer_score: newScore,
+    points_earned: points
   })
 })
 
@@ -1326,6 +1353,13 @@ app.get('/', (c) => {
                         </p>
                     </div>
                     <div class="flex items-center space-x-4" id="authButtons">
+                        <div class="bg-white px-4 py-2 rounded-lg border-2 border-purple-300">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-praying-hands text-purple-600"></i>
+                                <span class="text-sm font-semibold text-purple-800">기도 점수:</span>
+                                <span id="prayerScore" class="text-lg font-bold text-purple-900">0</span>
+                            </div>
+                        </div>
                         <div class="bg-white px-4 py-2 rounded-lg border-2 border-blue-300">
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-bible text-blue-600"></i>
@@ -1341,6 +1375,17 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
+                        <button 
+                            onclick="addPrayerPoints()" 
+                            id="prayerBtn" 
+                            class="bg-white px-4 py-2 rounded-lg border-2 border-purple-300 hover:bg-purple-50 transition cursor-pointer"
+                            title="기도하기 (클릭 시 10점)">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-praying-hands text-purple-600"></i>
+                                <span class="text-sm font-semibold text-purple-800">기도 점수:</span>
+                                <span id="prayerScoreUser" class="text-lg font-bold text-purple-900">0</span>
+                            </div>
+                        </button>
                         <div id="scriptureScoreBtn" class="bg-white px-4 py-2 rounded-lg border-2 border-blue-300">
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-bible text-blue-600"></i>

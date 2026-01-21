@@ -312,6 +312,7 @@ function showVideoAlreadyCompleted() {
 // =====================
 let typingScore = 0;
 let videoScore = 0;
+let prayerScore = 0;
 let completedVerses = new Set(); // Track completed verses
 
 // Load user scores from API
@@ -321,6 +322,9 @@ async function loadUserScores() {
         // Fallback to localStorage if not logged in
         const savedScore = localStorage.getItem('typingScore');
         typingScore = savedScore ? parseInt(savedScore) : 0;
+        
+        const savedPrayerScore = localStorage.getItem('prayerScore');
+        prayerScore = savedPrayerScore ? parseInt(savedPrayerScore) : 0;
         
         const savedVerses = localStorage.getItem('completedVerses');
         if (savedVerses) {
@@ -342,6 +346,7 @@ async function loadUserScores() {
         
         typingScore = data.typing_score || 0;
         videoScore = data.video_score || 0;
+        prayerScore = data.prayer_score || 0;
         
         // Load completed videos
         if (data.completed_videos && Array.isArray(data.completed_videos)) {
@@ -435,6 +440,8 @@ function updateTypingScoreDisplay() {
     const totalScore = typingScore + videoScore;
     const scoreElement = document.getElementById('typingScore');
     const scoreUserElement = document.getElementById('typingScoreUser');
+    const prayerScoreElement = document.getElementById('prayerScore');
+    const prayerScoreUserElement = document.getElementById('prayerScoreUser');
     
     if (scoreElement) {
         scoreElement.textContent = totalScore;
@@ -442,7 +449,87 @@ function updateTypingScoreDisplay() {
     if (scoreUserElement) {
         scoreUserElement.textContent = totalScore;
     }
+    if (prayerScoreElement) {
+        prayerScoreElement.textContent = prayerScore;
+    }
+    if (prayerScoreUserElement) {
+        prayerScoreUserElement.textContent = prayerScore;
+    }
 }
+
+// Add prayer points (10 points per click)
+async function addPrayerPoints() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    const pointsToAdd = 10;
+    
+    try {
+        const response = await axios.post(`/api/users/${currentUserId}/scores/prayer`, {
+            points: pointsToAdd
+        });
+        
+        prayerScore = response.data.prayer_score;
+        updateTypingScoreDisplay();
+        
+        // Save to localStorage as backup
+        localStorage.setItem('prayerScore', prayerScore.toString());
+        
+        // Show success animation
+        const btn = document.getElementById('prayerBtn');
+        btn.classList.add('animate-pulse');
+        
+        // Show floating +10 animation
+        showFloatingScore(btn, '+10');
+        
+        setTimeout(() => {
+            btn.classList.remove('animate-pulse');
+        }, 500);
+        
+    } catch (error) {
+        console.error('Failed to add prayer points:', error);
+        alert('기도 점수 추가에 실패했습니다.');
+    }
+}
+
+// Show floating score animation
+function showFloatingScore(element, text) {
+    const floatingDiv = document.createElement('div');
+    floatingDiv.textContent = text;
+    floatingDiv.style.cssText = `
+        position: fixed;
+        left: ${element.getBoundingClientRect().left + element.offsetWidth / 2}px;
+        top: ${element.getBoundingClientRect().top}px;
+        color: #9333ea;
+        font-weight: bold;
+        font-size: 24px;
+        pointer-events: none;
+        z-index: 9999;
+        animation: floatUp 1s ease-out forwards;
+    `;
+    
+    // Add animation keyframes if not exists
+    if (!document.getElementById('floatUpStyle')) {
+        const style = document.createElement('style');
+        style.id = 'floatUpStyle';
+        style.textContent = `
+            @keyframes floatUp {
+                0% { opacity: 1; transform: translateY(0); }
+                100% { opacity: 0; transform: translateY(-50px); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(floatingDiv);
+    
+    setTimeout(() => {
+        floatingDiv.remove();
+    }, 1000);
+}
+
 
 // Calculate similarity between two strings (accuracy)
 function calculateAccuracy(original, typed) {

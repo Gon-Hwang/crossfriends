@@ -2074,12 +2074,12 @@ async function loadPosts() {
                             ${sharedPostHtml}
                             <div class="mt-4 flex items-center space-x-6 text-gray-600">
                                 ${post.content && post.content.startsWith('[기도부탁]') ? `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition">
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="기도하였으면 눌러 주세요">
                                         <i class="fas fa-praying-hands ${isLiked ? 'text-purple-600' : ''} text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0} 기도</span>
                                     </button>
                                 ` : `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">
                                         <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>

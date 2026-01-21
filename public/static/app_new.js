@@ -578,7 +578,7 @@ function checkTyping() {
             completedVerses.add(verseId);
         }
     } else {
-        bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 완료한 구절입니다 (점수 미지급)</p>';
+        bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 타이핑 완료한 구절입니다</p>';
     }
     
     // Update total score only if points earned

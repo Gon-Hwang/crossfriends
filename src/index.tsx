@@ -1767,6 +1767,160 @@ app.get('/', (c) => {
             let currentUserId = null;
             let currentUser = null;
 
+            // =====================
+            // Typing Game Functions
+            // =====================
+            let typingScore = 0;
+
+            // Load typing score from localStorage
+            function loadTypingScore() {
+                const savedScore = localStorage.getItem('typingScore');
+                typingScore = savedScore ? parseInt(savedScore) : 0;
+                updateTypingScoreDisplay();
+            }
+
+            // Save typing score to localStorage
+            function saveTypingScore(score) {
+                typingScore = score;
+                localStorage.setItem('typingScore', score.toString());
+                updateTypingScoreDisplay();
+            }
+
+            // Update typing score display in header
+            function updateTypingScoreDisplay() {
+                const scoreElement = document.getElementById('typingScore');
+                const scoreUserElement = document.getElementById('typingScoreUser');
+                
+                if (scoreElement) {
+                    scoreElement.textContent = typingScore;
+                }
+                if (scoreUserElement) {
+                    scoreUserElement.textContent = typingScore;
+                }
+            }
+
+            // Calculate similarity between two strings (accuracy)
+            function calculateAccuracy(original, typed) {
+                // Remove extra whitespaces and trim
+                const cleanOriginal = original.replace(/\\s+/g, ' ').trim();
+                const cleanTyped = typed.replace(/\\s+/g, ' ').trim();
+                
+                // Calculate Levenshtein distance
+                const matrix = [];
+                const n = cleanOriginal.length;
+                const m = cleanTyped.length;
+                
+                if (n === 0) return m === 0 ? 100 : 0;
+                if (m === 0) return 0;
+                
+                // Initialize matrix
+                for (let i = 0; i <= n; i++) {
+                    matrix[i] = [i];
+                }
+                for (let j = 0; j <= m; j++) {
+                    matrix[0][j] = j;
+                }
+                
+                // Fill matrix
+                for (let i = 1; i <= n; i++) {
+                    for (let j = 1; j <= m; j++) {
+                        const cost = cleanOriginal[i - 1] === cleanTyped[j - 1] ? 0 : 1;
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j] + 1,      // deletion
+                            matrix[i][j - 1] + 1,      // insertion
+                            matrix[i - 1][j - 1] + cost // substitution
+                        );
+                    }
+                }
+                
+                const distance = matrix[n][m];
+                const maxLength = Math.max(n, m);
+                const accuracy = ((maxLength - distance) / maxLength) * 100;
+                
+                return Math.round(accuracy);
+            }
+
+            // Handle typing input when Enter is pressed
+            function handleTypingEnter(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    checkTyping();
+                }
+            }
+
+            // Check typing accuracy and update score
+            function checkTyping() {
+                const verseText = document.getElementById('verseText').textContent;
+                const typingInput = document.getElementById('typingInput');
+                const typingResult = document.getElementById('typingResult');
+                const userInput = typingInput.value;
+                
+                if (!userInput.trim()) {
+                    alert('성경구절을 입력해주세요!');
+                    return;
+                }
+                
+                // Calculate accuracy
+                const accuracy = calculateAccuracy(verseText, userInput);
+                
+                // Calculate points earned (accuracy percentage = points)
+                const pointsEarned = accuracy;
+                
+                // Update total score
+                const newScore = typingScore + pointsEarned;
+                saveTypingScore(newScore);
+                
+                // Show result with animation
+                typingResult.classList.remove('hidden');
+                
+                let resultColor = 'text-red-600';
+                let resultIcon = 'fa-times-circle';
+                let resultMessage = '다시 도전해보세요!';
+                
+                if (accuracy === 100) {
+                    resultColor = 'text-green-600';
+                    resultIcon = 'fa-check-circle';
+                    resultMessage = '완벽합니다! 🎉';
+                } else if (accuracy >= 90) {
+                    resultColor = 'text-blue-600';
+                    resultIcon = 'fa-smile';
+                    resultMessage = '훌륭합니다! 😊';
+                } else if (accuracy >= 70) {
+                    resultColor = 'text-yellow-600';
+                    resultIcon = 'fa-meh';
+                    resultMessage = '좋아요! 조금만 더!';
+                }
+                
+                typingResult.innerHTML = \`
+                    <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas \${resultIcon} \${resultColor} text-xl"></i>
+                                <span class="font-bold \${resultColor}">\${resultMessage}</span>
+                            </div>
+                            <span class="text-sm text-gray-600">정확도: <strong>\${accuracy}%</strong></span>
+                        </div>
+                        <div class="text-sm text-gray-700">
+                            <p class="mb-1">획득 점수: <strong class="text-yellow-600">+\${pointsEarned}점</strong></p>
+                            <p>총 점수: <strong class="text-blue-600">\${newScore}점</strong></p>
+                        </div>
+                    </div>
+                \`;
+                
+                // Clear input after a delay
+                setTimeout(() => {
+                    typingInput.value = '';
+                    typingInput.focus();
+                }, 2000);
+            }
+
+            // Reset typing input and result
+            function resetTyping() {
+                document.getElementById('typingInput').value = '';
+                document.getElementById('typingResult').classList.add('hidden');
+                document.getElementById('typingInput').focus();
+            }
+
             // Email History Management
             function loadEmailHistory() {
                 const history = localStorage.getItem('emailHistory');
@@ -3174,6 +3328,7 @@ app.get('/', (c) => {
             }
 
             // Initialize
+            loadTypingScore();
             updateAuthUI();
             updateEmailDatalist(); // Load email history
             autoLogin(); // Auto-login if session exists

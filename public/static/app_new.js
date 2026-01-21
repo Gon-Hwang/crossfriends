@@ -594,11 +594,11 @@ function checkTyping() {
     if (accuracy === 100) {
         resultColor = 'text-green-600';
         resultIcon = 'fa-check-circle';
-        resultMessage = isAlreadyCompleted ? '완벽합니다! (이미 완료)' : '완벽합니다! 🎉';
+        resultMessage = '완벽합니다! 🎉';
     } else if (accuracy >= 90) {
         resultColor = 'text-blue-600';
         resultIcon = 'fa-smile';
-        resultMessage = isAlreadyCompleted ? '훌륭합니다! (이미 완료)' : '훌륭합니다! 😊';
+        resultMessage = '훌륭합니다! 😊';
     } else if (accuracy >= 70) {
         resultColor = 'text-yellow-600';
         resultIcon = 'fa-meh';

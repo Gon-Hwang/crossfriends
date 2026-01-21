@@ -80,19 +80,7 @@ function startVideoTracking() {
         if (player && player.getCurrentTime) {
             const currentTime = player.getCurrentTime();
             
-            // 스킵 감지: 현재 시간이 마지막 체크 시간보다 2초 이상 앞으로 점프한 경우
-            if (lastCheckedTime > 0 && currentTime > lastCheckedTime + 2) {
-                detectSkip();
-                return;
-            }
-            
-            // 스킵 감지: 현재 시간이 maxWatchedTime보다 1초 이상 앞인 경우
-            if (currentTime > maxWatchedTime + 1) {
-                detectSkip();
-                return;
-            }
-            
-            // Update max watched time (only if no skip)
+            // Update max watched time
             if (currentTime > maxWatchedTime) {
                 maxWatchedTime = currentTime;
             }
@@ -118,8 +106,8 @@ async function saveVideoProgress() {
         return; // Don't save if not logged in or video not loaded
     }
     
-    if (isSkipDetected || completedVideos.has(CURRENT_VIDEO_ID)) {
-        return; // Don't save if skipped or already completed
+    if (completedVideos.has(CURRENT_VIDEO_ID)) {
+        return; // Don't save if already completed
     }
     
     const progress = Math.min((maxWatchedTime / videoDuration) * 100, 100);

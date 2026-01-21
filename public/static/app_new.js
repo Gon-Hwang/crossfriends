@@ -315,8 +315,8 @@ function showVideoAlreadyCompleted() {
     resultDiv.innerHTML = `
         <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
             <div class="flex items-center space-x-2">
-                <i class="fas fa-info-circle text-gray-600 text-lg"></i>
-                <span class="font-semibold text-gray-700">이미 시청 완료한 설교입니다</span>
+                <i class="fas fa-info-circle text-gray-600 text-base"></i>
+                <span class="text-sm text-gray-700">이미 시청 완료한 설교입니다</span>
             </div>
         </div>
     `;
@@ -575,7 +575,7 @@ function checkTyping() {
             completedVerses.add(verseId);
         }
     } else {
-        bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 타이핑 완료한 구절입니다</p>';
+        bonusMessage = '<p class="text-sm text-gray-600 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 타이핑 완료한 구절입니다</p>';
     }
     
     // Update total score only if points earned

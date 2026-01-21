@@ -1,15 +1,260 @@
+
 let currentUserId = null;
 let currentUser = null;
+
+// =====================
+// YouTube Video Tracking
+// =====================
+let player;
+let videoCheckInterval;
+let maxWatchedTime = 0;
+let videoDuration = 0;
+const CURRENT_VIDEO_ID = 'u13qcd4AePQ';
+let completedVideos = new Set();
+
+// Load YouTube IFrame API
+const tag = document.createElement('script');
+tag.src = "https://www.youtube.com/iframe_api";
+const firstScriptTag = document.getElementsByTagName('script')[0];
+firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+// Load completed videos from localStorage
+function loadCompletedVideos() {
+    const saved = localStorage.getItem('completedVideos');
+    if (saved) {
+        completedVideos = new Set(JSON.parse(saved));
+    }
+}
+
+// Save completed videos to localStorage
+function saveCompletedVideos() {
+    localStorage.setItem('completedVideos', JSON.stringify([...completedVideos]));
+}
+
+// Called automatically when YouTube API is ready
+function onYouTubeIframeAPIReady() {
+    player = new YT.Player('sermonPlayer', {
+        height: '100%',
+        width: '100%',
+        videoId: CURRENT_VIDEO_ID,
+        playerVars: {
+            'playsinline': 1,
+            'rel': 0,
+            'modestbranding': 1
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+        }
+    });
+}
+
+// Player is ready
+function onPlayerReady(event) {
+    videoDuration = player.getDuration();
+    console.log('Video duration:', videoDuration);
+    
+    // Check if video already completed
+    if (completedVideos.has(CURRENT_VIDEO_ID)) {
+        showVideoAlreadyCompleted();
+    }
+}
+
+// Player state changed (playing, paused, ended, etc.)
+function onPlayerStateChange(event) {
+    if (event.data == YT.PlayerState.PLAYING) {
+        // Show progress container when playing
+        document.getElementById('videoProgressContainer').classList.remove('hidden');
+        
+        // Start tracking progress
+        startVideoTracking();
+    } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
+        // Stop tracking
+        stopVideoTracking();
+        
+        // Check completion on ended
+        if (event.data == YT.PlayerState.ENDED) {
+            checkVideoCompletion();
+        }
+    }
+}
+
+// Start tracking video progress
+function startVideoTracking() {
+    if (videoCheckInterval) {
+        clearInterval(videoCheckInterval);
+    }
+    
+    videoCheckInterval = setInterval(() => {
+        if (player && player.getCurrentTime) {
+            const currentTime = player.getCurrentTime();
+            
+            // Update max watched time
+            if (currentTime > maxWatchedTime) {
+                maxWatchedTime = currentTime;
+            }
+            
+            // Update progress bar
+            updateVideoProgress();
+        }
+    }, 1000);
+}
+
+// Stop tracking video progress
+function stopVideoTracking() {
+    if (videoCheckInterval) {
+        clearInterval(videoCheckInterval);
+        videoCheckInterval = null;
+    }
+}
+
+// Update video progress display
+function updateVideoProgress() {
+    if (!videoDuration || videoDuration === 0) return;
+    
+    const progressPercent = Math.min((maxWatchedTime / videoDuration) * 100, 100);
+    const progressBar = document.getElementById('videoProgressBar');
+    const progressPercentText = document.getElementById('videoProgressPercent');
+    
+    if (progressBar) {
+        progressBar.style.width = progressPercent + '%';
+    }
+    if (progressPercentText) {
+        progressPercentText.textContent = Math.round(progressPercent) + '%';
+    }
+    
+    // Auto-check completion when reaching 90%+
+    if (progressPercent >= 90 && !completedVideos.has(CURRENT_VIDEO_ID)) {
+        checkVideoCompletion();
+    }
+}
+
+// Check if video is completed (90%+ watched)
+function checkVideoCompletion() {
+    if (!videoDuration || videoDuration === 0) return;
+    
+    const watchedPercent = (maxWatchedTime / videoDuration) * 100;
+    
+    console.log('Checking completion:', {
+        maxWatchedTime,
+        videoDuration,
+        watchedPercent,
+        alreadyCompleted: completedVideos.has(CURRENT_VIDEO_ID)
+    });
+    
+    // Check if already completed this video
+    if (completedVideos.has(CURRENT_VIDEO_ID)) {
+        showVideoAlreadyCompleted();
+        return;
+    }
+    
+    // 90% or more = completed
+    if (watchedPercent >= 90) {
+        const pointsEarned = 100;
+        const newScore = typingScore + pointsEarned;
+        saveTypingScore(newScore);
+        
+        // Mark as completed
+        completedVideos.add(CURRENT_VIDEO_ID);
+        saveCompletedVideos();
+        
+        showVideoCompletionReward(pointsEarned, newScore);
+        
+        // Stop tracking
+        stopVideoTracking();
+    }
+}
+
+// Show video completion reward
+function showVideoCompletionReward(points, totalScore) {
+    const resultDiv = document.getElementById('videoCompletionResult');
+    
+    resultDiv.innerHTML = `
+        <div class="bg-green-50 border-2 border-green-600 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    <span class="font-bold text-green-600">설교 시청 완료! 🎉</span>
+                </div>
+                <span class="text-sm text-gray-600">시청률: <strong>${Math.round((maxWatchedTime / videoDuration) * 100)}%</strong></span>
+            </div>
+            <div class="text-sm text-gray-700">
+                <p class="mb-1">획득 점수: <strong class="text-green-600">+${points}점</strong></p>
+                <p>총 성경 점수: <strong class="text-blue-600">${totalScore}점</strong></p>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+                <i class="fas fa-heart mr-1"></i>말씀을 끝까지 들으셨습니다. 은혜가 충만하시길!
+            </p>
+        </div>
+    `;
+    
+    resultDiv.classList.remove('hidden');
+    
+    // Hide progress container
+    document.getElementById('videoProgressContainer').classList.add('hidden');
+}
+
+// Show already completed message
+function showVideoAlreadyCompleted() {
+    const resultDiv = document.getElementById('videoCompletionResult');
+    
+    resultDiv.innerHTML = `
+        <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
+            <div class="flex items-center space-x-2 mb-2">
+                <i class="fas fa-info-circle text-gray-600 text-lg"></i>
+                <span class="font-semibold text-gray-700">이미 시청 완료한 설교입니다</span>
+            </div>
+            <p class="text-xs text-gray-500">
+                <i class="fas fa-check mr-1"></i>이 설교는 이미 점수를 받으셨습니다 (중복 지급 불가)
+            </p>
+        </div>
+    `;
+    
+    resultDiv.classList.remove('hidden');
+}
 
 // =====================
 // Typing Game Functions
 // =====================
 let typingScore = 0;
+let completedVerses = new Set(); // Track completed verses
+
+// Toggle typing area visibility
+function toggleTypingArea() {
+    const typingArea = document.getElementById('typingArea');
+    const toggleIcon = document.getElementById('typingToggleIcon');
+    
+    console.log('Toggle clicked', typingArea, toggleIcon);
+    
+    if (!typingArea || !toggleIcon) {
+        console.error('Elements not found:', { typingArea, toggleIcon });
+        return;
+    }
+    
+    if (typingArea.classList.contains('hidden')) {
+        typingArea.classList.remove('hidden');
+        toggleIcon.classList.remove('fa-chevron-down');
+        toggleIcon.classList.add('fa-chevron-up');
+        console.log('Opened typing area');
+    } else {
+        typingArea.classList.add('hidden');
+        toggleIcon.classList.remove('fa-chevron-up');
+        toggleIcon.classList.add('fa-chevron-down');
+        console.log('Closed typing area');
+    }
+}
 
 // Load typing score from localStorage
 function loadTypingScore() {
     const savedScore = localStorage.getItem('typingScore');
     typingScore = savedScore ? parseInt(savedScore) : 0;
+    
+    // Load completed verses
+    const savedVerses = localStorage.getItem('completedVerses');
+    if (savedVerses) {
+        completedVerses = new Set(JSON.parse(savedVerses));
+    }
+    
     updateTypingScoreDisplay();
 }
 
@@ -17,6 +262,10 @@ function loadTypingScore() {
 function saveTypingScore(score) {
     typingScore = score;
     localStorage.setItem('typingScore', score.toString());
+    
+    // Save completed verses
+    localStorage.setItem('completedVerses', JSON.stringify([...completedVerses]));
+    
     updateTypingScoreDisplay();
 }
 
@@ -36,8 +285,8 @@ function updateTypingScoreDisplay() {
 // Calculate similarity between two strings (accuracy)
 function calculateAccuracy(original, typed) {
     // Remove extra whitespaces and trim
-    const cleanOriginal = original.replace(/\s+/g, ' ').trim();
-    const cleanTyped = typed.replace(/\s+/g, ' ').trim();
+    const cleanOriginal = original.replace(/\\s+/g, ' ').trim();
+    const cleanTyped = typed.replace(/\\s+/g, ' ').trim();
     
     // Calculate Levenshtein distance
     const matrix = [];
@@ -94,15 +343,34 @@ function checkTyping() {
         return;
     }
     
+    // Create a unique ID for this verse (using the text content)
+    const verseId = verseText.trim();
+    
+    // Check if this verse was already completed
+    const isAlreadyCompleted = completedVerses.has(verseId);
+    
     // Calculate accuracy
     const accuracy = calculateAccuracy(verseText, userInput);
     
     // Calculate points earned (accuracy percentage = points)
-    const pointsEarned = accuracy;
+    let pointsEarned = 0;
+    let bonusMessage = '';
     
-    // Update total score
+    if (!isAlreadyCompleted) {
+        pointsEarned = accuracy;
+        // Mark as completed if accuracy is high enough
+        if (accuracy >= 90) {
+            completedVerses.add(verseId);
+        }
+    } else {
+        bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 완료한 구절입니다 (점수 미지급)</p>';
+    }
+    
+    // Update total score only if points earned
     const newScore = typingScore + pointsEarned;
-    saveTypingScore(newScore);
+    if (pointsEarned > 0) {
+        saveTypingScore(newScore);
+    }
     
     // Show result with animation
     typingResult.classList.remove('hidden');
@@ -114,11 +382,11 @@ function checkTyping() {
     if (accuracy === 100) {
         resultColor = 'text-green-600';
         resultIcon = 'fa-check-circle';
-        resultMessage = '완벽합니다! 🎉';
+        resultMessage = isAlreadyCompleted ? '완벽합니다! (이미 완료)' : '완벽합니다! 🎉';
     } else if (accuracy >= 90) {
         resultColor = 'text-blue-600';
         resultIcon = 'fa-smile';
-        resultMessage = '훌륭합니다! 😊';
+        resultMessage = isAlreadyCompleted ? '훌륭합니다! (이미 완료)' : '훌륭합니다! 😊';
     } else if (accuracy >= 70) {
         resultColor = 'text-yellow-600';
         resultIcon = 'fa-meh';
@@ -135,8 +403,9 @@ function checkTyping() {
                 <span class="text-sm text-gray-600">정확도: <strong>${accuracy}%</strong></span>
             </div>
             <div class="text-sm text-gray-700">
-                <p class="mb-1">획득 점수: <strong class="text-yellow-600">+${pointsEarned}점</strong></p>
+                <p class="mb-1">획득 점수: <strong class="${pointsEarned > 0 ? 'text-yellow-600' : 'text-gray-500'}">+${pointsEarned}점</strong></p>
                 <p>총 점수: <strong class="text-blue-600">${newScore}점</strong></p>
+                ${bonusMessage}
             </div>
         </div>
     `;
@@ -164,9 +433,11 @@ function loadEmailHistory() {
 function saveEmailToHistory(email) {
     let history = loadEmailHistory();
     
+    // Add email to history if not already present
     if (!history.includes(email)) {
-        history.unshift(email);
+        history.unshift(email); // Add to beginning
         
+        // Keep only last 10 emails
         if (history.length > 10) {
             history = history.slice(0, 10);
         }
@@ -174,6 +445,7 @@ function saveEmailToHistory(email) {
         localStorage.setItem('emailHistory', JSON.stringify(history));
     }
     
+    // Update datalist
     updateEmailDatalist();
 }
 
@@ -192,6 +464,7 @@ function updateEmailDatalist() {
 }
 
 // Location data
+// 도 → 시 2단계 교회 위치 데이터
 const locationData = {
     '서울특별시': ['강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', '서초구', '성동구', '성북구', '송파구', '양천구', '영등포구', '용산구', '은평구', '종로구', '중구', '중랑구'],
     '부산광역시': ['강서구', '금정구', '기장군', '남구', '동구', '동래구', '부산진구', '북구', '사상구', '사하구', '서구', '수영구', '연제구', '영도구', '중구', '해운대구'],
@@ -201,13 +474,24 @@ const locationData = {
     '대전광역시': ['대덕구', '동구', '서구', '유성구', '중구'],
     '울산광역시': ['남구', '동구', '북구', '울주군', '중구'],
     '세종특별자치시': ['세종특별자치시'],
-    '경기도': ['가평군', '고양시', '과천시', '광명시', '광주시', '구리시', '군포시', '김포시', '남양주시', '동두천시', '부천시', '성남시', '수원시', '시흥시', '안산시', '안성시', '안양시', '양주시', '양평군', '여주시', '연천군', '오산시', '용인시', '의왕시', '의정부시', '이천시', '파주시', '평택시', '포천시', '하남시', '화성시']
+    '경기도': ['가평군', '고양시', '과천시', '광명시', '광주시', '구리시', '군포시', '김포시', '남양주시', '동두천시', '부천시', '성남시', '수원시', '시흥시', '안san시', '안성시', '안양시', '양주시', '양평군', '여주시', '연천군', '오산시', '용인시', '의왕시', '의정부시', '이천시', '파주시', '평택시', '포천시', '하남시', '화성시'],
+    '강원특별자치도': ['강릉시', '고성군', '동해시', '삼척시', '속초시', '양구군', '양양군', '영월군', '원주시', '인제군', '정선군', '철원군', '춘천시', '태백시', '평창군', '홍천군', '화천군', '횡성군'],
+    '충청북도': ['괴산군', '단양군', '보은군', '영동군', '옥천군', '음성군', '제천시', '증평군', '진천군', '청주시', '충주시'],
+    '충청남도': ['계룡시', '공주시', '금산군', '논산시', '당진시', '보령시', '부여군', '서산시', '서천군', '아산시', '예산군', '천안시', '청양군', '태안군', '홍성군'],
+    '전북특별자치도': ['고창군', '군산시', '김제시', '남원시', '무주군', '부안군', '순창군', '완주군', '익산시', '임실군', '장수군', '전주시', '정읍시', '진안군'],
+    '전라남도': ['강진군', '고흥군', '곡성군', '광양시', '구례군', '나주시', '담양군', '목포시', '무안군', '보성군', '순천시', '신안군', '여수시', '영광군', '영암군', '완도군', '장성군', '장흥군', '진도군', '함평군', '해남군', '화순군'],
+    '경상북도': ['경산시', '경주시', '고령군', '구미시', '군위군', '김천시', '문경시', '봉화군', '상주시', '성주군', '안동시', '영덕군', '영양군', '영주시', '영천시', '예천군', '울릉군', '울진군', '의성군', '청도군', '청송군', '칠곡군', '포항시'],
+    '경상남도': ['거제시', '거창군', '고성군', '김해시', '남해군', '밀양시', '사천시', '산청군', '양산시', '의령군', '진주시', '창녕군', '창원시', '통영시', '하동군', '함안군', '함양군', '합천군'],
+    '제주특별자치도': ['서귀포시', '제주시']
 };
 
+// Update cities based on province selection
+// Update cities based on province selection (도→시 2단계)
 function updateCities() {
     const province = document.getElementById('signupProvince').value;
     const citySelect = document.getElementById('signupCity');
     
+    // Reset city dropdown
     citySelect.innerHTML = '<option value="">시/군/구 선택</option>';
     
     if (province && locationData[province]) {
@@ -228,12 +512,14 @@ function updateCities() {
 function previewAvatar(event) {
     const file = event.target.files[0];
     if (file) {
+        // Check file size (5MB limit)
         if (file.size > 5 * 1024 * 1024) {
             alert('파일 크기는 5MB를 초과할 수 없습니다.');
             event.target.value = '';
             return;
         }
         
+        // Preview image
         const reader = new FileReader();
         reader.onload = function(e) {
             const preview = document.getElementById('avatarPreview');
@@ -250,6 +536,7 @@ function showSignupModal() {
 
 function hideSignupModal() {
     document.getElementById('signupModal').classList.add('hidden');
+    // Clear form
     document.getElementById('signupEmail').value = '';
     document.getElementById('signupName').value = '';
     document.getElementById('signupChurch').value = '';
@@ -260,9 +547,11 @@ function hideSignupModal() {
     document.getElementById('signupGender').value = '';
     document.getElementById('signupPosition').value = '';
     document.getElementById('signupAvatar').value = '';
+    // Clear faith answers
     for (let i = 1; i <= 10; i++) {
         document.getElementById('faith_q' + i).value = '';
     }
+    // Reset avatar preview
     document.getElementById('avatarPreview').innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
 }
 
@@ -275,6 +564,438 @@ function hideLoginModal() {
     document.getElementById('loginEmail').value = '';
 }
 
+// Profile Menu Toggle
+function toggleProfileMenu() {
+    const menu = document.getElementById('profileMenu');
+    menu.classList.toggle('hidden');
+}
+
+// Close profile menu when clicking outside
+document.addEventListener('click', function(event) {
+    const profileMenu = document.getElementById('profileMenu');
+    const userMenu = document.getElementById('userMenu');
+    
+    if (profileMenu && userMenu && !userMenu.contains(event.target)) {
+        profileMenu.classList.add('hidden');
+    }
+});
+
+// View Profile Modal functions
+async function showViewProfileModal() {
+    if (!currentUser) return;
+    
+    try {
+        // Fetch latest user data
+        const response = await axios.get('/api/users/' + currentUserId);
+        const user = response.data.user;
+        
+        // Parse faith answers if exists
+        let faithAnswers = null;
+        if (user.faith_answers) {
+            try {
+                faithAnswers = JSON.parse(user.faith_answers);
+                console.log('Parsed faith answers:', faithAnswers);
+            } catch (e) {
+                console.error('Failed to parse faith_answers:', e);
+            }
+        } else {
+            console.log('No faith_answers data for user');
+        }
+        
+        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
+        const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
+        
+        const content = `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Profile Section -->
+                <div class="md:col-span-1">
+                    <div class="bg-gray-50 rounded-lg p-6 text-center">
+                        <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
+                            ${user.avatar_url ? `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />` : '<i class="fas fa-user"></i>'}
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
+                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
+                            ${roleName}
+                        </span>
+                        <div class="mt-4 text-xs text-gray-500">
+                            <p>회원 ID: #${user.id}</p>
+                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            ${user.updated_at && user.updated_at !== user.created_at ? `<p>최근 수정: ${new Date(user.updated_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Details Section -->
+                <div class="md:col-span-2 space-y-4">
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                        <h4 class="font-semibold text-blue-800 mb-3">
+                            <i class="fas fa-info-circle mr-2"></i>기본 정보
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span class="text-gray-600">이메일:</span>
+                                <p class="font-medium text-gray-800 break-all">${user.email}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">이름:</span>
+                                <p class="font-medium text-gray-800">${user.name}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">성별:</span>
+                                <p class="font-medium text-gray-800">${user.gender || '-'}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">역할:</span>
+                                <p class="font-medium text-gray-800">${roleName}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
+                        <h4 class="font-semibold text-green-800 mb-3">
+                            <i class="fas fa-church mr-2"></i>교회 정보
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span class="text-gray-600">소속 교회:</span>
+                                <p class="font-medium text-gray-800">${user.church || '-'}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">담임목사:</span>
+                                <p class="font-medium text-gray-800">${user.pastor || '-'}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">교단:</span>
+                                <p class="font-medium text-gray-800">${user.denomination || '-'}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">교회 직분:</span>
+                                <p class="font-medium text-gray-800">${user.position || '-'}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <span class="text-gray-600">교회 위치:</span>
+                                <p class="font-medium text-gray-800">${user.location || '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${user.bio ? `
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                        <h4 class="font-semibold text-purple-800 mb-2">
+                            <i class="fas fa-comment-dots mr-2"></i>소개
+                        </h4>
+                        <p class="text-sm text-gray-700">${user.bio}</p>
+                    </div>
+                    ` : ''}
+                    
+                    ${faithAnswers ? `
+                    <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+                        <h4 class="font-semibold text-yellow-800 mb-3">
+                            <i class="fas fa-cross mr-2"></i>신앙 고백
+                        </h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">1. 예수님이 창조주 하나님임을 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q1 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">2. 십자가 대속을 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q2 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">3. 예수님의 부활을 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q3 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">4. 예수님을 주님으로 영접했습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q4 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">5. 성령님이 계십니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q5 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">6. 천국 갈 것을 확신합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q6 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">7. 성경을 진리로 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q7 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">8. 정기적으로 예배에 참석합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q8 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">9. 정기적으로 기도합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q9 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">10. 가끔 전도합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q10 || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('viewProfileContent').innerHTML = content;
+        document.getElementById('viewProfileModal').classList.remove('hidden');
+    } catch (error) {
+        console.error('Failed to load profile:', error);
+        alert('프로필 정보를 불러오는데 실패했습니다.');
+    }
+}
+
+function hideViewProfileModal() {
+    document.getElementById('viewProfileModal').classList.add('hidden');
+}
+
+// Edit Profile Modal functions
+async function showEditProfileModal() {
+    if (!currentUser) return;
+    
+    try {
+        // Fetch latest user data to get faith_answers
+        const response = await axios.get('/api/users/' + currentUserId);
+        const user = response.data.user;
+        
+        document.getElementById('editProfileModal').classList.remove('hidden');
+        
+        // Populate form with current user data
+        document.getElementById('editEmail').value = user.email || '';
+        document.getElementById('editName').value = user.name || '';
+        document.getElementById('editGender').value = user.gender || '';
+        document.getElementById('editChurch').value = user.church || '';
+        document.getElementById('editPastor').value = user.pastor || '';
+        document.getElementById('editPosition').value = user.position || '';
+        
+        // Parse and populate faith answers
+        if (user.faith_answers) {
+            try {
+                const faithAnswers = JSON.parse(user.faith_answers);
+                for (let i = 1; i <= 10; i++) {
+                    const element = document.getElementById('edit_faith_q' + i);
+                    if (element && faithAnswers['q' + i]) {
+                        element.value = faithAnswers['q' + i];
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to parse faith_answers:', e);
+            }
+        }
+        
+        // Show current avatar
+        const editAvatarPreview = document.getElementById('editAvatarPreview');
+        if (user.avatar_url) {
+            editAvatarPreview.innerHTML = '<img src="' + user.avatar_url + '" class="w-full h-full object-cover" />';
+        } else {
+            editAvatarPreview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+        }
+    } catch (error) {
+        console.error('Failed to load user data:', error);
+        alert('사용자 정보를 불러오는데 실패했습니다.');
+    }
+}
+
+function hideEditProfileModal() {
+    document.getElementById('editProfileModal').classList.add('hidden');
+    document.getElementById('editAvatar').value = '';
+}
+
+function previewEditAvatar(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            alert('파일 크기는 5MB를 초과할 수 없습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('editAvatarPreview');
+            preview.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover" />';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+async function handleEditProfile() {
+    const name = document.getElementById('editName').value;
+    const gender = document.getElementById('editGender').value;
+    const church = document.getElementById('editChurch').value;
+    const pastor = document.getElementById('editPastor').value;
+    const position = document.getElementById('editPosition').value;
+    const avatarFile = document.getElementById('editAvatar').files[0];
+    
+    // 신앙 고백 답변 수집
+    const faithAnswers = {
+        q1: document.getElementById('edit_faith_q1').value,
+        q2: document.getElementById('edit_faith_q2').value,
+        q3: document.getElementById('edit_faith_q3').value,
+        q4: document.getElementById('edit_faith_q4').value,
+        q5: document.getElementById('edit_faith_q5').value,
+        q6: document.getElementById('edit_faith_q6').value,
+        q7: document.getElementById('edit_faith_q7').value,
+        q8: document.getElementById('edit_faith_q8').value,
+        q9: document.getElementById('edit_faith_q9').value,
+        q10: document.getElementById('edit_faith_q10').value
+    };
+
+    if (!name) {
+        alert('이름은 필수 항목입니다.');
+        return;
+    }
+
+    try {
+        // Update user info including faith_answers
+        await axios.put('/api/users/' + currentUserId, {
+            name,
+            gender,
+            church,
+            pastor,
+            position,
+            faith_answers: JSON.stringify(faithAnswers)
+        });
+
+        // Upload new avatar if selected
+        if (avatarFile) {
+            const formData = new FormData();
+            formData.append('avatar', avatarFile);
+            
+            try {
+                await axios.post('/api/users/' + currentUserId + '/avatar', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+            }
+        }
+
+        // Refresh user data
+        const userResponse = await axios.get('/api/users/' + currentUserId);
+        currentUser = userResponse.data.user;
+        updateAuthUI();
+        
+        alert('회원정보가 수정되었습니다! 👍');
+        hideEditProfileModal();
+        loadPosts();
+    } catch (error) {
+        console.error('Edit profile error:', error);
+        alert('회원정보 수정에 실패했습니다. 다시 시도해주세요.');
+    }
+}
+
+
+// Signup handler
+async function handleSignup() {
+    const email = document.getElementById('signupEmail').value;
+    const name = document.getElementById('signupName').value;
+    const church = document.getElementById('signupChurch').value;
+    const pastor = document.getElementById('signupPastor').value;
+    const denomination = document.getElementById('signupDenomination').value;
+    const province = document.getElementById('signupProvince').value;
+    const city = document.getElementById('signupCity').value;
+    const gender = document.getElementById('signupGender').value;
+    const position = document.getElementById('signupPosition').value;
+    const avatarFile = document.getElementById('signupAvatar').files[0];
+    
+    // 신앙 고백 답변 수집
+    const faithAnswers = {
+        q1: document.getElementById('faith_q1').value,
+        q2: document.getElementById('faith_q2').value,
+        q3: document.getElementById('faith_q3').value,
+        q4: document.getElementById('faith_q4').value,
+        q5: document.getElementById('faith_q5').value,
+        q6: document.getElementById('faith_q6').value,
+        q7: document.getElementById('faith_q7').value,
+        q8: document.getElementById('faith_q8').value,
+        q9: document.getElementById('faith_q9').value,
+        q10: document.getElementById('faith_q10').value
+    };
+
+    // 필수 항목 확인 (이름, 성별, 이메일, 프로필 사진)
+    if (!email || !name) {
+        alert('이름과 이메일은 필수 항목입니다.');
+        return;
+    }
+    
+    if (!gender) {
+        alert('성별을 선택해주세요.');
+        return;
+    }
+    
+    if (!avatarFile) {
+        alert('프로필 사진을 업로드해주세요.');
+        return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        alert('올바른 이메일 형식을 입력해주세요.');
+        return;
+    }
+
+    // 교회 위치 조합: 도 + 시 (둘 다 있을 경우만)
+    const location = (province && city) ? (province + ' ' + city) : '';
+
+    try {
+        // 1. Create user
+        const response = await axios.post('/api/users', {
+            email,
+            name,
+            church,
+            pastor,
+            denomination,
+            location,
+            position,
+            gender,
+            faith_answers: JSON.stringify(faithAnswers)
+        });
+
+        const newUserId = response.data.id;
+
+        // 2. Upload avatar if selected
+        if (avatarFile) {
+            const formData = new FormData();
+            formData.append('avatar', avatarFile);
+            
+            try {
+                await axios.post('/api/users/' + newUserId + '/avatar', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+                // Continue even if avatar upload fails
+            }
+        }
+
+        alert('회원가입이 완료되었습니다! 환영합니다! 🎉');
+        hideSignupModal();
+        
+        // Save email to history
+        saveEmailToHistory(email);
+        
+        // Auto login - Fetch complete user info
+        const userResponse = await axios.get('/api/users/' + newUserId);
+        currentUserId = newUserId;
+        currentUser = userResponse.data.user;
+        updateAuthUI();
+        loadPosts();
+    } catch (error) {
+        console.error('Signup error:', error);
+        if (error.response && error.response.status === 500) {
+            alert('이미 가입된 이메일입니다.');
+        } else {
+            alert('회원가입에 실패했습니다. 다시 시도해주세요.');
+        }
+    }
+}
+
 // Login handler
 async function handleLogin() {
     const email = document.getElementById('loginEmail').value;
@@ -284,6 +1005,7 @@ async function handleLogin() {
         return;
     }
 
+    // Trim whitespace
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
@@ -294,6 +1016,7 @@ async function handleLogin() {
     console.log('로그인 시도:', trimmedEmail);
 
     try {
+        // Find user by email
         const response = await axios.get('/api/users');
         console.log('사용자 목록 조회 성공:', response.data.users.length, '명');
         
@@ -304,12 +1027,13 @@ async function handleLogin() {
             currentUserId = user.id;
             currentUser = user;
             
+            // Save email to history
             saveEmailToHistory(trimmedEmail);
             
             updateAuthUI();
             hideLoginModal();
-            await loadPosts();
-            alert('환영합니다, ' + user.name + '님! 😊');
+            loadPosts();
+            alert(`환영합니다, ${user.name}님! 😊`);
         } else {
             console.log('사용자를 찾을 수 없음. 입력된 이메일:', trimmedEmail);
             console.log('등록된 이메일 목록:', response.data.users.map(u => u.email));
@@ -317,14 +1041,798 @@ async function handleLogin() {
         }
     } catch (error) {
         console.error('Login error:', error);
-        alert('로그인에 실패했습니다. 다시 시도해주세요.');
+        alert('로그인에 실패했습니다. 콘솔을 확인해주세요.');
+    }
+}
+
+// Logout
+function logout() {
+    currentUserId = null;
+    currentUser = null;
+    localStorage.removeItem('currentUserId');
+    localStorage.removeItem('currentUser');
+    updateAuthUI();
+    document.getElementById('postsFeed').innerHTML = '<div class="text-center text-gray-500 py-10">로그인하여 게시물을 확인하세요</div>';
+}
+
+// Go to admin panel
+function goToAdmin() {
+    window.location.href = '/admin';
+}
+
+// Update UI based on auth state
+function updateAuthUI() {
+    const authButtons = document.getElementById('authButtons');
+    const userMenu = document.getElementById('userMenu');
+    const userName = document.getElementById('userName');
+    const userAvatarContainer = document.getElementById('userAvatarContainer');
+    const newPostAvatar = document.getElementById('newPostAvatar');
+    const adminPanelBtn = document.getElementById('adminPanelBtn');
+
+    if (currentUserId) {
+        authButtons.classList.add('hidden');
+        userMenu.classList.remove('hidden');
+        
+        // Update user name
+        userName.textContent = currentUser.name;
+        
+        // Show admin panel button if user is admin
+        if (currentUser.role === 'admin') {
+            adminPanelBtn.classList.remove('hidden');
+        } else {
+            adminPanelBtn.classList.add('hidden');
+        }
+        
+        // Save to localStorage for admin panel access
+        localStorage.setItem('currentUserId', currentUserId);
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        // Update user avatar in header
+        if (currentUser.avatar_url) {
+            // Create image element with proper error handling
+            const img = document.createElement('img');
+            img.src = currentUser.avatar_url;
+            img.alt = 'Profile';
+            img.className = 'w-full h-full object-cover';
+            img.onerror = function() {
+                // If image fails to load, show default icon
+                userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
+            };
+            userAvatarContainer.innerHTML = '';
+            userAvatarContainer.appendChild(img);
+            
+            // Update new post avatar
+            const postImg = document.createElement('img');
+            postImg.src = currentUser.avatar_url;
+            postImg.alt = 'Profile';
+            postImg.className = 'w-full h-full object-cover';
+            postImg.onerror = function() {
+                newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
+            };
+            newPostAvatar.innerHTML = '';
+            newPostAvatar.appendChild(postImg);
+        } else {
+            userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
+            newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
+        }
+        
+        // Add role badge
+        addRoleBadge(userAvatarContainer.parentElement, currentUser.role);
+        addRoleBadge(newPostAvatar.parentElement, currentUser.role);
+    } else {
+        authButtons.classList.remove('hidden');
+        userMenu.classList.add('hidden');
+    }
+}
+
+// Add role badge to avatar container
+function addRoleBadge(container, role) {
+    if (!container) return;
+    
+    // Remove existing badge
+    const existingBadge = container.querySelector('.admin-badge-crown, .admin-badge, .moderator-badge');
+    if (existingBadge) {
+        existingBadge.remove();
+    }
+    
+    if (role === 'admin') {
+        const badge = document.createElement('div');
+        badge.className = 'admin-badge-crown';
+        badge.innerHTML = '<i class="fas fa-crown"></i>';
+        badge.title = '관리자';
+        container.appendChild(badge);
+    } else if (role === 'moderator') {
+        const badge = document.createElement('div');
+        badge.className = 'moderator-badge';
+        badge.innerHTML = '<i class="fas fa-shield-alt"></i>';
+        badge.title = '운영자';
+        container.appendChild(badge);
+    }
+}
+
+// Create new post
+async function createPost() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        showLoginModal();
+        return;
+    }
+
+    const content = document.getElementById('newPostContent').value;
+    const imageFile = document.getElementById('postImageFile').files[0];
+    const videoFile = document.getElementById('postVideoFile').files[0];
+    
+    // Get shared post ID if exists
+    const sharedPostPreview = document.getElementById('sharedPostPreview');
+    const sharedPostId = sharedPostPreview.dataset.sharedPostId || null;
+
+    if (!content && !imageFile && !videoFile && !sharedPostId) {
+        alert('내용, 사진, 동영상 또는 공유할 포스팅을 입력해주세요.');
+        return;
+    }
+
+    // Disable post button
+    const postBtn = document.getElementById('createPostBtn');
+    const originalBtnText = postBtn.innerHTML;
+    postBtn.disabled = true;
+    postBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>업로드 중...';
+    postBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+    try {
+        // 1. Create post with shared_post_id
+        const response = await axios.post('/api/posts', {
+            user_id: currentUserId,
+            content: content || '',
+            verse_reference: null,
+            shared_post_id: sharedPostId
+        });
+
+        const postId = response.data.id;
+
+        // 2. Upload image if selected
+        if (imageFile) {
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            
+            try {
+                await axios.post('/api/posts/' + postId + '/image', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } catch (uploadError) {
+                console.error('Image upload error:', uploadError);
+            }
+        }
+
+        // 3. Upload video if selected
+        if (videoFile) {
+            // Show progress bar
+            const progressContainer = document.getElementById('uploadProgressContainer');
+            const progressBar = document.getElementById('uploadProgressBar');
+            const progressPercent = document.getElementById('uploadPercent');
+            const uploadStatus = document.getElementById('uploadStatus');
+            
+            progressContainer.classList.remove('hidden');
+            
+            const formData = new FormData();
+            formData.append('video', videoFile);
+            
+            try {
+                await axios.post('/api/posts/' + postId + '/video', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                    onUploadProgress: function(progressEvent) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        progressBar.style.width = percentCompleted + '%';
+                        progressPercent.textContent = percentCompleted + '%';
+                        
+                        if (percentCompleted === 100) {
+                            uploadStatus.textContent = '처리 중...';
+                        }
+                    }
+                });
+                
+                uploadStatus.textContent = '업로드 완료!';
+                uploadStatus.innerHTML = '<i class="fas fa-check-circle mr-2"></i>업로드 완료!';
+                
+                // Hide progress bar after 1 second
+                setTimeout(function() {
+                    progressContainer.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                    progressPercent.textContent = '0%';
+                    uploadStatus.textContent = '업로드 중...';
+                }, 1000);
+            } catch (uploadError) {
+                console.error('Video upload error:', uploadError);
+                uploadStatus.textContent = '업로드 실패';
+                uploadStatus.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>업로드 실패';
+                
+                setTimeout(function() {
+                    progressContainer.classList.add('hidden');
+                    progressBar.style.width = '0%';
+                    progressPercent.textContent = '0%';
+                    uploadStatus.textContent = '업로드 중...';
+                }, 2000);
+            }
+        }
+
+        document.getElementById('newPostContent').value = '';
+        removePostImage();
+        removePostVideo();
+        removeSharedPost(); // Clear shared post preview
+        
+        // Re-enable button
+        postBtn.disabled = false;
+        postBtn.innerHTML = originalBtnText;
+        postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        
+        await loadPosts();
+    } catch (error) {
+        console.error('Error creating post:', error);
+        alert('게시물 작성에 실패했습니다.');
+        
+        // Re-enable button
+        postBtn.disabled = false;
+        postBtn.innerHTML = originalBtnText;
+        postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+// Preview post image
+function previewPostImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+            alert('파일 크기는 10MB를 초과할 수 없습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        if (!file.type.startsWith('image/')) {
+            alert('이미지 파일만 업로드할 수 있습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('postImagePreview');
+            const container = document.getElementById('postImagePreviewContainer');
+            preview.src = e.target.result;
+            container.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Remove post image
+function removePostImage() {
+    document.getElementById('postImageFile').value = '';
+    document.getElementById('postImagePreview').src = '';
+    document.getElementById('postImagePreviewContainer').classList.add('hidden');
+}
+
+// Preview post video
+function previewPostVideo(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (file.size > 100 * 1024 * 1024) {
+            alert('파일 크기는 100MB를 초과할 수 없습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        if (!file.type.startsWith('video/')) {
+            alert('동영상 파일만 업로드할 수 있습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        // Hide image preview if shown
+        document.getElementById('postImagePreviewContainer').classList.add('hidden');
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('postVideoPreview');
+            const container = document.getElementById('postVideoPreviewContainer');
+            preview.src = e.target.result;
+            container.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Remove post video
+function removePostVideo() {
+    document.getElementById('postVideoFile').value = '';
+    document.getElementById('postVideoPreview').src = '';
+    document.getElementById('postVideoPreviewContainer').classList.add('hidden');
+}
+
+// Toggle like
+async function toggleLike(postId) {
+    try {
+        const response = await axios.post(`/api/posts/${postId}/like`, {
+            user_id: currentUserId
+        });
+        loadPosts();
+    } catch (error) {
+        console.error('Error toggling like:', error);
+    }
+}
+
+// Delete post (Admin only)
+async function deletePost(postId) {
+    if (!currentUser || currentUser.role !== 'admin') {
+        alert('권한이 없습니다.');
+        return;
+    }
+
+    if (!confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+        return;
+    }
+
+    try {
+        await axios.delete(`/api/posts/${postId}`);
+        alert('게시물이 삭제되었습니다.');
+        loadPosts();
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        alert('게시물 삭제에 실패했습니다.');
+    }
+}
+
+// Share post - creates new post with quoted original post
+async function sharePost(postId) {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+
+    try {
+        // Get the original post details
+        const response = await axios.get(`/api/posts/${postId}?user_id=${currentUserId}`);
+        const post = response.data.post;
+        
+        // Scroll to new post area
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Focus textarea but don't clear it (user can write their opinion)
+        const textarea = document.getElementById('newPostContent');
+        textarea.focus();
+        
+        // Clear any existing image/video previews (shared post will replace them)
+        const postImagePreviewContainer = document.getElementById('postImagePreviewContainer');
+        const postVideoPreviewContainer = document.getElementById('postVideoPreviewContainer');
+        postImagePreviewContainer.classList.add('hidden');
+        postVideoPreviewContainer.classList.add('hidden');
+        
+        // Create shared post card preview (액자 안의 액자 - 첨부파일처럼)
+        const sharedPostPreview = document.getElementById('sharedPostPreview');
+        
+        const avatarHtml = post.user_avatar 
+            ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+            : '<i class="fas fa-user"></i>';
+        
+        // Role badge for shared post
+        let roleBadgeHtml = '';
+        if (post.user_role === 'admin') {
+            roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+        } else if (post.user_role === 'moderator') {
+            roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+        }
+        
+        const verseHtml = post.verse_reference ? `
+            <div class="mt-2 bg-blue-50 border-l-4 border-blue-600 p-2 rounded text-xs">
+                <p class="text-blue-600 font-semibold">
+                    <i class="fas fa-bible mr-1"></i>${post.verse_reference}
+                </p>
+            </div>
+        ` : '';
+        
+        const imageHtml = post.image_url ? `
+            <div class="mt-2">
+                <img src="${post.image_url}" alt="Post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
+            </div>
+        ` : '';
+        
+        const videoHtml = post.video_url ? `
+            <div class="mt-2">
+                <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
+                    <source src="${post.video_url}" type="video/mp4">
+                    동영상을 재생할 수 없습니다.
+                </video>
+            </div>
+        ` : '';
+        
+        // Create the shared post card (inner frame) - looks like an attachment
+        const sharedCardHtml = `
+            <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-gray-400 p-4 relative shadow-sm">
+                <div class="absolute top-2 right-2 z-10">
+                    <button 
+                        onclick="removeSharedPost()"
+                        class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition shadow-md">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-300">
+                    <i class="fas fa-quote-left text-blue-600 text-sm"></i>
+                    <span class="text-xs font-bold text-gray-700">공유된 포스팅</span>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="admin-badge-container">
+                        <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                            ${avatarHtml}
+                        </div>
+                        ${roleBadgeHtml}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center space-x-2 flex-wrap">
+                            <h4 class="font-bold text-sm text-gray-800">${post.user_name}</h4>
+                            <span class="text-xs text-gray-500">•</span>
+                            <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
+                        </div>
+                        <p class="text-xs text-gray-600 mb-2">${post.user_church || ''}</p>
+                        <p class="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">${post.content}</p>
+                        ${imageHtml}
+                        ${videoHtml}
+                        ${verseHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        sharedPostPreview.innerHTML = sharedCardHtml;
+        sharedPostPreview.classList.remove('hidden');
+        
+        // Store the shared post ID for later use
+        sharedPostPreview.dataset.sharedPostId = postId;
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+        successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>포스팅이 공유되었습니다. 의견을 작성하고 게시하세요!';
+        document.body.appendChild(successMsg);
+        
+        setTimeout(() => {
+            successMsg.remove();
+        }, 3000);
+        
+    } catch (error) {
+        console.error('Error sharing post:', error);
+        alert('포스팅 공유에 실패했습니다.');
+    }
+}
+
+// Remove shared post preview
+function removeSharedPost() {
+    const sharedPostPreview = document.getElementById('sharedPostPreview');
+    sharedPostPreview.innerHTML = '';
+    sharedPostPreview.classList.add('hidden');
+    delete sharedPostPreview.dataset.sharedPostId;
+}
+
+// Load comments
+async function loadComments(postId) {
+    const commentsDiv = document.getElementById(`comments-${postId}`);
+    if (commentsDiv.classList.contains('hidden')) {
+        try {
+            const response = await axios.get(`/api/posts/${postId}/comments`);
+            const comments = response.data.comments;
+            
+            let commentsHtml = '';
+            comments.forEach(comment => {
+                const avatarHtml = comment.user_avatar 
+                    ? `<img src="${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                    : '<i class="fas fa-user"></i>';
+                
+                // Role badge for comments
+                let roleBadgeHtml = '';
+                if (comment.user_role === 'admin') {
+                    roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+                } else if (comment.user_role === 'moderator') {
+                    roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+                }
+                
+                commentsHtml += `
+                    <div class="flex space-x-3">
+                        <div class="admin-badge-container">
+                            <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">${avatarHtml}</div>
+                            ${roleBadgeHtml}
+                        </div>
+                        <div class="flex-1">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
+                                <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">${formatDate(comment.created_at)}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const html = `
+                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-200">
+                    ${commentsHtml}
+                    <div class="flex space-x-2 mt-3">
+                        <input 
+                            id="comment-input-${postId}"
+                            type="text"
+                            placeholder="댓글을 작성하세요..."
+                            class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                        <button 
+                            id="comment-submit-${postId}"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            commentsDiv.innerHTML = html;
+            commentsDiv.classList.remove('hidden');
+            
+            // Add event listeners after HTML is inserted
+            const submitBtn = document.getElementById(`comment-submit-${postId}`);
+            const inputField = document.getElementById(`comment-input-${postId}`);
+            
+            if (submitBtn) {
+                submitBtn.addEventListener('click', () => createComment(postId));
+            }
+            
+            if (inputField) {
+                inputField.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') createComment(postId);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading comments:', error);
+        }
+    } else {
+        commentsDiv.classList.add('hidden');
+    }
+}
+
+// Create comment
+async function createComment(postId) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    const content = input.value;
+
+    if (!content) {
+        alert('댓글 내용을 입력해주세요.');
+        return;
+    }
+
+    try {
+        await axios.post(`/api/posts/${postId}/comments`, {
+            user_id: currentUserId,
+            content
+        });
+        input.value = '';
+        loadComments(postId);
+        loadPosts();
+    } catch (error) {
+        console.error('Error creating comment:', error);
+        alert('댓글 작성에 실패했습니다.');
+    }
+}
+
+// Load posts
+async function loadPosts() {
+    try {
+        const response = await axios.get(`/api/posts?user_id=${currentUserId}`);
+        const posts = response.data.posts;
+        const feed = document.getElementById('postsFeed');
+        
+        let postsHtml = '';
+        posts.forEach(post => {
+            const isLiked = post.is_liked > 0;
+            const avatarHtml = post.user_avatar 
+                ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                : '<i class="fas fa-user"></i>';
+            
+            // Role badge HTML
+            let roleBadgeHtml = '';
+            if (post.user_role === 'admin') {
+                roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+            } else if (post.user_role === 'moderator') {
+                roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+            }
+            
+            const verseHtml = post.verse_reference ? `
+                <div class="mt-3 bg-gray-50 border-l-4 border-blue-600 p-3 rounded">
+                    <p class="text-sm text-blue-600 font-semibold">
+                        <i class="fas fa-bible mr-2"></i>${post.verse_reference}
+                    </p>
+                </div>
+            ` : '';
+            
+            const imageHtml = post.image_url ? `
+                <div class="mt-3">
+                    <img src="${post.image_url}" alt="Post image" class="w-full rounded-lg max-h-96 object-cover" onerror="this.style.display='none'" />
+                </div>
+            ` : '';
+            
+            const videoHtml = post.video_url ? `
+                <div class="mt-3">
+                    <video controls class="w-full rounded-lg max-h-96" controlsList="nodownload">
+                        <source src="${post.video_url}" type="video/mp4">
+                        동영상을 재생할 수 없습니다.
+                    </video>
+                </div>
+            ` : '';
+            
+            // Shared post card (액자 안의 액자)
+            let sharedPostHtml = '';
+            if (post.shared_post_id) {
+                const sharedAvatarHtml = post.shared_user_avatar 
+                    ? `<img src="${post.shared_user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                    : '<i class="fas fa-user"></i>';
+                
+                let sharedRoleBadgeHtml = '';
+                if (post.shared_user_role === 'admin') {
+                    sharedRoleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
+                } else if (post.shared_user_role === 'moderator') {
+                    sharedRoleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+                }
+                
+                const sharedVerseHtml = post.shared_verse_reference ? `
+                    <div class="mt-2 bg-blue-50 border-l-4 border-blue-600 p-2 rounded text-xs">
+                        <p class="text-blue-600 font-semibold">
+                            <i class="fas fa-bible mr-1"></i>${post.shared_verse_reference}
+                        </p>
+                    </div>
+                ` : '';
+                
+                const sharedImageHtml = post.shared_image_url ? `
+                    <div class="mt-2 max-w-full">
+                        <img src="${post.shared_image_url}" alt="Shared post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
+                    </div>
+                ` : '';
+                
+                const sharedVideoHtml = post.shared_video_url ? `
+                    <div class="mt-2 max-w-full">
+                        <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
+                            <source src="${post.shared_video_url}" type="video/mp4">
+                            동영상을 재생할 수 없습니다.
+                        </video>
+                    </div>
+                ` : '';
+                
+                sharedPostHtml = `
+                    <div class="mt-3 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-gray-400 p-4 shadow-sm max-w-full overflow-hidden">
+                        <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-300">
+                            <i class="fas fa-quote-left text-blue-600 text-sm"></i>
+                            <span class="text-xs font-bold text-gray-700">공유된 포스팅</span>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="admin-badge-container flex-shrink-0">
+                                <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                                    ${sharedAvatarHtml}
+                                </div>
+                                ${sharedRoleBadgeHtml}
+                            </div>
+                            <div class="flex-1 min-w-0 overflow-hidden">
+                                <div class="flex items-center space-x-2 flex-wrap">
+                                    <h4 class="font-bold text-sm text-gray-800 truncate">${post.shared_user_name}</h4>
+                                    <span class="text-xs text-gray-500 flex-shrink-0">•</span>
+                                    <p class="text-xs text-gray-500 flex-shrink-0">${formatDate(post.shared_created_at)}</p>
+                                </div>
+                                <p class="text-xs text-gray-600 mb-2 truncate">${post.shared_user_church || ''}</p>
+                                <p class="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">${post.shared_content}</p>
+                                ${sharedImageHtml}
+                                ${sharedVideoHtml}
+                                ${sharedVerseHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            postsHtml += `
+                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1 overflow-hidden">
+                    <div class="flex items-start space-x-4">
+                        <div class="admin-badge-container">
+                            <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">${avatarHtml}</div>
+                            ${roleBadgeHtml}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-gray-800">${post.user_name}</h4>
+                                    <p class="text-sm text-gray-500">${post.user_church || ''}</p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
+                                    ${currentUser && currentUser.role === 'admin' ? `
+                                        <button 
+                                            onclick="deletePost(${post.id})" 
+                                            class="text-red-500 hover:text-red-700 transition ml-2" 
+                                            title="게시물 삭제">
+                                            <i class="fas fa-trash-alt text-sm"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <p class="mt-3 text-gray-800 whitespace-pre-wrap">${post.content}</p>
+                            ${imageHtml}
+                            ${videoHtml}
+                            ${verseHtml}
+                            ${sharedPostHtml}
+                            <div class="mt-4 flex items-center space-x-6 text-gray-600">
+                                <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
+                                    <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
+                                    <span class="text-sm">${post.likes_count || 0}</span>
+                                </button>
+                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                    <i class="fas fa-comment text-lg"></i>
+                                    <span class="text-sm">${post.comments_count || 0}</span>
+                                </button>
+                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                    <i class="fas fa-share text-lg"></i>
+                                    <span class="text-sm">공유</span>
+                                </button>
+                            </div>
+                            <div id="comments-${post.id}" class="hidden"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        feed.innerHTML = postsHtml;
+    } catch (error) {
+        console.error('Error loading posts:', error);
+    }
+}
+
+// Format date
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // seconds
+
+    if (diff < 60) return '방금 전';
+    if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}일 전`;
+    
+    return date.toLocaleDateString('ko-KR');
+}
+
+// Auto-login from localStorage
+async function autoLogin() {
+    const savedUserId = localStorage.getItem('currentUserId');
+    const savedUser = localStorage.getItem('currentUser');
+    
+    if (savedUserId && savedUser) {
+        try {
+            // Verify user still exists in database
+            const response = await axios.get('/api/users/' + savedUserId);
+            
+            if (response.data.user) {
+                // User exists, restore session
+                currentUserId = parseInt(savedUserId);
+                currentUser = response.data.user;
+                updateAuthUI();
+                loadPosts();
+                console.log('자동 로그인 성공:', currentUser.name);
+            } else {
+                // User doesn't exist, clear localStorage
+                localStorage.removeItem('currentUserId');
+                localStorage.removeItem('currentUser');
+            }
+        } catch (error) {
+            // Error fetching user, clear localStorage
+            console.error('자동 로그인 실패:', error);
+            localStorage.removeItem('currentUserId');
+            localStorage.removeItem('currentUser');
+        }
     }
 }
 
 // Initialize
-window.addEventListener('DOMContentLoaded', function() {
-    loadTypingScore();
-    updateAuthUI();
-    updateEmailDatalist();
-    autoLogin();
-});
+loadTypingScore();
+loadCompletedVideos();
+updateAuthUI();
+updateEmailDatalist(); // Load email history
+autoLogin(); // Auto-login if session exists

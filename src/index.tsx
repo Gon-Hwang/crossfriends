@@ -949,8 +949,9 @@ app.get('/', (c) => {
                         <button 
                             onclick="toggleTypingArea()"
                             class="w-full mt-2 py-2 px-4 bg-yellow-50 hover:bg-yellow-100 border-2 border-yellow-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-yellow-800 font-semibold">
-                            <i id="typingToggleIcon" class="fas fa-chevron-down"></i>
-                            <span>말씀 타이핑 게임</span>
+                            <i class="fas fa-keyboard text-yellow-600"></i>
+                            <span>말씀 타이핑</span>
+                            <i id="typingToggleIcon" class="fas fa-chevron-down text-sm"></i>
                         </button>
                         
                         <!-- Typing Input Area (Initially Hidden) -->

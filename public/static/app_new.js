@@ -1456,6 +1456,29 @@ function addRoleBadge(container, role) {
     }
 }
 
+// Toggle prayer request mode
+let isPrayerRequestMode = false;
+
+function togglePrayerRequest() {
+    isPrayerRequestMode = !isPrayerRequestMode;
+    const btn = document.getElementById('prayerRequestBtn');
+    const textarea = document.getElementById('newPostContent');
+    
+    if (isPrayerRequestMode) {
+        // Enable prayer request mode
+        btn.classList.remove('bg-purple-100', 'text-purple-700', 'border-transparent');
+        btn.classList.add('bg-purple-600', 'text-white', 'border-purple-600');
+        btn.innerHTML = '<i class="fas fa-check mr-2"></i>기도부탁 모드';
+        textarea.placeholder = '기도 제목을 입력하세요...\n\n예: 가족의 건강을 위해 기도 부탁드립니다.';
+    } else {
+        // Disable prayer request mode
+        btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-600');
+        btn.classList.add('bg-purple-100', 'text-purple-700', 'border-transparent');
+        btn.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도부탁';
+        textarea.placeholder = '무엇을 나누고 싶으신가요?';
+    }
+}
+
 // Create new post
 async function createPost() {
     if (!currentUserId) {

@@ -1,2 +1,1 @@
-// Force reload timestamp
-console.log('Cache bust:', new Date().toISOString());
+// Cache bust: 1769019612

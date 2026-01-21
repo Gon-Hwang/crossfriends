@@ -401,6 +401,12 @@ async function saveVideoScore(score, videoId) {
 
 // Toggle typing area visibility
 function toggleTypingArea() {
+    // Check if user is logged in
+    if (!currentUserId) {
+        // Do nothing when not logged in, tooltip will show the message
+        return;
+    }
+    
     const typingArea = document.getElementById('typingArea');
     const toggleIcon = document.getElementById('typingToggleIcon');
     
@@ -1231,10 +1237,16 @@ function updateAuthUI() {
     const userAvatarContainer = document.getElementById('userAvatarContainer');
     const newPostAvatar = document.getElementById('newPostAvatar');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
+    const typingToggleBtn = document.getElementById('typingToggleBtn');
 
     if (currentUserId) {
         authButtons.classList.add('hidden');
         userMenu.classList.remove('hidden');
+        
+        // Remove tooltip from typing button when logged in
+        if (typingToggleBtn) {
+            typingToggleBtn.removeAttribute('title');
+        }
         
         // Update user name
         userName.textContent = currentUser.name;
@@ -1285,6 +1297,11 @@ function updateAuthUI() {
     } else {
         authButtons.classList.remove('hidden');
         userMenu.classList.add('hidden');
+        
+        // Add tooltip to typing button when not logged in
+        if (typingToggleBtn) {
+            typingToggleBtn.setAttribute('title', '로그인 필요');
+        }
     }
 }
 

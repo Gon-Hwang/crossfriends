@@ -2066,12 +2066,6 @@ async function loadPosts() {
             
             postsHtml += `
                 <div class="${post.content && post.content.startsWith('[기도부탁]') ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300' : 'bg-white border-gray-300'} rounded-xl shadow-md border-2 p-6 transition-all duration-300 hover:shadow-xl ${post.content && post.content.startsWith('[기도부탁]') ? 'hover:border-purple-500' : 'hover:border-gray-500'} hover:-translate-y-1 overflow-hidden relative">
-                    ${post.content && post.content.startsWith('[기도부탁]') ? `
-                        <div class="absolute bottom-4 right-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center space-x-1.5 text-xs font-semibold">
-                            <i class="fas fa-praying-hands"></i>
-                            <span>기도부탁</span>
-                        </div>
-                    ` : ''}
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
                             <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">${avatarHtml}</div>
@@ -2100,26 +2094,34 @@ async function loadPosts() {
                             ${videoHtml}
                             ${verseHtml}
                             ${sharedPostHtml}
-                            <div class="mt-4 flex items-center space-x-6 text-gray-600">
+                            <div class="mt-4 flex items-center justify-between text-gray-600">
+                                <div class="flex items-center space-x-6">
+                                    ${post.content && post.content.startsWith('[기도부탁]') ? `
+                                        <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="기도하였으면 눌러 주세요">
+                                            <i class="fas fa-praying-hands ${isLiked ? 'text-purple-600' : ''} text-lg"></i>
+                                            <span class="text-sm">${post.likes_count || 0} 기도</span>
+                                        </button>
+                                    ` : `
+                                        <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">
+                                            <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
+                                            <span class="text-sm">${post.likes_count || 0}</span>
+                                        </button>
+                                    `}
+                                    <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                        <i class="fas fa-comment text-lg"></i>
+                                        <span class="text-sm">${post.comments_count || 0}</span>
+                                    </button>
+                                    <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                        <i class="fas fa-share text-lg"></i>
+                                        <span class="text-sm">공유</span>
+                                    </button>
+                                </div>
                                 ${post.content && post.content.startsWith('[기도부탁]') ? `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="기도하였으면 눌러 주세요">
-                                        <i class="fas fa-praying-hands ${isLiked ? 'text-purple-600' : ''} text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0} 기도</span>
-                                    </button>
-                                ` : `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">
-                                        <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0}</span>
-                                    </button>
-                                `}
-                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
-                                    <i class="fas fa-comment text-lg"></i>
-                                    <span class="text-sm">${post.comments_count || 0}</span>
-                                </button>
-                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
-                                    <i class="fas fa-share text-lg"></i>
-                                    <span class="text-sm">공유</span>
-                                </button>
+                                    <div class="bg-purple-600 text-white px-3 py-1 rounded-full shadow-md flex items-center space-x-1.5 text-xs font-semibold">
+                                        <i class="fas fa-praying-hands"></i>
+                                        <span>기도부탁</span>
+                                    </div>
+                                ` : ''}
                             </div>
                             <div id="comments-${post.id}" class="hidden"></div>
                         </div>

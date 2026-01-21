@@ -319,7 +319,7 @@ function showVideoAlreadyCompleted() {
                 <span class="font-semibold text-gray-700">이미 시청 완료한 설교입니다</span>
             </div>
             <p class="text-xs text-gray-500">
-                <i class="fas fa-check mr-1"></i>이 설교는 이미 점수를 받으셨습니다 (중복 지급 불가)
+                <i class="fas fa-check mr-1"></i>이 설교는 이미 점수를 받으셨습니다
             </p>
         </div>
     `;

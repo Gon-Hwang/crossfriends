@@ -874,6 +874,13 @@ app.get('/', (c) => {
                         </p>
                     </div>
                     <div class="flex items-center space-x-4" id="authButtons">
+                        <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 px-4 py-2 rounded-lg border-2 border-yellow-300">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-keyboard text-yellow-600"></i>
+                                <span class="text-sm font-semibold text-yellow-800">타이핑 점수:</span>
+                                <span id="typingScore" class="text-lg font-bold text-yellow-900">0</span>
+                            </div>
+                        </div>
                         <button onclick="showLoginModal()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                             로그인
                         </button>
@@ -882,6 +889,13 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
+                        <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 px-4 py-2 rounded-lg border-2 border-yellow-300">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-keyboard text-yellow-600"></i>
+                                <span class="text-sm font-semibold text-yellow-800">타이핑 점수:</span>
+                                <span id="typingScoreUser" class="text-lg font-bold text-yellow-900">0</span>
+                            </div>
+                        </div>
                         <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-3 py-2 rounded-lg hover:bg-red-50 transition" title="관리자 패널">
                             <i class="fas fa-shield-alt mr-1"></i>
                             <span class="hidden md:inline">관리자 모드</span>
@@ -924,11 +938,31 @@ app.get('/', (c) => {
                         <h3 class="text-lg font-bold mb-4 text-gray-800">
                             <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
                         </h3>
-                        <div class="border-l-4 border-blue-600 pl-4 py-2">
+                        <div class="border-l-4 border-blue-600 pl-4 py-2 mb-4">
                             <p class="font-bold text-blue-600 mb-2">요한복음 3:16</p>
-                            <p class="text-gray-800 leading-relaxed">
+                            <p id="verseText" class="text-gray-800 leading-relaxed">
                                 하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라
                             </p>
+                        </div>
+                        
+                        <!-- Typing Input Area -->
+                        <div class="mt-4 pt-4 border-t-2 border-gray-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-sm font-semibold text-gray-700">
+                                    <i class="fas fa-keyboard text-yellow-600 mr-1"></i>타이핑 연습
+                                </label>
+                                <button onclick="resetTyping()" class="text-xs text-gray-500 hover:text-gray-700 underline">
+                                    <i class="fas fa-redo mr-1"></i>초기화
+                                </button>
+                            </div>
+                            <textarea 
+                                id="typingInput"
+                                placeholder="위 성경구절을 입력하고 Enter를 누르세요..."
+                                class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-sm"
+                                rows="3"
+                                onkeydown="handleTypingEnter(event)"
+                            ></textarea>
+                            <div id="typingResult" class="mt-2 text-sm hidden"></div>
                         </div>
                     </div>
                 </div>

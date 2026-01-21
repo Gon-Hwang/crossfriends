@@ -945,8 +945,16 @@ app.get('/', (c) => {
                             </p>
                         </div>
                         
-                        <!-- Typing Input Area -->
-                        <div class="mt-4 pt-4 border-t-2 border-gray-200">
+                        <!-- Typing Toggle Button -->
+                        <button 
+                            onclick="toggleTypingArea()"
+                            class="w-full mt-2 py-2 px-4 bg-yellow-50 hover:bg-yellow-100 border-2 border-yellow-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-yellow-800 font-semibold">
+                            <i id="typingToggleIcon" class="fas fa-chevron-down"></i>
+                            <span>말씀 타이핑 게임</span>
+                        </button>
+                        
+                        <!-- Typing Input Area (Initially Hidden) -->
+                        <div id="typingArea" class="mt-4 pt-4 border-t-2 border-gray-200 hidden">
                             <div class="flex items-center justify-between mb-2">
                                 <label class="text-sm font-semibold text-gray-700">
                                     <i class="fas fa-keyboard text-yellow-600 mr-1"></i>말씀 타이핑
@@ -1771,11 +1779,35 @@ app.get('/', (c) => {
             // Typing Game Functions
             // =====================
             let typingScore = 0;
+            let completedVerses = new Set(); // Track completed verses
+
+            // Toggle typing area visibility
+            function toggleTypingArea() {
+                const typingArea = document.getElementById('typingArea');
+                const toggleIcon = document.getElementById('typingToggleIcon');
+                
+                if (typingArea.classList.contains('hidden')) {
+                    typingArea.classList.remove('hidden');
+                    toggleIcon.classList.remove('fa-chevron-down');
+                    toggleIcon.classList.add('fa-chevron-up');
+                } else {
+                    typingArea.classList.add('hidden');
+                    toggleIcon.classList.remove('fa-chevron-up');
+                    toggleIcon.classList.add('fa-chevron-down');
+                }
+            }
 
             // Load typing score from localStorage
             function loadTypingScore() {
                 const savedScore = localStorage.getItem('typingScore');
                 typingScore = savedScore ? parseInt(savedScore) : 0;
+                
+                // Load completed verses
+                const savedVerses = localStorage.getItem('completedVerses');
+                if (savedVerses) {
+                    completedVerses = new Set(JSON.parse(savedVerses));
+                }
+                
                 updateTypingScoreDisplay();
             }
 
@@ -1783,6 +1815,10 @@ app.get('/', (c) => {
             function saveTypingScore(score) {
                 typingScore = score;
                 localStorage.setItem('typingScore', score.toString());
+                
+                // Save completed verses
+                localStorage.setItem('completedVerses', JSON.stringify([...completedVerses]));
+                
                 updateTypingScoreDisplay();
             }
 
@@ -1860,15 +1896,34 @@ app.get('/', (c) => {
                     return;
                 }
                 
+                // Create a unique ID for this verse (using the text content)
+                const verseId = verseText.trim();
+                
+                // Check if this verse was already completed
+                const isAlreadyCompleted = completedVerses.has(verseId);
+                
                 // Calculate accuracy
                 const accuracy = calculateAccuracy(verseText, userInput);
                 
                 // Calculate points earned (accuracy percentage = points)
-                const pointsEarned = accuracy;
+                let pointsEarned = 0;
+                let bonusMessage = '';
                 
-                // Update total score
+                if (!isAlreadyCompleted) {
+                    pointsEarned = accuracy;
+                    // Mark as completed if accuracy is high enough
+                    if (accuracy >= 90) {
+                        completedVerses.add(verseId);
+                    }
+                } else {
+                    bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 완료한 구절입니다 (점수 미지급)</p>';
+                }
+                
+                // Update total score only if points earned
                 const newScore = typingScore + pointsEarned;
-                saveTypingScore(newScore);
+                if (pointsEarned > 0) {
+                    saveTypingScore(newScore);
+                }
                 
                 // Show result with animation
                 typingResult.classList.remove('hidden');
@@ -1880,11 +1935,11 @@ app.get('/', (c) => {
                 if (accuracy === 100) {
                     resultColor = 'text-green-600';
                     resultIcon = 'fa-check-circle';
-                    resultMessage = '완벽합니다! 🎉';
+                    resultMessage = isAlreadyCompleted ? '완벽합니다! (이미 완료)' : '완벽합니다! 🎉';
                 } else if (accuracy >= 90) {
                     resultColor = 'text-blue-600';
                     resultIcon = 'fa-smile';
-                    resultMessage = '훌륭합니다! 😊';
+                    resultMessage = isAlreadyCompleted ? '훌륭합니다! (이미 완료)' : '훌륭합니다! 😊';
                 } else if (accuracy >= 70) {
                     resultColor = 'text-yellow-600';
                     resultIcon = 'fa-meh';
@@ -1901,8 +1956,9 @@ app.get('/', (c) => {
                             <span class="text-sm text-gray-600">정확도: <strong>\${accuracy}%</strong></span>
                         </div>
                         <div class="text-sm text-gray-700">
-                            <p class="mb-1">획득 점수: <strong class="text-yellow-600">+\${pointsEarned}점</strong></p>
+                            <p class="mb-1">획득 점수: <strong class="\${pointsEarned > 0 ? 'text-yellow-600' : 'text-gray-500'}">+\${pointsEarned}점</strong></p>
                             <p>총 점수: <strong class="text-blue-600">\${newScore}점</strong></p>
+                            \${bonusMessage}
                         </div>
                     </div>
                 \`;
@@ -1911,6 +1967,8 @@ app.get('/', (c) => {
                 setTimeout(() => {
                     typingInput.value = '';
                     typingInput.focus();
+                }, 2000);
+            }
                 }, 2000);
             }
 

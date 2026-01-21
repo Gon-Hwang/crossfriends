@@ -1375,17 +1375,13 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <button 
-                            onclick="addPrayerPoints()" 
-                            id="prayerBtn" 
-                            class="bg-white px-4 py-2 rounded-lg border-2 border-purple-300 hover:bg-purple-50 transition cursor-pointer"
-                            title="기도하기 (클릭 시 10점)">
+                        <div class="bg-white px-4 py-2 rounded-lg border-2 border-purple-300">
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-praying-hands text-purple-600"></i>
                                 <span class="text-sm font-semibold text-purple-800">기도 점수:</span>
                                 <span id="prayerScoreUser" class="text-lg font-bold text-purple-900">0</span>
                             </div>
-                        </button>
+                        </div>
                         <div id="scriptureScoreBtn" class="bg-white px-4 py-2 rounded-lg border-2 border-blue-300">
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-bible text-blue-600"></i>

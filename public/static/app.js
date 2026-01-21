@@ -457,7 +457,44 @@ function updateTypingScoreDisplay() {
     }
 }
 
-// Add prayer points (10 points per click)
+// Add prayer points for a post (10 points per click)
+async function addPrayerForPost(postId) {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        showLoginModal();
+        return;
+    }
+    
+    const pointsToAdd = 10;
+    
+    try {
+        const response = await axios.post(`/api/users/${currentUserId}/scores/prayer`, {
+            points: pointsToAdd
+        });
+        
+        prayerScore = response.data.prayer_score;
+        updateTypingScoreDisplay();
+        
+        // Save to localStorage as backup
+        localStorage.setItem('prayerScore', prayerScore.toString());
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-20 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+        successMsg.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도하셨습니다! +10점';
+        document.body.appendChild(successMsg);
+        
+        setTimeout(() => {
+            successMsg.remove();
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Failed to add prayer points:', error);
+        alert('기도 점수 추가에 실패했습니다.');
+    }
+}
+
+// Add prayer points (10 points per click) - kept for backward compatibility
 async function addPrayerPoints() {
     if (!currentUserId) {
         alert('로그인이 필요합니다.');
@@ -479,14 +516,16 @@ async function addPrayerPoints() {
         
         // Show success animation
         const btn = document.getElementById('prayerBtn');
-        btn.classList.add('animate-pulse');
-        
-        // Show floating +10 animation
-        showFloatingScore(btn, '+10');
-        
-        setTimeout(() => {
-            btn.classList.remove('animate-pulse');
-        }, 500);
+        if (btn) {
+            btn.classList.add('animate-pulse');
+            
+            // Show floating +10 animation
+            showFloatingScore(btn, '+10');
+            
+            setTimeout(() => {
+                btn.classList.remove('animate-pulse');
+            }, 500);
+        }
         
     } catch (error) {
         console.error('Failed to add prayer points:', error);
@@ -2033,6 +2072,10 @@ async function loadPosts() {
                                 <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
                                     <i class="fas fa-comment text-lg"></i>
                                     <span class="text-sm">${post.comments_count || 0}</span>
+                                </button>
+                                <button onclick="addPrayerForPost(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="이 게시물을 위해 기도하기 (+10점)">
+                                    <i class="fas fa-praying-hands text-lg"></i>
+                                    <span class="text-sm">기도</span>
                                 </button>
                                 <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
                                     <i class="fas fa-share text-lg"></i>

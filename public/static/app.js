@@ -1687,6 +1687,42 @@ async function toggleLike(postId) {
     }
 }
 
+// Toggle pray (for prayer request posts)
+async function togglePray(postId) {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        showLoginModal();
+        return;
+    }
+    
+    try {
+        const response = await axios.post(`/api/posts/${postId}/pray`, {
+            user_id: currentUserId
+        });
+        
+        if (response.data.prayed) {
+            // Update prayer score display
+            prayerScore = response.data.prayer_score;
+            updateTypingScoreDisplay();
+            
+            // Show success message
+            const successMsg = document.createElement('div');
+            successMsg.className = 'fixed top-20 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+            successMsg.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도하셨습니다! +10점';
+            document.body.appendChild(successMsg);
+            
+            setTimeout(() => {
+                successMsg.remove();
+            }, 2000);
+        }
+        
+        loadPosts();
+    } catch (error) {
+        console.error('Error toggling pray:', error);
+        alert('기도 처리에 실패했습니다.');
+    }
+}
+
 // Delete post (Admin only)
 async function deletePost(postId) {
     if (!currentUser || currentUser.role !== 'admin') {
@@ -2089,9 +2125,9 @@ async function loadPosts() {
                             ${sharedPostHtml}
                             <div class="mt-4 flex items-center space-x-6 text-gray-600">
                                 ${post.is_prayer_request === 1 ? `
-                                    <button onclick="addPrayerForPost(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="이 게시물을 위해 기도하기 (+10점)">
+                                    <button onclick="togglePray(${post.id})" class="flex items-center space-x-2 ${post.is_prayed > 0 ? 'text-purple-600' : 'hover:text-purple-600'} transition" title="이 게시물을 위해 기도하기 (+10점)">
                                         <i class="fas fa-praying-hands text-lg"></i>
-                                        <span class="text-sm">기도</span>
+                                        <span class="text-sm">${post.prayer_clicks_count || 0}</span>
                                     </button>
                                 ` : `
                                     <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">

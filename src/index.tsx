@@ -168,6 +168,8 @@ app.get('/api/posts', async (c) => {
       (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count,
       (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked,
+      (SELECT COUNT(*) FROM prayer_clicks WHERE post_id = p.id) as prayer_clicks_count,
+      (SELECT COUNT(*) FROM prayer_clicks WHERE post_id = p.id AND user_id = ?) as is_prayed,
       sp.id as shared_post_id,
       sp.content as shared_content,
       sp.image_url as shared_image_url,
@@ -183,7 +185,7 @@ app.get('/api/posts', async (c) => {
     LEFT JOIN posts sp ON p.shared_post_id = sp.id
     LEFT JOIN users su ON sp.user_id = su.id
     ORDER BY p.created_at DESC
-  `).bind(currentUserId || 0).all()
+  `).bind(currentUserId || 0, currentUserId || 0).all()
   
   return c.json({ posts: results })
 })
@@ -411,6 +413,35 @@ app.post('/api/posts/:id/like', async (c) => {
     // Like
     await DB.prepare('INSERT INTO likes (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
     return c.json({ liked: true })
+  }
+})
+
+// Toggle prayer on a post (for prayer request posts)
+app.post('/api/posts/:id/pray', async (c) => {
+  const { DB } = c.env
+  const postId = c.req.param('id')
+  const { user_id } = await c.req.json()
+  
+  // Check if already prayed
+  const existing = await DB.prepare(
+    'SELECT id FROM prayer_clicks WHERE post_id = ? AND user_id = ?'
+  ).bind(postId, user_id).first()
+  
+  if (existing) {
+    // Unpray (취소)
+    await DB.prepare('DELETE FROM prayer_clicks WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
+    return c.json({ prayed: false })
+  } else {
+    // Pray (기도하기)
+    await DB.prepare('INSERT INTO prayer_clicks (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
+    
+    // Add 10 points to user's prayer score
+    const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
+    const currentScore = user?.prayer_score || 0
+    const newScore = currentScore + 10
+    await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
+    
+    return c.json({ prayed: true, prayer_score: newScore })
   }
 })
 

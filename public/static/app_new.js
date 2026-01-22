@@ -1320,6 +1320,8 @@ function updateAuthUI() {
     const newPostAvatar = document.getElementById('newPostAvatar');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
     const typingToggleBtn = document.getElementById('typingToggleBtn');
+    const typingLoginOverlay = document.getElementById('typingLoginOverlay');
+    const videoLoginOverlay = document.getElementById('videoLoginOverlay');
 
     if (currentUserId) {
         authButtons.classList.add('hidden');
@@ -1328,6 +1330,14 @@ function updateAuthUI() {
         // Remove tooltip from typing button when logged in
         if (typingToggleBtn) {
             typingToggleBtn.removeAttribute('title');
+        }
+        
+        // Hide login overlays when logged in
+        if (typingLoginOverlay) {
+            typingLoginOverlay.classList.add('hidden');
+        }
+        if (videoLoginOverlay) {
+            videoLoginOverlay.classList.add('hidden');
         }
         
         // Update user name
@@ -1383,6 +1393,14 @@ function updateAuthUI() {
         // Add tooltip to typing button when not logged in
         if (typingToggleBtn) {
             typingToggleBtn.setAttribute('title', '로그인 필요');
+        }
+        
+        // Show login overlays when not logged in
+        if (typingLoginOverlay) {
+            typingLoginOverlay.classList.remove('hidden');
+        }
+        if (videoLoginOverlay) {
+            videoLoginOverlay.classList.remove('hidden');
         }
         
         // Reset avatars to default

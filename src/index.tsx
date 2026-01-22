@@ -218,11 +218,11 @@ app.get('/api/posts/:id', async (c) => {
 // Create new post
 app.post('/api/posts', async (c) => {
   const { DB } = c.env
-  const { user_id, content, image_url, verse_reference, shared_post_id } = await c.req.json()
+  const { user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request } = await c.req.json()
   
   const result = await DB.prepare(
-    'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id) VALUES (?, ?, ?, ?, ?)'
-  ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null).run()
+    'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0).run()
   
   return c.json({ id: result.meta.last_row_id, user_id, content }, 201)
 })

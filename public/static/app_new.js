@@ -1501,15 +1501,21 @@ async function createPost() {
     postBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
-        // 1. Create post with shared_post_id
+        // 1. Create post with shared_post_id and is_prayer_request
         const response = await axios.post('/api/posts', {
             user_id: currentUserId,
             content: content || '',
             verse_reference: null,
-            shared_post_id: sharedPostId
+            shared_post_id: sharedPostId,
+            is_prayer_request: isPrayerRequestMode ? 1 : 0
         });
 
         const postId = response.data.id;
+        
+        // Reset prayer request mode after posting
+        if (isPrayerRequestMode) {
+            togglePrayerRequest();
+        }
 
         // 2. Upload image if selected
         if (imageFile) {
@@ -2081,17 +2087,20 @@ async function loadPosts() {
                             ${verseHtml}
                             ${sharedPostHtml}
                             <div class="mt-4 flex items-center space-x-6 text-gray-600">
-                                <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
-                                    <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
-                                    <span class="text-sm">${post.likes_count || 0}</span>
-                                </button>
+                                ${post.is_prayer_request ? `
+                                    <button onclick="addPrayerForPost(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="이 게시물을 위해 기도하기 (+10점)">
+                                        <i class="fas fa-praying-hands text-lg"></i>
+                                        <span class="text-sm">기도</span>
+                                    </button>
+                                ` : `
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
+                                        <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
+                                        <span class="text-sm">${post.likes_count || 0}</span>
+                                    </button>
+                                `}
                                 <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
                                     <i class="fas fa-comment text-lg"></i>
                                     <span class="text-sm">${post.comments_count || 0}</span>
-                                </button>
-                                <button onclick="addPrayerForPost(${post.id})" class="flex items-center space-x-2 hover:text-purple-600 transition" title="이 게시물을 위해 기도하기 (+10점)">
-                                    <i class="fas fa-praying-hands text-lg"></i>
-                                    <span class="text-sm">기도</span>
                                 </button>
                                 <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
                                     <i class="fas fa-share text-lg"></i>

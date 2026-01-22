@@ -1953,6 +1953,7 @@ async function loadPosts() {
         
         let postsHtml = '';
         posts.forEach(post => {
+            console.log('🔍 Post ID:', post.id, 'is_prayer_request:', post.is_prayer_request, 'type:', typeof post.is_prayer_request);
             const isLiked = post.is_liked > 0;
             const avatarHtml = post.user_avatar 
                 ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`

@@ -11,7 +11,6 @@ let maxWatchedTime = 0;
 let videoDuration = 0;
 const CURRENT_VIDEO_ID = 'u13qcd4AePQ';
 let completedVideos = new Set();
-let isSkipDetected = false;
 let lastCheckedTime = 0;
 
 // Load YouTube IFrame API
@@ -78,19 +77,7 @@ function startVideoTracking() {
         if (player && player.getCurrentTime) {
             const currentTime = player.getCurrentTime();
             
-            // 스킵 감지: 현재 시간이 마지막 체크 시간보다 2초 이상 앞으로 점프한 경우
-            if (lastCheckedTime > 0 && currentTime > lastCheckedTime + 2) {
-                detectSkip();
-                return;
-            }
-            
-            // 스킵 감지: 현재 시간이 maxWatchedTime보다 1초 이상 앞인 경우
-            if (currentTime > maxWatchedTime + 1) {
-                detectSkip();
-                return;
-            }
-            
-            // Update max watched time (only if no skip)
+            // Update max watched time
             if (currentTime > maxWatchedTime) {
                 maxWatchedTime = currentTime;
             }
@@ -132,98 +119,9 @@ function updateVideoProgress() {
     }
 }
 
-// Detect skip and reset
-function detectSkip() {
-    if (isSkipDetected) return; // 이미 감지된 경우 중복 처리 방지
-    
-    isSkipDetected = true;
-    
-    // 동영상 일시정지
-    if (player && player.pauseVideo) {
-        player.pauseVideo();
-    }
-    
-    // 경고 메시지 표시
-    showSkipWarning();
-    
-    // 진행도 초기화
-    maxWatchedTime = 0;
-    lastCheckedTime = 0;
-    
-    // 동영상을 처음으로 되돌림
-    if (player && player.seekTo) {
-        player.seekTo(0);
-    }
-    
-    // 진행도 바 초기화
-    updateVideoProgress();
-}
-
-// Show skip warning
-function showSkipWarning() {
-    const resultDiv = document.getElementById('videoCompletionResult');
-    
-    resultDiv.innerHTML = `
-        <div class="bg-red-50 border-2 border-red-600 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-                    <span class="font-bold text-red-600">스킵이 감지되었습니다! ⚠️</span>
-                </div>
-            </div>
-            <div class="text-sm text-gray-700 mb-3">
-                <p class="mb-1">설교 영상을 건너뛰면 점수를 받을 수 없습니다.</p>
-                <p class="font-semibold text-red-600">처음부터 다시 시청해주세요.</p>
-            </div>
-            <button 
-                onclick="resetVideoAndRetry()"
-                class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition font-semibold">
-                <i class="fas fa-redo mr-2"></i>처음부터 다시 시청하기
-            </button>
-            <p class="text-xs text-gray-500 mt-2">
-                <i class="fas fa-info-circle mr-1"></i>말씀을 끝까지 집중해서 들어주세요. 점수를 받으려면 90% 이상 시청이 필요합니다.
-            </p>
-        </div>
-    `;
-    
-    resultDiv.classList.remove('hidden');
-    
-    // 진행도 컨테이너 숨김
-    document.getElementById('videoProgressContainer').classList.add('hidden');
-}
-
-// Reset video and retry
-function resetVideoAndRetry() {
-    // 경고 메시지 숨김
-    document.getElementById('videoCompletionResult').classList.add('hidden');
-    
-    // 스킵 플래그 리셋
-    isSkipDetected = false;
-    
-    // 진행도 초기화
-    maxWatchedTime = 0;
-    lastCheckedTime = 0;
-    
-    // 동영상을 처음으로 되돌림
-    if (player && player.seekTo) {
-        player.seekTo(0);
-    }
-    
-    // 진행도 바 초기화
-    updateVideoProgress();
-    
-    // 진행도 컨테이너 표시
-    document.getElementById('videoProgressContainer').classList.remove('hidden');
-}
-
 // Check if video is completed (90%+ watched)
 async function checkVideoCompletion() {
     if (!videoDuration || videoDuration === 0) return;
-    
-    // 스킵이 감지된 경우 완료 체크 안함
-    if (isSkipDetected) {
-        return;
-    }
     
     const watchedPercent = (maxWatchedTime / videoDuration) * 100;
     
@@ -231,8 +129,7 @@ async function checkVideoCompletion() {
         maxWatchedTime,
         videoDuration,
         watchedPercent,
-        alreadyCompleted: completedVideos.has(CURRENT_VIDEO_ID),
-        isSkipDetected
+        alreadyCompleted: completedVideos.has(CURRENT_VIDEO_ID)
     });
     
     // Check if already completed this video
@@ -1364,7 +1261,6 @@ function logout() {
     // Reset video tracking
     maxWatchedTime = 0;
     lastCheckedTime = 0;
-    isSkipDetected = false;
     
     // Reset UI
     updateAuthUI();

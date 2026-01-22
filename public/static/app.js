@@ -1344,10 +1344,70 @@ async function handleLogin() {
 function logout() {
     currentUserId = null;
     currentUser = null;
+    
+    // Reset all scores
+    typingScore = 0;
+    videoScore = 0;
+    prayerScore = 0;
+    completedVerses = new Set();
+    completedVideos = new Set();
+    
+    // Clear localStorage
     localStorage.removeItem('currentUserId');
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('typingScore');
+    localStorage.removeItem('videoScore');
+    localStorage.removeItem('prayerScore');
+    localStorage.removeItem('completedVerses');
+    localStorage.removeItem('completedVideos');
+    
+    // Reset video tracking
+    maxWatchedTime = 0;
+    lastCheckedTime = 0;
+    isSkipDetected = false;
+    
+    // Reset UI
     updateAuthUI();
+    updateTypingScoreDisplay();
+    
+    // Clear posts feed
     document.getElementById('postsFeed').innerHTML = '<div class="text-center text-gray-500 py-10">로그인하여 게시물을 확인하세요</div>';
+    
+    // Clear typing input
+    const typingInput = document.getElementById('typingInput');
+    const typingResult = document.getElementById('typingResult');
+    if (typingInput) typingInput.value = '';
+    if (typingResult) typingResult.classList.add('hidden');
+    
+    // Hide typing area
+    const typingArea = document.getElementById('typingArea');
+    if (typingArea) typingArea.classList.add('hidden');
+    
+    // Hide video progress and completion
+    const videoProgressContainer = document.getElementById('videoProgressContainer');
+    const videoCompletionResult = document.getElementById('videoCompletionResult');
+    if (videoProgressContainer) videoProgressContainer.classList.add('hidden');
+    if (videoCompletionResult) videoCompletionResult.classList.add('hidden');
+    
+    // Reset video progress bar
+    const videoProgressBar = document.getElementById('videoProgressBar');
+    const videoProgressPercent = document.getElementById('videoProgressPercent');
+    if (videoProgressBar) videoProgressBar.style.width = '0%';
+    if (videoProgressPercent) videoProgressPercent.textContent = '0%';
+    
+    // Clear new post content
+    const newPostContent = document.getElementById('newPostContent');
+    if (newPostContent) newPostContent.value = '';
+    
+    // Remove image/video previews
+    removePostImage();
+    removePostVideo();
+    removeSharedPost();
+    
+    // Reload page to ensure clean state
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
 }
 
 // Go to admin panel
@@ -1428,6 +1488,25 @@ function updateAuthUI() {
         if (typingToggleBtn) {
             typingToggleBtn.setAttribute('title', '로그인 필요');
         }
+        
+        // Reset avatars to default
+        if (userAvatarContainer) {
+            userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
+        }
+        if (newPostAvatar) {
+            newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
+        }
+        
+        // Reset scores to 0
+        const scoreElement = document.getElementById('typingScore');
+        const scoreUserElement = document.getElementById('typingScoreUser');
+        const prayerScoreElement = document.getElementById('prayerScore');
+        const prayerScoreUserElement = document.getElementById('prayerScoreUser');
+        
+        if (scoreElement) scoreElement.textContent = '0';
+        if (scoreUserElement) scoreUserElement.textContent = '0';
+        if (prayerScoreElement) prayerScoreElement.textContent = '0';
+        if (prayerScoreUserElement) prayerScoreUserElement.textContent = '0';
     }
 }
 

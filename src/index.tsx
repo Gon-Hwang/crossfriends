@@ -220,11 +220,11 @@ app.get('/api/posts/:id', async (c) => {
 // Create new post
 app.post('/api/posts', async (c) => {
   const { DB } = c.env
-  const { user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request } = await c.req.json()
+  const { user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color } = await c.req.json()
   
   const result = await DB.prepare(
-    'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request) VALUES (?, ?, ?, ?, ?, ?)'
-  ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0).run()
+    'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0, background_color || null).run()
   
   return c.json({ id: result.meta.last_row_id, user_id, content }, 201)
 })
@@ -1578,9 +1578,57 @@ app.get('/', (c) => {
                                 <textarea 
                                     id="newPostContent"
                                     placeholder="무엇을 나누고 싶으신가요?"
-                                    class="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    class="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                                     rows="3"
                                 ></textarea>
+                                
+                                <!-- Background Color Selector -->
+                                <div class="mt-3 flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        <i class="fas fa-palette mr-1"></i>배경색:
+                                    </span>
+                                    <button 
+                                        onclick="selectBackgroundColor('#FEE2E2', this)" 
+                                        class="color-selector-btn w-8 h-8 rounded-full bg-red-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                        title="빨강">
+                                    </button>
+                                    <button 
+                                        onclick="selectBackgroundColor('#FFEDD5', this)" 
+                                        class="color-selector-btn w-8 h-8 rounded-full bg-orange-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                        title="주황">
+                                    </button>
+                                    <button 
+                                        onclick="selectBackgroundColor('#FEF9C3', this)" 
+                                        class="color-selector-btn w-8 h-8 rounded-full bg-yellow-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                        title="노랑">
+                                    </button>
+                                    <button 
+                                        onclick="selectBackgroundColor('#D1FAE5', this)" 
+                                        class="color-selector-btn w-8 h-8 rounded-full bg-green-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                        title="초록">
+                                    </button>
+                                    <button 
+                                        onclick="selectBackgroundColor('#DBEAFE', this)" 
+                                        class="color-selector-btn w-8 h-8 rounded-full bg-blue-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                        title="파랑">
+                                    </button>
+                                    <button 
+                                        onclick="selectBackgroundColor('#E0E7FF', this)" 
+                                        class="color-selector-btn w-8 h-8 rounded-full bg-indigo-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                        title="남색">
+                                    </button>
+                                    <button 
+                                        onclick="selectBackgroundColor('#EDE9FE', this)" 
+                                        class="color-selector-btn w-8 h-8 rounded-full bg-purple-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                        title="보라">
+                                    </button>
+                                    <button 
+                                        onclick="resetBackgroundColor()" 
+                                        class="ml-2 text-xs text-gray-500 hover:text-gray-700 underline"
+                                        title="초기화">
+                                        <i class="fas fa-undo mr-1"></i>초기화
+                                    </button>
+                                </div>
                                 
                                 <!-- Image Preview -->
                                 <div id="postImagePreviewContainer" class="hidden mt-3">

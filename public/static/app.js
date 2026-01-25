@@ -1,6 +1,7 @@
 
 let currentUserId = null;
 let currentUser = null;
+let selectedBackgroundColor = null; // 선택된 배경색
 
 // =====================
 // YouTube Video Tracking
@@ -1501,13 +1502,14 @@ async function createPost() {
     postBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
     try {
-        // 1. Create post with shared_post_id and is_prayer_request
+        // 1. Create post with shared_post_id, is_prayer_request and background_color
         const response = await axios.post('/api/posts', {
             user_id: currentUserId,
             content: content || '',
             verse_reference: null,
             shared_post_id: sharedPostId,
-            is_prayer_request: isPrayerRequestMode ? 1 : 0
+            is_prayer_request: isPrayerRequestMode ? 1 : 0,
+            background_color: selectedBackgroundColor
         });
 
         const postId = response.data.id;
@@ -1586,6 +1588,7 @@ async function createPost() {
         removePostImage();
         removePostVideo();
         removeSharedPost(); // Clear shared post preview
+        resetBackgroundColor(); // Clear selected background color
         
         // Re-enable button
         postBtn.disabled = false;
@@ -2093,8 +2096,11 @@ async function loadPosts() {
                 `;
             }
             
+            // Background color style
+            const backgroundStyle = post.background_color ? `style="background-color: ${post.background_color};"` : '';
+            
             postsHtml += `
-                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1 overflow-hidden">
+                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1 overflow-hidden" ${backgroundStyle}>
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
                             <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">${avatarHtml}</div>
@@ -2204,6 +2210,48 @@ async function autoLogin() {
             localStorage.removeItem('currentUser');
         }
     }
+}
+
+// Background Color Selection Functions
+function selectBackgroundColor(color, element) {
+    // Update selected color
+    selectedBackgroundColor = color;
+    
+    // Remove 'selected' class from all color buttons
+    const allColorButtons = document.querySelectorAll('.color-selector-btn');
+    allColorButtons.forEach(btn => {
+        btn.classList.remove('ring-4', 'ring-offset-2');
+    });
+    
+    // Add 'selected' class to clicked button
+    if (element) {
+        element.classList.add('ring-4', 'ring-offset-2');
+    }
+    
+    // Update post textarea background
+    const textarea = document.getElementById('newPostContent');
+    if (color) {
+        textarea.style.backgroundColor = color;
+        textarea.style.color = '#1F2937'; // Dark gray text for readability
+    } else {
+        textarea.style.backgroundColor = '';
+        textarea.style.color = '';
+    }
+}
+
+function resetBackgroundColor() {
+    selectedBackgroundColor = null;
+    
+    // Remove selection highlight from all buttons
+    const allColorButtons = document.querySelectorAll('.color-selector-btn');
+    allColorButtons.forEach(btn => {
+        btn.classList.remove('ring-4', 'ring-offset-2');
+    });
+    
+    // Reset textarea background
+    const textarea = document.getElementById('newPostContent');
+    textarea.style.backgroundColor = '';
+    textarea.style.color = '';
 }
 
 // Initialize

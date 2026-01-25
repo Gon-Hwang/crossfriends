@@ -1676,6 +1676,19 @@ async function togglePray(postId) {
             user_id: currentUserId
         });
         
+        if (response.data.already_prayed) {
+            // Already prayed - show info message
+            const infoMsg = document.createElement('div');
+            infoMsg.className = 'fixed top-20 right-4 bg-gray-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+            infoMsg.innerHTML = '<i class="fas fa-info-circle mr-2"></i>이미 기도하셨습니다';
+            document.body.appendChild(infoMsg);
+            
+            setTimeout(() => {
+                infoMsg.remove();
+            }, 2000);
+            return;
+        }
+        
         if (response.data.prayed) {
             // Update prayer score display
             prayerScore = response.data.prayer_score;
@@ -1683,7 +1696,7 @@ async function togglePray(postId) {
             
             // Show success message
             const successMsg = document.createElement('div');
-            successMsg.className = 'fixed top-20 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+            successMsg.className = 'fixed top-20 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
             successMsg.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도하셨습니다! +10점';
             document.body.appendChild(successMsg);
             

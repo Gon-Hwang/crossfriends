@@ -416,7 +416,7 @@ app.post('/api/posts/:id/like', async (c) => {
   }
 })
 
-// Toggle prayer on a post (for prayer request posts)
+// Toggle prayer on a post (for prayer request posts) - Only once
 app.post('/api/posts/:id/pray', async (c) => {
   const { DB } = c.env
   const postId = c.req.param('id')
@@ -428,14 +428,13 @@ app.post('/api/posts/:id/pray', async (c) => {
   ).bind(postId, user_id).first()
   
   if (existing) {
-    // Unpray (취소)
-    await DB.prepare('DELETE FROM prayer_clicks WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
-    return c.json({ prayed: false })
+    // Already prayed - do not allow toggle off
+    return c.json({ prayed: true, already_prayed: true })
   } else {
-    // Pray (기도하기)
+    // Pray (기도하기) - first time only
     await DB.prepare('INSERT INTO prayer_clicks (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
     
-    // Add 10 points to user's prayer score
+    // Add 10 points to user's prayer score (only once)
     const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.prayer_score || 0
     const newScore = currentScore + 10

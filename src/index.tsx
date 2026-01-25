@@ -1584,13 +1584,10 @@ app.get('/', (c) => {
                                 
                                 <!-- Background Color Selector -->
                                 <div class="mt-3">
-                                    <div class="flex items-center mb-2">
-                                        <span class="text-sm font-medium text-gray-700">
-                                            <i class="fas fa-palette mr-1"></i>배경색:
-                                        </span>
+                                    <div class="flex items-center justify-end mb-2">
                                         <button 
                                             onclick="resetBackgroundColor()" 
-                                            class="ml-auto text-xs text-gray-500 hover:text-gray-700 underline"
+                                            class="text-xs text-gray-500 hover:text-gray-700 underline"
                                             title="초기화">
                                             <i class="fas fa-undo mr-1"></i>초기화
                                         </button>

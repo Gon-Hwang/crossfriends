@@ -1600,17 +1600,17 @@ app.get('/', (c) => {
                                             <button 
                                                 onclick="selectBackgroundColor('#FEE2E2', this)" 
                                                 class="color-selector-btn w-10 h-10 rounded-full bg-red-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                                title="일상">
+                                                title="중보">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">일상</span>
+                                            <span class="text-xs font-medium text-gray-600">중보</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#FFEDD5', this)" 
                                                 class="color-selector-btn w-10 h-10 rounded-full bg-orange-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                                title="중보">
+                                                title="일상">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">중보</span>
+                                            <span class="text-xs font-medium text-gray-600">일상</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 

@@ -2103,8 +2103,8 @@ async function loadPosts() {
                             ${verseHtml}
                             ${sharedPostHtml}
                             <div class="mt-4 flex items-center space-x-6 text-gray-600">
-                                ${post.is_prayer_request === 1 ? `
-                                    <button onclick="togglePray(${post.id})" class="flex items-center space-x-2 ${post.is_prayed > 0 ? 'text-purple-600' : 'hover:text-purple-600'} transition" title="이 게시물을 위해 기도하기 (+10점)">
+                                ${post.background_color === '#FCA5A5' ? `
+                                    <button onclick="togglePray(${post.id})" class="flex items-center space-x-2 ${post.is_prayed > 0 ? 'text-red-600' : 'hover:text-red-600'} transition" title="기도했으면 누르세요">
                                         <i class="fas fa-praying-hands text-lg"></i>
                                         <span class="text-sm">${post.prayer_clicks_count || 0}</span>
                                     </button>

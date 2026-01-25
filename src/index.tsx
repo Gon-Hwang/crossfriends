@@ -1598,8 +1598,8 @@ app.get('/', (c) => {
                                     <div class="flex items-start space-x-3">
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#FECACA', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-red-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#FCA5A5', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-red-300 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="중보">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">중보</span>

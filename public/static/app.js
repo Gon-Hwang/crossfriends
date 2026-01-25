@@ -1368,20 +1368,9 @@ function updateAuthUI() {
         
         // Update user avatar in header
         if (currentUser.role === 'admin') {
-            // Admin: Show professional admin avatar image
-            const adminImg = document.createElement('img');
-            adminImg.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-            adminImg.alt = 'Admin';
-            adminImg.className = 'w-full h-full object-cover';
-            userAvatarContainer.innerHTML = '';
-            userAvatarContainer.appendChild(adminImg);
-            
-            const adminPostImg = document.createElement('img');
-            adminPostImg.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-            adminPostImg.alt = 'Admin';
-            adminPostImg.className = 'w-full h-full object-cover';
-            newPostAvatar.innerHTML = '';
-            newPostAvatar.appendChild(adminPostImg);
+            // Admin: Show crown icon filling the avatar
+            userAvatarContainer.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
+            newPostAvatar.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
         } else if (currentUser.avatar_url) {
             // Regular users: Show avatar image
             const img = document.createElement('img');

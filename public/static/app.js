@@ -1694,7 +1694,7 @@ async function togglePray(postId) {
             // Prayer cancelled
             const cancelMsg = document.createElement('div');
             cancelMsg.className = 'fixed top-20 right-4 bg-gray-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
-            cancelMsg.innerHTML = '<i class="fas fa-undo mr-2"></i>기도를 취소했습니다 -10점';
+            cancelMsg.innerHTML = '<i class="fas fa-undo mr-2"></i>취소 -10점';
             document.body.appendChild(cancelMsg);
             
             setTimeout(() => {

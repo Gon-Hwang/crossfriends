@@ -1351,13 +1351,39 @@ function updateAuthUI() {
             adminPanelBtn.classList.add('hidden');
         }
         
+        // Hide photo/video upload buttons for admin
+        const postImageLabel = document.querySelector('label[for="postImageFile"]');
+        const postVideoLabel = document.querySelector('label[for="postVideoFile"]');
+        if (currentUser.role === 'admin') {
+            if (postImageLabel) postImageLabel.style.display = 'none';
+            if (postVideoLabel) postVideoLabel.style.display = 'none';
+        } else {
+            if (postImageLabel) postImageLabel.style.display = 'inline-flex';
+            if (postVideoLabel) postVideoLabel.style.display = 'inline-flex';
+        }
+        
         // Save to localStorage for admin panel access
         localStorage.setItem('currentUserId', currentUserId);
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         
         // Update user avatar in header
-        if (currentUser.avatar_url) {
-            // Create image element with proper error handling
+        if (currentUser.role === 'admin') {
+            // Admin: Show professional admin avatar image
+            const adminImg = document.createElement('img');
+            adminImg.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+            adminImg.alt = 'Admin';
+            adminImg.className = 'w-full h-full object-cover';
+            userAvatarContainer.innerHTML = '';
+            userAvatarContainer.appendChild(adminImg);
+            
+            const adminPostImg = document.createElement('img');
+            adminPostImg.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+            adminPostImg.alt = 'Admin';
+            adminPostImg.className = 'w-full h-full object-cover';
+            newPostAvatar.innerHTML = '';
+            newPostAvatar.appendChild(adminPostImg);
+        } else if (currentUser.avatar_url) {
+            // Regular users: Show avatar image
             const img = document.createElement('img');
             img.src = currentUser.avatar_url;
             img.alt = 'Profile';

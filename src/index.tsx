@@ -1611,7 +1611,7 @@ app.get('/', (c) => {
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#FEF08A', this)" 
+                                                onclick="selectBackgroundColor('#FDE68A', this)" 
                                                 class="color-selector-btn w-10 h-10 rounded-full bg-yellow-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="말씀">
                                             </button>
@@ -1619,7 +1619,7 @@ app.get('/', (c) => {
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#BBF7D0', this)" 
+                                                onclick="selectBackgroundColor('#A7F3D0', this)" 
                                                 class="color-selector-btn w-10 h-10 rounded-full bg-green-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="사역">
                                             </button>

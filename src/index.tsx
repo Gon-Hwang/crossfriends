@@ -1646,8 +1646,8 @@ app.get('/', (c) => {
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#DDD6FE', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-purple-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#FFFFFF', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="자유">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">자유</span>

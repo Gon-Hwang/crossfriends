@@ -1399,9 +1399,11 @@ function updateAuthUI() {
             newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
         }
         
-        // Add role badge
-        addRoleBadge(userAvatarContainer.parentElement, currentUser.role);
-        addRoleBadge(newPostAvatar.parentElement, currentUser.role);
+        // Add role badge (skip for admin since they have crown icon as avatar)
+        if (currentUser.role !== 'admin') {
+            addRoleBadge(userAvatarContainer.parentElement, currentUser.role);
+            addRoleBadge(newPostAvatar.parentElement, currentUser.role);
+        }
     } else {
         authButtons.classList.remove('hidden');
         userMenu.classList.add('hidden');
@@ -1777,11 +1779,9 @@ async function sharePost(postId) {
             ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
             : '<i class="fas fa-user"></i>';
         
-        // Role badge for shared post
+        // Role badge for shared post (skip admin badge since they have crown icon as avatar)
         let roleBadgeHtml = '';
-        if (post.user_role === 'admin') {
-            roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
-        } else if (post.user_role === 'moderator') {
+        if (post.user_role === 'moderator') {
             roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
         }
         
@@ -1889,11 +1889,9 @@ async function loadComments(postId) {
                     ? `<img src="${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                     : '<i class="fas fa-user"></i>';
                 
-                // Role badge for comments
+                // Role badge for comments (skip admin badge since they have crown icon as avatar)
                 let roleBadgeHtml = '';
-                if (comment.user_role === 'admin') {
-                    roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
-                } else if (comment.user_role === 'moderator') {
+                if (comment.user_role === 'moderator') {
                     roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
                 }
                 
@@ -1996,11 +1994,9 @@ async function loadPosts() {
                 ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                 : '<i class="fas fa-user"></i>';
             
-            // Role badge HTML
+            // Role badge HTML (skip admin badge since they have crown icon as avatar)
             let roleBadgeHtml = '';
-            if (post.user_role === 'admin') {
-                roleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
-            } else if (post.user_role === 'moderator') {
+            if (post.user_role === 'moderator') {
                 roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
             }
             
@@ -2035,9 +2031,7 @@ async function loadPosts() {
                     : '<i class="fas fa-user"></i>';
                 
                 let sharedRoleBadgeHtml = '';
-                if (post.shared_user_role === 'admin') {
-                    sharedRoleBadgeHtml = '<div class="admin-badge-crown" title="관리자"><i class="fas fa-crown"></i></div>';
-                } else if (post.shared_user_role === 'moderator') {
+                if (post.shared_user_role === 'moderator') {
                     sharedRoleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
                 }
                 

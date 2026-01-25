@@ -1603,40 +1603,40 @@ app.get('/', (c) => {
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#FED7AA', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-orange-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#FFEDD5', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-orange-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="일상">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">일상</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#FEF08A', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-yellow-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#FEF9C3', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-yellow-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="말씀">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">말씀</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#A7F3D0', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-green-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#D1FAE5', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-green-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="사역">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">사역</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#BFDBFE', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-blue-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#DBEAFE', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-blue-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="찬양">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">찬양</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#C7D2FE', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-indigo-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#E0E7FF', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-indigo-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="교회">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">교회</span>

@@ -1583,51 +1583,76 @@ app.get('/', (c) => {
                                 ></textarea>
                                 
                                 <!-- Background Color Selector -->
-                                <div class="mt-3 flex items-center space-x-2">
-                                    <span class="text-sm font-medium text-gray-700">
-                                        <i class="fas fa-palette mr-1"></i>배경색:
-                                    </span>
-                                    <button 
-                                        onclick="selectBackgroundColor('#FEE2E2', this)" 
-                                        class="color-selector-btn w-8 h-8 rounded-full bg-red-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                        title="빨강">
-                                    </button>
-                                    <button 
-                                        onclick="selectBackgroundColor('#FFEDD5', this)" 
-                                        class="color-selector-btn w-8 h-8 rounded-full bg-orange-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                        title="주황">
-                                    </button>
-                                    <button 
-                                        onclick="selectBackgroundColor('#FEF9C3', this)" 
-                                        class="color-selector-btn w-8 h-8 rounded-full bg-yellow-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                        title="노랑">
-                                    </button>
-                                    <button 
-                                        onclick="selectBackgroundColor('#D1FAE5', this)" 
-                                        class="color-selector-btn w-8 h-8 rounded-full bg-green-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                        title="초록">
-                                    </button>
-                                    <button 
-                                        onclick="selectBackgroundColor('#DBEAFE', this)" 
-                                        class="color-selector-btn w-8 h-8 rounded-full bg-blue-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                        title="파랑">
-                                    </button>
-                                    <button 
-                                        onclick="selectBackgroundColor('#E0E7FF', this)" 
-                                        class="color-selector-btn w-8 h-8 rounded-full bg-indigo-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                        title="남색">
-                                    </button>
-                                    <button 
-                                        onclick="selectBackgroundColor('#EDE9FE', this)" 
-                                        class="color-selector-btn w-8 h-8 rounded-full bg-purple-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                        title="보라">
-                                    </button>
-                                    <button 
-                                        onclick="resetBackgroundColor()" 
-                                        class="ml-2 text-xs text-gray-500 hover:text-gray-700 underline"
-                                        title="초기화">
-                                        <i class="fas fa-undo mr-1"></i>초기화
-                                    </button>
+                                <div class="mt-3">
+                                    <div class="flex items-center mb-2">
+                                        <span class="text-sm font-medium text-gray-700">
+                                            <i class="fas fa-palette mr-1"></i>배경색:
+                                        </span>
+                                        <button 
+                                            onclick="resetBackgroundColor()" 
+                                            class="ml-auto text-xs text-gray-500 hover:text-gray-700 underline"
+                                            title="초기화">
+                                            <i class="fas fa-undo mr-1"></i>초기화
+                                        </button>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <button 
+                                                onclick="selectBackgroundColor('#FEE2E2', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-red-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                title="일상">
+                                            </button>
+                                            <span class="text-xs font-medium text-gray-600">일상</span>
+                                        </div>
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <button 
+                                                onclick="selectBackgroundColor('#FFEDD5', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-orange-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                title="중보">
+                                            </button>
+                                            <span class="text-xs font-medium text-gray-600">중보</span>
+                                        </div>
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <button 
+                                                onclick="selectBackgroundColor('#FEF9C3', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-yellow-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                title="말씀">
+                                            </button>
+                                            <span class="text-xs font-medium text-gray-600">말씀</span>
+                                        </div>
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <button 
+                                                onclick="selectBackgroundColor('#D1FAE5', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-green-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                title="사역">
+                                            </button>
+                                            <span class="text-xs font-medium text-gray-600">사역</span>
+                                        </div>
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <button 
+                                                onclick="selectBackgroundColor('#DBEAFE', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-blue-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                title="찬양">
+                                            </button>
+                                            <span class="text-xs font-medium text-gray-600">찬양</span>
+                                        </div>
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <button 
+                                                onclick="selectBackgroundColor('#E0E7FF', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-indigo-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                title="교회">
+                                            </button>
+                                            <span class="text-xs font-medium text-gray-600">교회</span>
+                                        </div>
+                                        <div class="flex flex-col items-center space-y-1">
+                                            <button 
+                                                onclick="selectBackgroundColor('#EDE9FE', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full bg-purple-100 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                title="자유">
+                                            </button>
+                                            <span class="text-xs font-medium text-gray-600">자유</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <!-- Image Preview -->

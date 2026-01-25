@@ -416,7 +416,7 @@ app.post('/api/posts/:id/like', async (c) => {
   }
 })
 
-// Toggle prayer on a post (for prayer request posts) - Only once
+// Toggle prayer on a post (for prayer request posts) - Can toggle on/off
 app.post('/api/posts/:id/pray', async (c) => {
   const { DB } = c.env
   const postId = c.req.param('id')
@@ -428,13 +428,21 @@ app.post('/api/posts/:id/pray', async (c) => {
   ).bind(postId, user_id).first()
   
   if (existing) {
-    // Already prayed - do not allow toggle off
-    return c.json({ prayed: true, already_prayed: true })
+    // Cancel prayer - remove from database and deduct points
+    await DB.prepare('DELETE FROM prayer_clicks WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
+    
+    // Deduct 10 points from user's prayer score
+    const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
+    const currentScore = user?.prayer_score || 0
+    const newScore = Math.max(0, currentScore - 10) // Don't go below 0
+    await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
+    
+    return c.json({ prayed: false, prayer_score: newScore })
   } else {
-    // Pray (기도하기) - first time only
+    // Pray (기도하기) - add to database and add points
     await DB.prepare('INSERT INTO prayer_clicks (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
     
-    // Add 10 points to user's prayer score (only once)
+    // Add 10 points to user's prayer score
     const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.prayer_score || 0
     const newScore = currentScore + 10

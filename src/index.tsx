@@ -1731,13 +1731,6 @@ app.get('/', (c) => {
                                     </div>
                                     <div class="flex items-center space-x-3">
                                         <button 
-                                            id="prayerRequestBtn"
-                                            onclick="togglePrayerRequest()"
-                                            class="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-200 transition border-2 border-transparent"
-                                            title="기도부탁으로 전환">
-                                            <i class="fas fa-praying-hands mr-2"></i>기도부탁
-                                        </button>
-                                        <button 
                                             id="createPostBtn"
                                             onclick="createPost()"
                                             class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">

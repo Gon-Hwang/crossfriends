@@ -923,6 +923,23 @@ app.delete('/api/admin/posts/:id', requireAdmin, async (c) => {
   return c.json({ success: true, deleted_post_id: id })
 })
 
+// Admin: Delete all posts
+app.delete('/api/admin/posts', requireAdmin, async (c) => {
+  const { DB } = c.env
+  
+  // Get count before deletion
+  const countResult = await DB.prepare('SELECT COUNT(*) as count FROM posts').first()
+  const deletedCount = countResult?.count || 0
+  
+  // Delete all related data first
+  await DB.prepare('DELETE FROM comments').run()
+  await DB.prepare('DELETE FROM likes').run()
+  await DB.prepare('DELETE FROM comment_likes').run()
+  await DB.prepare('DELETE FROM posts').run()
+  
+  return c.json({ success: true, deleted_count: deletedCount })
+})
+
 // Admin: Get statistics
 app.get('/api/admin/stats', requireAdmin, async (c) => {
   const { DB } = c.env
@@ -1149,9 +1166,14 @@ app.get('/admin', (c) => {
                     <h2 class="text-2xl font-bold text-gray-800">
                         <i class="fas fa-newspaper text-blue-600 mr-2"></i>게시물 관리
                     </h2>
-                    <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-                        <i class="fas fa-sync-alt mr-2"></i>새로고침
-                    </button>
+                    <div class="flex space-x-2">
+                        <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-sync-alt mr-2"></i>새로고침
+                        </button>
+                        <button onclick="deleteAllPosts()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                            <i class="fas fa-trash-alt mr-2"></i>모든 게시물 삭제
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
@@ -1392,6 +1414,31 @@ app.get('/admin', (c) => {
                     loadAdminPosts();
                 } catch (error) {
                     console.error('Failed to delete post:', error);
+                    alert('게시물 삭제에 실패했습니다.');
+                }
+            }
+
+            async function deleteAllPosts() {
+                if (!confirm('⚠️ 경고: 모든 게시물을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 게시물과 관련된 댓글, 좋아요가 함께 삭제됩니다.')) {
+                    return;
+                }
+                
+                // Double confirmation
+                const confirmText = prompt('정말로 삭제하시려면 "DELETE"를 입력하세요:');
+                if (confirmText !== 'DELETE') {
+                    alert('삭제가 취소되었습니다.');
+                    return;
+                }
+                
+                try {
+                    const response = await axios.delete('/api/admin/posts', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    alert(\`\${response.data.deleted_count}개의 게시물이 삭제되었습니다.\`);
+                    loadStats();
+                    loadAdminPosts();
+                } catch (error) {
+                    console.error('Failed to delete all posts:', error);
                     alert('게시물 삭제에 실패했습니다.');
                 }
             }

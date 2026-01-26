@@ -2055,6 +2055,9 @@ async function submitEditPost() {
 
 // Delete post
 // Edit post
+let editPostImageFile = null;
+let editPostVideoFile = null;
+
 async function editPost(postId) {
     try {
         // Fetch post data
@@ -2067,14 +2070,50 @@ async function editPost(postId) {
             return;
         }
         
+        // Reset file selections
+        editPostImageFile = null;
+        editPostVideoFile = null;
+        
         // Fill modal with current data
         document.getElementById('editPostId').value = postId;
         document.getElementById('editPostContent').value = post.content || '';
-        document.getElementById('editPostVerseReference').value = post.verse_reference || '';
-        document.getElementById('editPostBackgroundColor').value = post.background_color || '#FFFFFF';
         
-        // Update color selection display
-        selectEditBackgroundColor(post.background_color || '#FFFFFF');
+        // Show current media if exists
+        const currentMediaDiv = document.getElementById('editCurrentMedia');
+        const currentMediaPreview = document.getElementById('editCurrentMediaPreview');
+        
+        if (post.image_url || post.video_url) {
+            currentMediaDiv.classList.remove('hidden');
+            let mediaHTML = '';
+            
+            if (post.image_url) {
+                mediaHTML = `
+                    <div class="relative">
+                        <img src="${post.image_url}" class="max-w-full h-auto rounded-lg border border-gray-300" />
+                        <p class="text-xs text-gray-500 mt-1">현재 이미지 (새 이미지 선택 시 교체됩니다)</p>
+                    </div>
+                `;
+            }
+            
+            if (post.video_url) {
+                mediaHTML = `
+                    <div class="relative">
+                        <video src="${post.video_url}" class="max-w-full h-auto rounded-lg border border-gray-300" controls></video>
+                        <p class="text-xs text-gray-500 mt-1">현재 동영상 (새 동영상 선택 시 교체됩니다)</p>
+                    </div>
+                `;
+            }
+            
+            currentMediaPreview.innerHTML = mediaHTML;
+        } else {
+            currentMediaDiv.classList.add('hidden');
+        }
+        
+        // Reset preview areas
+        document.getElementById('editImagePreview').classList.add('hidden');
+        document.getElementById('editVideoPreview').classList.add('hidden');
+        document.getElementById('editImageInput').value = '';
+        document.getElementById('editVideoInput').value = '';
         
         // Show modal
         document.getElementById('editPostModal').classList.remove('hidden');
@@ -2089,65 +2128,79 @@ async function editPost(postId) {
 
 function hideEditPostModal() {
     document.getElementById('editPostModal').classList.add('hidden');
+    editPostImageFile = null;
+    editPostVideoFile = null;
 }
 
-function selectEditBackgroundColor(color) {
-    document.getElementById('editPostBackgroundColor').value = color;
+function handleEditImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
     
-    // Update UI to show selected color
-    const colorButtons = document.querySelectorAll('#editPostModal button[onclick^="selectEditBackgroundColor"]');
-    colorButtons.forEach(btn => {
-        const btnColor = btn.style.backgroundColor;
-        const normalizedBtnColor = btnColor ? rgbToHex(btnColor) : '#FFFFFF';
-        
-        if (normalizedBtnColor.toLowerCase() === color.toLowerCase()) {
-            btn.classList.remove('border-transparent');
-            btn.classList.add('border-blue-500');
-        } else {
-            btn.classList.add('border-transparent');
-            btn.classList.remove('border-blue-500');
-        }
-    });
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showToast('이미지 파일만 선택할 수 있습니다.', 'error');
+        return;
+    }
     
-    // Update color name
-    const colorNames = {
-        '#FCA5A5': '중보 기도',
-        '#fca5a5': '중보 기도',
-        '#FDE68A': '말씀',
-        '#fde68a': '말씀',
-        '#FED7AA': '일상',
-        '#fed7aa': '일상',
-        '#A7F3D0': '사역',
-        '#a7f3d0': '사역',
-        '#BAE6FD': '찬양',
-        '#bae6fd': '찬양',
-        '#DDD6FE': '교회',
-        '#ddd6fe': '교회',
-        '#FFFFFF': '자유',
-        '#ffffff': '자유'
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('이미지 파일은 10MB 이하여야 합니다.', 'error');
+        return;
+    }
+    
+    editPostImageFile = file;
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('editImagePreviewImg').src = e.target.result;
+        document.getElementById('editImagePreview').classList.remove('hidden');
     };
-    document.getElementById('editSelectedColorName').textContent = colorNames[color.toLowerCase()] || '자유';
+    reader.readAsDataURL(file);
 }
 
-// Helper function to convert RGB to Hex
-function rgbToHex(rgb) {
-    if (rgb.startsWith('#')) return rgb;
+function removeEditImage() {
+    editPostImageFile = null;
+    document.getElementById('editImageInput').value = '';
+    document.getElementById('editImagePreview').classList.add('hidden');
+}
+
+function handleEditVideoSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
     
-    const result = rgb.match(/\d+/g);
-    if (!result || result.length < 3) return '#FFFFFF';
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+        showToast('동영상 파일만 선택할 수 있습니다.', 'error');
+        return;
+    }
     
-    const r = parseInt(result[0]).toString(16).padStart(2, '0');
-    const g = parseInt(result[1]).toString(16).padStart(2, '0');
-    const b = parseInt(result[2]).toString(16).padStart(2, '0');
+    // Validate file size (50MB max)
+    if (file.size > 50 * 1024 * 1024) {
+        showToast('동영상 파일은 50MB 이하여야 합니다.', 'error');
+        return;
+    }
     
-    return `#${r}${g}${b}`.toUpperCase();
+    editPostVideoFile = file;
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        document.getElementById('editVideoPreviewVideo').src = e.target.result;
+        document.getElementById('editVideoPreview').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeEditVideo() {
+    editPostVideoFile = null;
+    document.getElementById('editVideoInput').value = '';
+    document.getElementById('editVideoPreview').classList.add('hidden');
 }
 
 async function saveEditedPost() {
     const postId = document.getElementById('editPostId').value;
     const content = document.getElementById('editPostContent').value.trim();
-    const verseReference = document.getElementById('editPostVerseReference').value.trim();
-    const backgroundColor = document.getElementById('editPostBackgroundColor').value;
     
     if (!content) {
         showToast('내용을 입력해주세요.', 'error');
@@ -2155,11 +2208,53 @@ async function saveEditedPost() {
     }
     
     try {
+        // Disable save button
+        const saveBtn = document.getElementById('editPostSaveBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>저장 중...';
+        
+        // First update the text content
         await axios.put(`/api/posts/${postId}`, {
-            content,
-            verse_reference: verseReference || null,
-            background_color: backgroundColor
+            content
         });
+        
+        // Upload image if selected
+        if (editPostImageFile) {
+            const imageFormData = new FormData();
+            imageFormData.append('image', editPostImageFile);
+            
+            // Show upload progress
+            document.getElementById('editUploadProgress').classList.remove('hidden');
+            document.getElementById('editUploadStatus').textContent = '이미지 업로드 중...';
+            
+            await axios.post(`/api/posts/${postId}/image`, imageFormData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    document.getElementById('editUploadProgressBar').style.width = percent + '%';
+                    document.getElementById('editUploadPercent').textContent = percent + '%';
+                }
+            });
+        }
+        
+        // Upload video if selected
+        if (editPostVideoFile) {
+            const videoFormData = new FormData();
+            videoFormData.append('video', editPostVideoFile);
+            
+            // Show upload progress
+            document.getElementById('editUploadProgress').classList.remove('hidden');
+            document.getElementById('editUploadStatus').textContent = '동영상 업로드 중...';
+            
+            await axios.post(`/api/posts/${postId}/video`, videoFormData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    document.getElementById('editUploadProgressBar').style.width = percent + '%';
+                    document.getElementById('editUploadPercent').textContent = percent + '%';
+                }
+            });
+        }
         
         // Show success message
         showToast('게시물이 수정되었습니다.', 'success');
@@ -2167,11 +2262,26 @@ async function saveEditedPost() {
         // Hide modal
         hideEditPostModal();
         
+        // Hide upload progress
+        document.getElementById('editUploadProgress').classList.add('hidden');
+        
+        // Reset button
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>저장';
+        
         // Reload posts to show updated content
         loadPosts();
     } catch (error) {
         console.error('Failed to update post:', error);
         showToast('게시물 수정에 실패했습니다.', 'error');
+        
+        // Reset button
+        const saveBtn = document.getElementById('editPostSaveBtn');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>저장';
+        
+        // Hide upload progress
+        document.getElementById('editUploadProgress').classList.add('hidden');
     }
 }
 

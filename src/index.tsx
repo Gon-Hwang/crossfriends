@@ -2276,10 +2276,12 @@ app.get('/', (c) => {
                     <h2 class="text-2xl font-bold text-gray-800">
                         <i class="fas fa-edit text-blue-600 mr-2"></i>게시물 수정
                     </h2>
-                    <button onclick="closeEditPostModal()" class="text-gray-500 hover:text-gray-700 transition">
+                    <button onclick="hideEditPostModal()" class="text-gray-500 hover:text-gray-700 transition">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
+                
+                <input type="hidden" id="editPostId" />
                 
                 <div class="space-y-4">
                     <!-- Content -->
@@ -2294,92 +2296,91 @@ app.get('/', (c) => {
                             placeholder="무슨 생각을 하고 계신가요?"></textarea>
                     </div>
                     
-                    <!-- Verse Reference -->
-                    <div>
+                    <!-- Current Media Preview -->
+                    <div id="editCurrentMedia" class="hidden">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-bible mr-2"></i>성경 구절 (선택사항)
+                            <i class="fas fa-image mr-2"></i>현재 첨부된 미디어
                         </label>
-                        <input 
-                            id="editPostVerse"
-                            type="text"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="예: 요한복음 3:16" />
+                        <div id="editCurrentMediaPreview" class="relative">
+                            <!-- Will be filled by JavaScript -->
+                        </div>
                     </div>
                     
-                    <!-- Background Color Selection -->
+                    <!-- Image Upload -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-3">
-                            <i class="fas fa-palette mr-2"></i>배경색 선택
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-image mr-2"></i>이미지 업로드 (새로운 이미지로 교체)
                         </label>
-                        <div class="flex flex-wrap gap-4">
-                            <div class="flex flex-col items-center space-y-1">
-                                <button 
-                                    onclick="selectEditBackgroundColor('#FCA5A5', this)" 
-                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-red-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                    title="중보 기도">
-                                </button>
-                                <span class="text-xs font-medium text-gray-600">중보</span>
+                        <div id="editImagePreview" class="hidden mb-3">
+                            <img id="editImagePreviewImg" class="max-w-full h-auto rounded-lg border border-gray-300" />
+                            <button 
+                                onclick="removeEditImage()"
+                                class="mt-2 text-sm text-red-600 hover:text-red-700">
+                                <i class="fas fa-times mr-1"></i>이미지 제거
+                            </button>
+                        </div>
+                        <input 
+                            type="file" 
+                            id="editImageInput" 
+                            accept="image/*"
+                            onchange="handleEditImageSelect(event)"
+                            class="hidden" />
+                        <label 
+                            for="editImageInput"
+                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition">
+                            <i class="fas fa-upload mr-2"></i>이미지 선택
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">새 이미지를 선택하면 기존 이미지를 대체합니다</p>
+                    </div>
+                    
+                    <!-- Video Upload -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-video mr-2"></i>동영상 업로드 (새로운 동영상으로 교체)
+                        </label>
+                        <div id="editVideoPreview" class="hidden mb-3">
+                            <video id="editVideoPreviewVideo" class="max-w-full h-auto rounded-lg border border-gray-300" controls></video>
+                            <button 
+                                onclick="removeEditVideo()"
+                                class="mt-2 text-sm text-red-600 hover:text-red-700">
+                                <i class="fas fa-times mr-1"></i>동영상 제거
+                            </button>
+                        </div>
+                        <input 
+                            type="file" 
+                            id="editVideoInput" 
+                            accept="video/*"
+                            onchange="handleEditVideoSelect(event)"
+                            class="hidden" />
+                        <label 
+                            for="editVideoInput"
+                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition">
+                            <i class="fas fa-upload mr-2"></i>동영상 선택
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">새 동영상을 선택하면 기존 동영상을 대체합니다</p>
+                    </div>
+                    
+                    <!-- Upload Progress -->
+                    <div id="editUploadProgress" class="hidden">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <p class="text-sm text-blue-800 mb-2" id="editUploadStatus">업로드 중...</p>
+                            <div class="w-full bg-blue-200 rounded-full h-2">
+                                <div id="editUploadProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                             </div>
-                            <div class="flex flex-col items-center space-y-1">
-                                <button 
-                                    onclick="selectEditBackgroundColor('#FDE68A', this)" 
-                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-yellow-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                    title="말씀">
-                                </button>
-                                <span class="text-xs font-medium text-gray-600">말씀</span>
-                            </div>
-                            <div class="flex flex-col items-center space-y-1">
-                                <button 
-                                    onclick="selectEditBackgroundColor('#FED7AA', this)" 
-                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-orange-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                    title="일상">
-                                </button>
-                                <span class="text-xs font-medium text-gray-600">일상</span>
-                            </div>
-                            <div class="flex flex-col items-center space-y-1">
-                                <button 
-                                    onclick="selectEditBackgroundColor('#A7F3D0', this)" 
-                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-green-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                    title="사역">
-                                </button>
-                                <span class="text-xs font-medium text-gray-600">사역</span>
-                            </div>
-                            <div class="flex flex-col items-center space-y-1">
-                                <button 
-                                    onclick="selectEditBackgroundColor('#BAE6FD', this)" 
-                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-sky-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                    title="찬양">
-                                </button>
-                                <span class="text-xs font-medium text-gray-600">찬양</span>
-                            </div>
-                            <div class="flex flex-col items-center space-y-1">
-                                <button 
-                                    onclick="selectEditBackgroundColor('#DDD6FE', this)" 
-                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-violet-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                    title="교회">
-                                </button>
-                                <span class="text-xs font-medium text-gray-600">교회</span>
-                            </div>
-                            <div class="flex flex-col items-center space-y-1">
-                                <button 
-                                    onclick="selectEditBackgroundColor('#FFFFFF', this)" 
-                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
-                                    title="자유">
-                                </button>
-                                <span class="text-xs font-medium text-gray-600">자유</span>
-                            </div>
+                            <p class="text-xs text-blue-600 mt-1" id="editUploadPercent">0%</p>
                         </div>
                     </div>
                     
                     <!-- Buttons -->
                     <div class="flex justify-end space-x-3 pt-4">
                         <button 
-                            onclick="closeEditPostModal()"
+                            onclick="hideEditPostModal()"
                             class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
                             <i class="fas fa-times mr-2"></i>취소
                         </button>
                         <button 
-                            onclick="submitEditPost()"
+                            onclick="saveEditedPost()"
+                            id="editPostSaveBtn"
                             class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                             <i class="fas fa-save mr-2"></i>저장
                         </button>
@@ -2389,101 +2390,6 @@ app.get('/', (c) => {
         </div>
 
         <!-- Signup Modal -->
-        <!-- Edit Post Modal -->
-        <div id="editPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-800">
-                        <i class="fas fa-edit text-blue-600 mr-2"></i>게시물 수정
-                    </h2>
-                    <button onclick="hideEditPostModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <input type="hidden" id="editPostId" />
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">내용</label>
-                        <textarea 
-                            id="editPostContent"
-                            rows="6"
-                            placeholder="게시물 내용을 입력하세요..."
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none resize-none"
-                        ></textarea>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">성경 구절 (선택사항)</label>
-                        <input 
-                            id="editPostVerseReference"
-                            type="text"
-                            placeholder="예: 요한복음 3:16"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                        />
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">배경색 선택</label>
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="selectEditBackgroundColor('#FCA5A5')" 
-                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
-                                style="background-color: #FCA5A5"
-                                title="중보 기도">
-                            </button>
-                            <button onclick="selectEditBackgroundColor('#FDE68A')" 
-                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
-                                style="background-color: #FDE68A"
-                                title="말씀">
-                            </button>
-                            <button onclick="selectEditBackgroundColor('#FED7AA')" 
-                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
-                                style="background-color: #FED7AA"
-                                title="일상">
-                            </button>
-                            <button onclick="selectEditBackgroundColor('#A7F3D0')" 
-                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
-                                style="background-color: #A7F3D0"
-                                title="사역">
-                            </button>
-                            <button onclick="selectEditBackgroundColor('#BAE6FD')" 
-                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
-                                style="background-color: #BAE6FD"
-                                title="찬양">
-                            </button>
-                            <button onclick="selectEditBackgroundColor('#DDD6FE')" 
-                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
-                                style="background-color: #DDD6FE"
-                                title="교회">
-                            </button>
-                            <button onclick="selectEditBackgroundColor('#FFFFFF')" 
-                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all bg-white"
-                                title="자유">
-                            </button>
-                        </div>
-                        <input type="hidden" id="editPostBackgroundColor" value="#FFFFFF" />
-                        <div class="mt-2 text-sm text-gray-600">
-                            현재 선택: <span id="editSelectedColorName" class="font-semibold">자유</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-3 pt-4">
-                        <button 
-                            onclick="saveEditedPost()"
-                            class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                            <i class="fas fa-save mr-2"></i>저장
-                        </button>
-                        <button 
-                            onclick="hideEditPostModal()"
-                            class="flex-1 bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition-colors font-semibold">
-                            <i class="fas fa-times mr-2"></i>취소
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div id="signupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 pb-4">

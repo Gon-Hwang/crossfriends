@@ -514,10 +514,10 @@ app.post('/api/posts/:id/pray', async (c) => {
     // Cancel prayer - remove from database and deduct points
     await DB.prepare('DELETE FROM prayer_clicks WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
     
-    // Deduct 20 points from user's prayer score
+    // Deduct 10 points from user's prayer score
     const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.prayer_score || 0
-    const newScore = Math.max(0, currentScore - 20) // Don't go below 0
+    const newScore = Math.max(0, currentScore - 10) // Don't go below 0
     await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
     
     return c.json({ prayed: false, prayer_score: newScore })
@@ -525,10 +525,10 @@ app.post('/api/posts/:id/pray', async (c) => {
     // Pray (기도하기) - add to database and add points
     await DB.prepare('INSERT INTO prayer_clicks (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
     
-    // Add 20 points to user's prayer score
+    // Add 10 points to user's prayer score
     const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.prayer_score || 0
-    const newScore = currentScore + 20
+    const newScore = currentScore + 10
     await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
     
     return c.json({ prayed: true, prayer_score: newScore })

@@ -611,11 +611,8 @@ function checkTyping() {
         </div>
     `;
     
-    // Clear input after a delay
-    setTimeout(() => {
-        typingInput.value = '';
-        typingInput.focus();
-    }, 2000);
+    // Keep the input text until user clicks reset button
+    // Don't auto-clear the input field
 }
 
 // Reset typing input and result

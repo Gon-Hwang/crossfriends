@@ -1117,11 +1117,29 @@ app.get('/api/admin/stats', requireAdmin, async (c) => {
   const commentCount = await DB.prepare('SELECT COUNT(*) as count FROM comments').first()
   const prayerCount = await DB.prepare('SELECT COUNT(*) as count FROM prayer_requests').first()
   
+  // Post type counts by background color
+  const prayerPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FCA5A5'").first()
+  const versePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FDE68A'").first()
+  const dailyPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FED7AA'").first()
+  const ministryPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#A7F3D0'").first()
+  const praisePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#BAE6FD'").first()
+  const churchPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#DDD6FE'").first()
+  const freePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FFFFFF' OR background_color IS NULL").first()
+  
   return c.json({
     users: userCount?.count || 0,
     posts: postCount?.count || 0,
     comments: commentCount?.count || 0,
-    prayers: prayerCount?.count || 0
+    prayers: prayerCount?.count || 0,
+    postTypes: {
+      prayer: prayerPostCount?.count || 0,      // 중보 기도
+      verse: versePostCount?.count || 0,        // 말씀
+      daily: dailyPostCount?.count || 0,        // 일상
+      ministry: ministryPostCount?.count || 0,  // 사역
+      praise: praisePostCount?.count || 0,      // 찬양
+      church: churchPostCount?.count || 0,      // 교회
+      free: freePostCount?.count || 0           // 자유
+    }
   })
 })
 
@@ -1567,6 +1585,63 @@ app.get('/admin', (c) => {
                 </div>
             </div>
 
+            <!-- Post Type Statistics -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                    <i class="fas fa-chart-pie text-blue-600 mr-2"></i>포스팅 유형별 통계
+                </h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    <!-- 중보 기도 -->
+                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-red-600 text-2xl font-bold mb-1" id="prayerPostCount">0</div>
+                        <div class="text-red-700 text-sm font-medium">중보 기도</div>
+                        <div class="w-8 h-8 bg-red-200 rounded-full mx-auto mt-2"></div>
+                    </div>
+                    
+                    <!-- 말씀 -->
+                    <div class="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-yellow-600 text-2xl font-bold mb-1" id="versePostCount">0</div>
+                        <div class="text-yellow-700 text-sm font-medium">말씀</div>
+                        <div class="w-8 h-8 bg-yellow-200 rounded-full mx-auto mt-2"></div>
+                    </div>
+                    
+                    <!-- 일상 -->
+                    <div class="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-orange-600 text-2xl font-bold mb-1" id="dailyPostCount">0</div>
+                        <div class="text-orange-700 text-sm font-medium">일상</div>
+                        <div class="w-8 h-8 bg-orange-200 rounded-full mx-auto mt-2"></div>
+                    </div>
+                    
+                    <!-- 사역 -->
+                    <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-green-600 text-2xl font-bold mb-1" id="ministryPostCount">0</div>
+                        <div class="text-green-700 text-sm font-medium">사역</div>
+                        <div class="w-8 h-8 bg-green-200 rounded-full mx-auto mt-2"></div>
+                    </div>
+                    
+                    <!-- 찬양 -->
+                    <div class="bg-sky-50 border-2 border-sky-200 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-sky-600 text-2xl font-bold mb-1" id="praisePostCount">0</div>
+                        <div class="text-sky-700 text-sm font-medium">찬양</div>
+                        <div class="w-8 h-8 bg-sky-200 rounded-full mx-auto mt-2"></div>
+                    </div>
+                    
+                    <!-- 교회 -->
+                    <div class="bg-violet-50 border-2 border-violet-200 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-violet-600 text-2xl font-bold mb-1" id="churchPostCount">0</div>
+                        <div class="text-violet-700 text-sm font-medium">교회</div>
+                        <div class="w-8 h-8 bg-violet-200 rounded-full mx-auto mt-2"></div>
+                    </div>
+                    
+                    <!-- 자유 -->
+                    <div class="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-gray-600 text-2xl font-bold mb-1" id="freePostCount">0</div>
+                        <div class="text-gray-700 text-sm font-medium">자유</div>
+                        <div class="w-8 h-8 bg-gray-200 rounded-full mx-auto mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Users Table -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
@@ -1669,6 +1744,17 @@ app.get('/admin', (c) => {
                     document.getElementById('totalUsers').textContent = response.data.users;
                     document.getElementById('totalPosts').textContent = response.data.posts;
                     document.getElementById('totalComments').textContent = response.data.comments;
+                    
+                    // Post type statistics
+                    if (response.data.postTypes) {
+                        document.getElementById('prayerPostCount').textContent = response.data.postTypes.prayer;
+                        document.getElementById('versePostCount').textContent = response.data.postTypes.verse;
+                        document.getElementById('dailyPostCount').textContent = response.data.postTypes.daily;
+                        document.getElementById('ministryPostCount').textContent = response.data.postTypes.ministry;
+                        document.getElementById('praisePostCount').textContent = response.data.postTypes.praise;
+                        document.getElementById('churchPostCount').textContent = response.data.postTypes.church;
+                        document.getElementById('freePostCount').textContent = response.data.postTypes.free;
+                    }
                 } catch (error) {
                     console.error('Failed to load stats:', error);
                     if (error.response && (error.response.status === 401 || error.response.status === 403)) {

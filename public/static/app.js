@@ -1580,6 +1580,13 @@ async function createPost() {
 
         const postId = response.data.id;
 
+        // 기도 포스팅(중보 기도)일 경우 기도 점수 즉시 업데이트
+        if (selectedBackgroundColor === '#FCA5A5') {
+            prayerScore += 20;
+            updateTypingScoreDisplay();
+            showToast('기도 포스팅 작성! 기도 점수 +20점', 'success');
+        }
+
         // 2. Upload image if selected
         if (imageFile) {
             const formData = new FormData();

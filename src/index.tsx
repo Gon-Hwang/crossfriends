@@ -670,12 +670,16 @@ app.post('/api/users/:id/scores/typing', async (c) => {
 app.post('/api/users/:id/scores/video', async (c) => {
   const { DB } = c.env
   const userId = c.req.param('id')
-  const { score, video_id } = await c.req.json()
+  const { video_id } = await c.req.json()
   
-  // Get current completed videos
+  // Get current completed videos and score
   const user = await DB.prepare(
     'SELECT completed_videos, video_score FROM users WHERE id = ?'
   ).bind(userId).first()
+  
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404)
+  }
   
   let completedVideos = []
   try {
@@ -684,7 +688,26 @@ app.post('/api/users/:id/scores/video', async (c) => {
     completedVideos = []
   }
   
-  // Find if this video already exists
+  // Check if this video is already completed
+  const existingVideo = completedVideos.find((v: any) => 
+    typeof v === 'string' ? v === video_id : v.video_id === video_id
+  )
+  
+  // If already completed, return current score without adding points
+  if (existingVideo && existingVideo.completed) {
+    return c.json({ 
+      success: true, 
+      video_score: user.video_score,
+      completed_videos: completedVideos,
+      already_completed: true,
+      message: '이미 시청 완료한 설교입니다. 점수는 한 번만 지급됩니다.'
+    })
+  }
+  
+  // Calculate new score (add 100 points)
+  const currentScore = parseInt(user.video_score) || 0
+  const newScore = currentScore + 100
+  
   const existingIndex = completedVideos.findIndex((v: any) => 
     typeof v === 'string' ? v === video_id : v.video_id === video_id
   )
@@ -709,14 +732,18 @@ app.post('/api/users/:id/scores/video', async (c) => {
     })
   }
   
+  // Update with new score
   await DB.prepare(
     'UPDATE users SET video_score = ?, completed_videos = ? WHERE id = ?'
-  ).bind(score, JSON.stringify(completedVideos), userId).run()
+  ).bind(newScore, JSON.stringify(completedVideos), userId).run()
   
   return c.json({ 
     success: true, 
-    video_score: score,
-    completed_videos: completedVideos
+    video_score: newScore,
+    completed_videos: completedVideos,
+    already_completed: false,
+    points_earned: 100,
+    message: '설교 시청 완료! 성경 점수 +100점'
   })
 })
 

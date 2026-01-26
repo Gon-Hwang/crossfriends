@@ -133,7 +133,7 @@ async function checkVideoCompletion() {
         alreadyCompleted: completedVideos.has(CURRENT_VIDEO_ID)
     });
     
-    // Check if already completed this video
+    // Check if already completed this video (client-side check)
     if (completedVideos.has(CURRENT_VIDEO_ID)) {
         showVideoAlreadyCompleted();
         return;
@@ -141,16 +141,23 @@ async function checkVideoCompletion() {
     
     // 90% or more = completed
     if (watchedPercent >= 90) {
-        const pointsEarned = 100;
-        const newVideoScore = videoScore + pointsEarned;
+        // Save video completion to server
+        const result = await saveVideoScore(CURRENT_VIDEO_ID);
         
-        // Save video score
-        await saveVideoScore(newVideoScore, CURRENT_VIDEO_ID);
+        // Server will tell us if it was already completed
+        if (result && result.already_completed) {
+            showVideoAlreadyCompleted();
+            return;
+        }
         
-        // Mark as completed
+        // Mark as completed locally
         completedVideos.add(CURRENT_VIDEO_ID);
         
-        showVideoCompletionReward(pointsEarned, typingScore + newVideoScore);
+        // Show reward with actual points earned from server
+        const pointsEarned = result ? result.points_earned : 100;
+        const totalScore = result ? result.video_score : (videoScore + 100);
+        
+        showVideoCompletionReward(pointsEarned, typingScore + totalScore);
         
         // Stop tracking
         stopVideoTracking();
@@ -282,23 +289,34 @@ async function saveTypingScore(score) {
 }
 
 // Save video score to API
-async function saveVideoScore(score, videoId) {
-    videoScore = score;
-    updateTypingScoreDisplay();
-    
+async function saveVideoScore(videoId) {
     if (!currentUserId) {
         // Fallback to localStorage if not logged in
         localStorage.setItem('completedVideos', JSON.stringify([...completedVideos]));
-        return;
+        return null;
     }
     
     try {
-        await axios.post(`/api/users/${currentUserId}/scores/video`, { 
-            score, 
+        const response = await axios.post(`/api/users/${currentUserId}/scores/video`, { 
             video_id: videoId 
         });
+        
+        // Update local score with the response
+        videoScore = response.data.video_score;
+        updateTypingScoreDisplay();
+        
+        // Show notification
+        if (response.data.already_completed) {
+            showToast(response.data.message, 'warning');
+        } else {
+            showToast(`${response.data.message} (총 ${response.data.video_score}점)`, 'success');
+        }
+        
+        return response.data;
     } catch (error) {
         console.error('Failed to save video score:', error);
+        showToast('점수 저장에 실패했습니다.', 'error');
+        return null;
     }
 }
 

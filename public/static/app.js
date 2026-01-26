@@ -197,19 +197,8 @@ function showVideoCompletionReward(points, totalScore) {
 function showVideoAlreadyCompleted() {
     const resultDiv = document.getElementById('videoCompletionResult');
     
-    resultDiv.innerHTML = `
-        <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
-            <div class="flex items-center space-x-2 mb-2">
-                <i class="fas fa-info-circle text-gray-600 text-lg"></i>
-                <span class="font-semibold text-gray-700">이미 시청 완료한 설교입니다</span>
-            </div>
-            <p class="text-xs text-gray-500">
-                <i class="fas fa-check mr-1"></i>이 설교는 이미 점수를 받으셨습니다 (중복 지급 불가)
-            </p>
-        </div>
-    `;
-    
-    resultDiv.classList.remove('hidden');
+    // Hide the message - no need to show already completed status
+    resultDiv.classList.add('hidden');
 }
 
 // =====================

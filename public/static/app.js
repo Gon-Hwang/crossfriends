@@ -2061,7 +2061,6 @@ async function submitEditPost() {
     try {
         await axios.put(`/api/posts/${currentEditingPostId}`, {
             content: content,
-            verse_reference: document.getElementById('editPostVerse').value.trim() || null,
             background_color: selectedEditBackgroundColor
         });
         
@@ -2216,13 +2215,8 @@ async function sharePost(postId) {
             roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
         }
         
-        const verseHtml = post.verse_reference ? `
-            <div class="mt-2 bg-blue-50 border-l-4 border-blue-600 p-2 rounded text-xs">
-                <p class="text-blue-600 font-semibold">
-                    <i class="fas fa-bible mr-1"></i>${post.verse_reference}
-                </p>
-            </div>
-        ` : '';
+        // Verse reference removed - not a feature
+        const verseHtml = '';
         
         const imageHtml = post.image_url ? `
             <div class="mt-2">
@@ -2578,13 +2572,8 @@ async function loadPosts() {
                 roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
             }
             
-            const verseHtml = post.verse_reference ? `
-                <div class="mt-3 bg-gray-50 border-l-4 border-blue-600 p-3 rounded">
-                    <p class="text-sm text-blue-600 font-semibold">
-                        <i class="fas fa-bible mr-2"></i>${post.verse_reference}
-                    </p>
-                </div>
-            ` : '';
+            // Verse reference removed - not a feature
+            const verseHtml = '';
             
             const imageHtml = post.image_url ? `
                 <div class="mt-3">
@@ -2616,13 +2605,8 @@ async function loadPosts() {
                     sharedRoleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
                 }
                 
-                const sharedVerseHtml = post.shared_verse_reference ? `
-                    <div class="mt-2 bg-blue-50 border-l-4 border-blue-600 p-2 rounded text-xs">
-                        <p class="text-blue-600 font-semibold">
-                            <i class="fas fa-bible mr-1"></i>${post.shared_verse_reference}
-                        </p>
-                    </div>
-                ` : '';
+                // Shared verse reference removed - not a feature
+                const sharedVerseHtml = '';
                 
                 const sharedImageHtml = post.shared_image_url ? `
                     <div class="mt-2 max-w-full">

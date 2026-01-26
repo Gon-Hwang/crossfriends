@@ -2174,10 +2174,10 @@ async function loadPosts() {
                                         <i class="fas fa-praying-hands text-lg"></i>
                                         <span class="text-sm">${post.prayer_clicks_count || 0}</span>
                                     </button>
-                                ` : post.background_color === '#FEF9C3' ? `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-yellow-600' : 'hover:text-yellow-600'} transition" title="할렐루야">
-                                        <i class="fas fa-hands-praying text-lg"></i>
-                                        <span class="text-sm">할렐루야 ${post.likes_count || 0}</span>
+                                ` : post.background_color === '#FDE68A' ? `
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-yellow-600' : 'hover:text-yellow-600'} transition" title="아멘">
+                                        <i class="fas fa-cross text-lg"></i>
+                                        <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>
                                 ` : `
                                     <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">

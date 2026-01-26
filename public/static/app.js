@@ -1924,9 +1924,115 @@ function copyPostLink(postId) {
 }
 
 // Edit post
+let currentEditingPostId = null;
+let selectedEditBackgroundColor = null;
+
 function editPost(postId) {
-    alert('게시물 수정 기능은 곧 추가될 예정입니다.');
-    togglePostMenu(postId);
+    // Get post data first
+    const postsFeed = document.getElementById('postsFeed');
+    const posts = Array.from(postsFeed.children);
+    
+    // Find the post data from the feed
+    fetch(`/api/posts?user_id=${currentUserId}`)
+        .then(res => res.json())
+        .then(data => {
+            const post = data.find(p => p.id === postId);
+            if (!post) {
+                alert('게시물을 찾을 수 없습니다.');
+                return;
+            }
+            
+            // Set current editing post
+            currentEditingPostId = postId;
+            selectedEditBackgroundColor = post.background_color;
+            
+            // Fill modal with current data
+            document.getElementById('editPostContent').value = post.content || '';
+            document.getElementById('editPostVerse').value = post.verse_reference || '';
+            
+            // Highlight selected background color
+            document.querySelectorAll('.edit-color-selector-btn').forEach(btn => {
+                btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
+            });
+            
+            if (selectedEditBackgroundColor) {
+                const colorBtn = document.querySelector(`.edit-color-selector-btn[onclick*="${selectedEditBackgroundColor}"]`);
+                if (colorBtn) {
+                    colorBtn.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
+                }
+            }
+            
+            // Show modal
+            document.getElementById('editPostModal').classList.remove('hidden');
+            togglePostMenu(postId); // Close the post menu
+        })
+        .catch(error => {
+            console.error('Error loading post:', error);
+            alert('게시물을 불러오는데 실패했습니다.');
+        });
+}
+
+function selectEditBackgroundColor(color, element) {
+    selectedEditBackgroundColor = color;
+    
+    // Remove ring from all buttons
+    document.querySelectorAll('.edit-color-selector-btn').forEach(btn => {
+        btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
+    });
+    
+    // Add ring to selected button
+    element.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
+}
+
+function closeEditPostModal() {
+    document.getElementById('editPostModal').classList.add('hidden');
+    currentEditingPostId = null;
+    selectedEditBackgroundColor = null;
+    
+    // Reset form
+    document.getElementById('editPostContent').value = '';
+    document.getElementById('editPostVerse').value = '';
+    document.querySelectorAll('.edit-color-selector-btn').forEach(btn => {
+        btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
+    });
+}
+
+async function submitEditPost() {
+    if (!currentEditingPostId) {
+        alert('수정할 게시물을 선택해주세요.');
+        return;
+    }
+    
+    const content = document.getElementById('editPostContent').value.trim();
+    if (!content) {
+        alert('내용을 입력해주세요.');
+        return;
+    }
+    
+    try {
+        await axios.put(`/api/posts/${currentEditingPostId}`, {
+            content: content,
+            verse_reference: document.getElementById('editPostVerse').value.trim() || null,
+            background_color: selectedEditBackgroundColor
+        });
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>게시물이 수정되었습니다!';
+        document.body.appendChild(successMsg);
+        
+        setTimeout(() => {
+            successMsg.remove();
+        }, 2000);
+        
+        // Close modal and reload posts
+        closeEditPostModal();
+        loadPosts();
+    } catch (error) {
+        console.error('Error updating post:', error);
+        alert('게시물 수정에 실패했습니다.');
+    }
 }
 
 // Delete post

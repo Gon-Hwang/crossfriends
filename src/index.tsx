@@ -362,6 +362,19 @@ app.get('/api/videos/posts/:filename', async (c) => {
   return new Response(object.body, { headers })
 })
 
+// Update post
+app.put('/api/posts/:id', async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  const { content, verse_reference, background_color } = await c.req.json()
+  
+  await DB.prepare(
+    'UPDATE posts SET content = ?, verse_reference = ?, background_color = ? WHERE id = ?'
+  ).bind(content, verse_reference || null, background_color || null, id).run()
+  
+  return c.json({ success: true })
+})
+
 // Delete post
 app.delete('/api/posts/:id', async (c) => {
   const { DB } = c.env
@@ -1795,6 +1808,125 @@ app.get('/', (c) => {
                     <!-- Posts Feed -->
                     <div id="postsFeed" class="space-y-4">
                         <!-- Posts will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Post Modal -->
+        <div id="editPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-edit text-blue-600 mr-2"></i>게시물 수정
+                    </h2>
+                    <button onclick="closeEditPostModal()" class="text-gray-500 hover:text-gray-700 transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Content -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-pen mr-2"></i>내용
+                        </label>
+                        <textarea 
+                            id="editPostContent"
+                            rows="6"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            placeholder="무슨 생각을 하고 계신가요?"></textarea>
+                    </div>
+                    
+                    <!-- Verse Reference -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-bible mr-2"></i>성경 구절 (선택사항)
+                        </label>
+                        <input 
+                            id="editPostVerse"
+                            type="text"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="예: 요한복음 3:16" />
+                    </div>
+                    
+                    <!-- Background Color Selection -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-palette mr-2"></i>배경색 선택
+                        </label>
+                        <div class="flex flex-wrap gap-4">
+                            <div class="flex flex-col items-center space-y-1">
+                                <button 
+                                    onclick="selectEditBackgroundColor('#FCA5A5', this)" 
+                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-red-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                    title="중보 기도">
+                                </button>
+                                <span class="text-xs font-medium text-gray-600">중보</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-1">
+                                <button 
+                                    onclick="selectEditBackgroundColor('#FDE68A', this)" 
+                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-yellow-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                    title="말씀">
+                                </button>
+                                <span class="text-xs font-medium text-gray-600">말씀</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-1">
+                                <button 
+                                    onclick="selectEditBackgroundColor('#FED7AA', this)" 
+                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-orange-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                    title="일상">
+                                </button>
+                                <span class="text-xs font-medium text-gray-600">일상</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-1">
+                                <button 
+                                    onclick="selectEditBackgroundColor('#A7F3D0', this)" 
+                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-green-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                    title="사역">
+                                </button>
+                                <span class="text-xs font-medium text-gray-600">사역</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-1">
+                                <button 
+                                    onclick="selectEditBackgroundColor('#BAE6FD', this)" 
+                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-sky-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                    title="찬양">
+                                </button>
+                                <span class="text-xs font-medium text-gray-600">찬양</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-1">
+                                <button 
+                                    onclick="selectEditBackgroundColor('#DDD6FE', this)" 
+                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-violet-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                    title="교회">
+                                </button>
+                                <span class="text-xs font-medium text-gray-600">교회</span>
+                            </div>
+                            <div class="flex flex-col items-center space-y-1">
+                                <button 
+                                    onclick="selectEditBackgroundColor('#FFFFFF', this)" 
+                                    class="edit-color-selector-btn w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                    title="자유">
+                                </button>
+                                <span class="text-xs font-medium text-gray-600">자유</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button 
+                            onclick="closeEditPostModal()"
+                            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            <i class="fas fa-times mr-2"></i>취소
+                        </button>
+                        <button 
+                            onclick="submitEditPost()"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
                     </div>
                 </div>
             </div>

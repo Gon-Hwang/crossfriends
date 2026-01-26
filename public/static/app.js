@@ -2135,7 +2135,7 @@ async function createComment(postId) {
         });
         input.value = '';
         refreshComments(postId); // Use refreshComments instead of loadComments to keep comments open
-        loadPosts();
+        // Don't call loadPosts() to keep comments section open
     } catch (error) {
         console.error('Error creating comment:', error);
         alert('댓글 작성에 실패했습니다.');

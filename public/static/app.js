@@ -1559,7 +1559,12 @@ async function createPost() {
         if (selectedBackgroundColor === '#FCA5A5') {
             prayerScore += 20;
             updateTypingScoreDisplay();
-            showToast('기도 포스팅 작성! 기도 점수 +20점', 'success');
+            showToastWithColor('기도 포스팅 작성! 기도 점수 +20점', selectedBackgroundColor);
+        }
+        
+        // 말씀 포스팅일 경우 성경 점수 업데이트
+        if (selectedBackgroundColor === '#FDE68A') {
+            showToastWithColor('말씀 포스팅 작성! 성경 점수 +10점', selectedBackgroundColor);
         }
         
         // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 즉시 업데이트
@@ -1567,7 +1572,7 @@ async function createPost() {
         if (activityPostColors.includes(selectedBackgroundColor)) {
             activityScore += 10;
             updateTypingScoreDisplay();
-            showToast('포스팅 작성! 활동 점수 +10점', 'success');
+            showToastWithColor('포스팅 작성! 활동 점수 +10점', selectedBackgroundColor);
         }
 
         // 2. Upload image if selected
@@ -2831,6 +2836,57 @@ function showToast(message, type = 'info') {
         toast.classList.add('bg-blue-600');
         toast.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
     }
+    
+    // Add to body
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateX(400px)';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+
+// Show toast notification with custom background color (matching post background)
+function showToastWithColor(message, backgroundColor) {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    existingToasts.forEach(toast => toast.remove());
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-[10000] transform transition-all duration-300 translate-x-0 border-2';
+    
+    // Set background color to match the post color
+    toast.style.backgroundColor = backgroundColor;
+    
+    // Set text color based on background brightness for better readability
+    // Dark text for light backgrounds, light text for dark backgrounds
+    const isDarkBackground = ['#FCA5A5', '#A7F3D0', '#BAE6FD', '#DDD6FE'].includes(backgroundColor);
+    const textColor = (backgroundColor === '#FFFFFF' || !isDarkBackground) ? '#1F2937' : '#1F2937';
+    toast.style.color = textColor;
+    
+    // Set border color slightly darker than background
+    const borderColors = {
+        '#FCA5A5': '#DC2626',  // 중보 기도 - 빨간색
+        '#FDE68A': '#CA8A04',  // 말씀 - 노란색
+        '#FED7AA': '#EA580C',  // 일상 - 주황색
+        '#A7F3D0': '#059669',  // 사역 - 초록색
+        '#BAE6FD': '#0284C7',  // 찬양 - 하늘색
+        '#DDD6FE': '#7C3AED',  // 교회 - 보라색
+        '#FFFFFF': '#D1D5DB'   // 자유 - 회색
+    };
+    toast.style.borderColor = borderColors[backgroundColor] || '#D1D5DB';
+    
+    // Add appropriate icon and message
+    toast.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
     
     // Add to body
     document.body.appendChild(toast);

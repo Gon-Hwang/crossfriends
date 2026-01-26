@@ -2175,16 +2175,16 @@ async function loadPosts() {
                                         <span class="text-sm">${post.prayer_clicks_count || 0}</span>
                                     </button>
                                 ` : `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition">
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">
                                         <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>
                                 `}
-                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition" title="댓글">
                                     <i class="fas fa-comment text-lg"></i>
                                     <span class="text-sm">${post.comments_count || 0}</span>
                                 </button>
-                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition">
+                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition" title="공유하기">
                                     <i class="fas fa-share text-lg"></i>
                                     <span class="text-sm">공유</span>
                                 </button>

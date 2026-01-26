@@ -972,6 +972,42 @@ app.put('/api/admin/users/:id/role', requireAdmin, async (c) => {
   return c.json({ success: true, id, role })
 })
 
+// Admin: Update user scores
+app.put('/api/admin/users/:id/scores', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  const { typing_score, prayer_score, activity_score } = await c.req.json()
+  
+  // Validate scores are numbers
+  if (typing_score !== undefined && (typeof typing_score !== 'number' || typing_score < 0)) {
+    return c.json({ error: 'Invalid typing_score' }, 400)
+  }
+  if (prayer_score !== undefined && (typeof prayer_score !== 'number' || prayer_score < 0)) {
+    return c.json({ error: 'Invalid prayer_score' }, 400)
+  }
+  if (activity_score !== undefined && (typeof activity_score !== 'number' || activity_score < 0)) {
+    return c.json({ error: 'Invalid activity_score' }, 400)
+  }
+  
+  // Update scores
+  await DB.prepare(
+    'UPDATE users SET typing_score = ?, prayer_score = ?, activity_score = ? WHERE id = ?'
+  ).bind(
+    typing_score !== undefined ? typing_score : 0,
+    prayer_score !== undefined ? prayer_score : 0,
+    activity_score !== undefined ? activity_score : 0,
+    id
+  ).run()
+  
+  return c.json({ 
+    success: true, 
+    id, 
+    typing_score, 
+    prayer_score, 
+    activity_score 
+  })
+})
+
 // Admin: Delete user
 app.delete('/api/admin/users/:id', requireAdmin, async (c) => {
   const { DB } = c.env
@@ -1449,6 +1485,7 @@ app.get('/admin', (c) => {
             window.createFakeUsers = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteFakeUsers = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteUser = function() { console.log('Function will be replaced after DOM loads'); };
+            window.editUserScore = function() { console.log('Function will be replaced after DOM loads'); };
             window.loadAdminPosts = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteAdminPost = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteAllPosts = function() { console.log('Function will be replaced after DOM loads'); };
@@ -1644,22 +1681,31 @@ app.get('/admin', (c) => {
                             </td>
                             <td class="px-4 py-3 text-sm">\${user.post_count}</td>
                             <td class="px-4 py-3 text-sm">
-                                <span class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                                <button 
+                                    onclick="editUserScore(\${user.id}, 'typing_score', \${user.typing_score || 0}, '성경점수')"
+                                    class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer transition">
                                     <i class="fas fa-bible text-xs mr-1"></i>
                                     \${user.typing_score || 0}
-                                </span>
+                                    <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
+                                </button>
                             </td>
                             <td class="px-4 py-3 text-sm">
-                                <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800">
+                                <button 
+                                    onclick="editUserScore(\${user.id}, 'prayer_score', \${user.prayer_score || 0}, '기도점수')"
+                                    class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer transition">
                                     <i class="fas fa-praying-hands text-xs mr-1"></i>
                                     \${user.prayer_score || 0}
-                                </span>
+                                    <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
+                                </button>
                             </td>
                             <td class="px-4 py-3 text-sm">
-                                <span class="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-800">
+                                <button 
+                                    onclick="editUserScore(\${user.id}, 'activity_score', \${user.activity_score || 0}, '활동점수')"
+                                    class="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer transition">
                                     <i class="fas fa-chart-line text-xs mr-1"></i>
                                     \${user.activity_score || 0}
-                                </span>
+                                    <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
+                                </button>
                             </td>
                             <td class="px-4 py-3 text-sm">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</td>
                             <td class="px-4 py-3 text-sm">
@@ -1675,6 +1721,54 @@ app.get('/admin', (c) => {
                 }
             }
 
+
+            window.editUserScore = async function(userId, scoreType, currentScore, scoreName) {
+                const newScore = prompt(\`\${scoreName} 변경\\n\\n현재 점수: \${currentScore}\\n새로운 점수를 입력하세요:\`, currentScore);
+                
+                if (newScore === null) return; // 취소
+                
+                const score = parseInt(newScore);
+                if (isNaN(score) || score < 0) {
+                    alert('올바른 점수를 입력해주세요 (0 이상의 숫자)');
+                    return;
+                }
+                
+                try {
+                    const scores = {
+                        typing_score: scoreType === 'typing_score' ? score : undefined,
+                        prayer_score: scoreType === 'prayer_score' ? score : undefined,
+                        activity_score: scoreType === 'activity_score' ? score : undefined
+                    };
+                    
+                    // Get current scores first
+                    const userResponse = await axios.get('/api/admin/users', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    const user = userResponse.data.users.find(u => u.id === userId);
+                    
+                    if (!user) {
+                        alert('사용자를 찾을 수 없습니다.');
+                        return;
+                    }
+                    
+                    // Set all scores (keep existing ones for other score types)
+                    const updateData = {
+                        typing_score: scoreType === 'typing_score' ? score : (user.typing_score || 0),
+                        prayer_score: scoreType === 'prayer_score' ? score : (user.prayer_score || 0),
+                        activity_score: scoreType === 'activity_score' ? score : (user.activity_score || 0)
+                    };
+                    
+                    await axios.put(\`/api/admin/users/\${userId}/scores\`, updateData, {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    
+                    alert(\`\${scoreName}가 \${score}점으로 변경되었습니다.\`);
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to update score:', error);
+                    alert('점수 변경에 실패했습니다.');
+                }
+            }
 
             window.createFakeUsers = async function() {
                 const count = prompt('생성할 테스트 사용자 수를 입력하세요 (최대 50명):', '10');

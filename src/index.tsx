@@ -379,18 +379,21 @@ app.delete('/api/posts/:id', async (c) => {
 app.get('/api/posts/:id/comments', async (c) => {
   const { DB } = c.env
   const postId = c.req.param('id')
+  const currentUserId = c.req.query('user_id') // For checking if current user liked the comment
   
   const { results } = await DB.prepare(`
     SELECT 
       c.*,
       u.name as user_name,
       u.avatar_url as user_avatar,
-      u.role as user_role
+      u.role as user_role,
+      (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as likes_count,
+      (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id AND user_id = ?) as is_liked
     FROM comments c
     LEFT JOIN users u ON c.user_id = u.id
     WHERE c.post_id = ?
     ORDER BY c.created_at ASC
-  `).bind(postId).all()
+  `).bind(currentUserId || 0, postId).all()
   
   return c.json({ comments: results })
 })
@@ -430,6 +433,28 @@ app.post('/api/posts/:id/like', async (c) => {
   } else {
     // Like
     await DB.prepare('INSERT INTO likes (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
+    return c.json({ liked: true })
+  }
+})
+
+// Toggle like on a comment
+app.post('/api/comments/:id/like', async (c) => {
+  const { DB } = c.env
+  const commentId = c.req.param('id')
+  const { user_id } = await c.req.json()
+  
+  // Check if already liked
+  const existing = await DB.prepare(
+    'SELECT id FROM comment_likes WHERE comment_id = ? AND user_id = ?'
+  ).bind(commentId, user_id).first()
+  
+  if (existing) {
+    // Unlike
+    await DB.prepare('DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?').bind(commentId, user_id).run()
+    return c.json({ liked: false })
+  } else {
+    // Like
+    await DB.prepare('INSERT INTO comment_likes (comment_id, user_id) VALUES (?, ?)').bind(commentId, user_id).run()
     return c.json({ liked: true })
   }
 })

@@ -1714,6 +1714,25 @@ async function toggleLike(postId) {
     }
 }
 
+// Toggle comment like
+async function toggleCommentLike(commentId, postId) {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        showLoginModal();
+        return;
+    }
+    
+    try {
+        await axios.post(`/api/comments/${commentId}/like`, {
+            user_id: currentUserId
+        });
+        // Reload comments to show updated like count
+        loadComments(postId);
+    } catch (error) {
+        console.error('Error toggling comment like:', error);
+    }
+}
+
 // Toggle pray (for prayer request posts)
 async function togglePray(postId) {
     if (!currentUserId) {
@@ -1917,11 +1936,13 @@ async function loadComments(postId) {
     const commentsDiv = document.getElementById(`comments-${postId}`);
     if (commentsDiv.classList.contains('hidden')) {
         try {
-            const response = await axios.get(`/api/posts/${postId}/comments`);
+            const response = await axios.get(`/api/posts/${postId}/comments?user_id=${currentUserId || 0}`);
             const comments = response.data.comments;
             
             let commentsHtml = '';
             comments.forEach(comment => {
+                const isLiked = comment.is_liked > 0;
+                
                 // Avatar HTML - Admin shows crown icon
                 const avatarHtml = comment.user_role === 'admin'
                     ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
@@ -1946,7 +1967,16 @@ async function loadComments(postId) {
                                 <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
                                 <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
                             </div>
-                            <p class="text-xs text-gray-500 mt-1">${formatDate(comment.created_at)}</p>
+                            <div class="flex items-center space-x-4 mt-1">
+                                <p class="text-xs text-gray-500">${formatDate(comment.created_at)}</p>
+                                <button 
+                                    onclick="toggleCommentLike(${comment.id}, ${postId})" 
+                                    class="flex items-center space-x-1 text-xs ${isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'} transition"
+                                    title="좋아요">
+                                    <i class="fas fa-heart"></i>
+                                    <span>${comment.likes_count || 0}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;

@@ -946,7 +946,6 @@ app.get('/api/admin/users', requireAdmin, async (c) => {
   const { results } = await DB.prepare(`
     SELECT 
       u.id, u.email, u.name, u.church, u.denomination, u.location, u.role, u.created_at,
-      u.typing_score, u.video_score, u.prayer_score, u.activity_score,
       (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as post_count,
       (SELECT COUNT(*) FROM comments WHERE user_id = u.id) as comment_count,
       (SELECT COUNT(*) FROM prayer_requests WHERE user_id = u.id) as prayer_count

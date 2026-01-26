@@ -2019,50 +2019,7 @@ function copyPostLink(postId) {
 let currentEditingPostId = null;
 let selectedEditBackgroundColor = null;
 
-function editPost(postId) {
-    // Get post data first
-    const postsFeed = document.getElementById('postsFeed');
-    const posts = Array.from(postsFeed.children);
-    
-    // Find the post data from the feed
-    fetch(`/api/posts?user_id=${currentUserId}`)
-        .then(res => res.json())
-        .then(data => {
-            const post = data.find(p => p.id === postId);
-            if (!post) {
-                alert('게시물을 찾을 수 없습니다.');
-                return;
-            }
-            
-            // Set current editing post
-            currentEditingPostId = postId;
-            selectedEditBackgroundColor = post.background_color;
-            
-            // Fill modal with current data
-            document.getElementById('editPostContent').value = post.content || '';
-            document.getElementById('editPostVerse').value = post.verse_reference || '';
-            
-            // Highlight selected background color
-            document.querySelectorAll('.edit-color-selector-btn').forEach(btn => {
-                btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
-            });
-            
-            if (selectedEditBackgroundColor) {
-                const colorBtn = document.querySelector(`.edit-color-selector-btn[onclick*="${selectedEditBackgroundColor}"]`);
-                if (colorBtn) {
-                    colorBtn.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
-                }
-            }
-            
-            // Show modal
-            document.getElementById('editPostModal').classList.remove('hidden');
-            togglePostMenu(postId); // Close the post menu
-        })
-        .catch(error => {
-            console.error('Error loading post:', error);
-            alert('게시물을 불러오는데 실패했습니다.');
-        });
-}
+// Removed duplicate editPost function - using inline editing instead
 
 function selectEditBackgroundColor(color, element) {
     selectedEditBackgroundColor = color;
@@ -2179,11 +2136,8 @@ async function savePostEdit(postId) {
 
 
 async function deletePost(postId) {
-    if (!currentUser || (currentUser.role !== 'admin' && currentUser.id !== currentUserId)) {
-        alert('권한이 없습니다.');
-        return;
-    }
-
+    // Permission check will be done on server side
+    // Just confirm with user before deleting
     if (!confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
         togglePostMenu(postId);
         return;

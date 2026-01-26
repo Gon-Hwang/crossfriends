@@ -1009,6 +1009,36 @@ function previewEditAvatar(event) {
     }
 }
 
+// Delete avatar
+async function deleteAvatar() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (!confirm('프로필 사진을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        await axios.delete('/api/users/' + currentUserId + '/avatar');
+        
+        // Update preview to default
+        const preview = document.getElementById('editAvatarPreview');
+        preview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+        
+        // Refresh user data
+        const userResponse = await axios.get('/api/users/' + currentUserId);
+        currentUser = userResponse.data.user;
+        updateAuthUI();
+        
+        alert('프로필 사진이 삭제되었습니다.');
+    } catch (error) {
+        console.error('Avatar delete error:', error);
+        alert('프로필 사진 삭제에 실패했습니다.');
+    }
+}
+
 async function handleEditProfile() {
     const name = document.getElementById('editName').value;
     const gender = document.getElementById('editGender').value;

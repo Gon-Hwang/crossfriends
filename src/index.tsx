@@ -114,6 +114,24 @@ app.post('/api/users/:id/avatar', async (c) => {
   }
 })
 
+// Delete avatar
+app.delete('/api/users/:id/avatar', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  
+  try {
+    // Set avatar_url to null in database
+    await DB.prepare(
+      'UPDATE users SET avatar_url = NULL WHERE id = ?'
+    ).bind(userId).run()
+    
+    return c.json({ message: 'Avatar deleted successfully' }, 200)
+  } catch (error) {
+    console.error('Avatar delete error:', error)
+    return c.json({ error: 'Delete failed' }, 500)
+  }
+})
+
 // Get avatar from R2
 app.get('/api/avatars/avatars/:filename', async (c) => {
   const { R2 } = c.env
@@ -2244,11 +2262,19 @@ app.get('/', (c) => {
                                     onchange="previewEditAvatar(event)"
                                     class="hidden"
                                 />
-                                <label 
-                                    for="editAvatar"
-                                    class="cursor-pointer inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
-                                    <i class="fas fa-upload mr-2"></i>사진 변경
-                                </label>
+                                <div class="flex space-x-2">
+                                    <label 
+                                        for="editAvatar"
+                                        class="cursor-pointer inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                        <i class="fas fa-upload mr-2"></i>사진 변경
+                                    </label>
+                                    <button 
+                                        type="button"
+                                        onclick="deleteAvatar()"
+                                        class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition">
+                                        <i class="fas fa-trash mr-2"></i>사진 삭제
+                                    </button>
+                                </div>
                                 <p class="text-xs text-gray-500 mt-2">JPG, PNG (최대 5MB)</p>
                             </div>
                         </div>

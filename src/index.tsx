@@ -1203,6 +1203,155 @@ app.post('/api/admin/create-fake-posts', requireAdmin, async (c) => {
   })
 })
 
+// Admin: Create fake comments
+app.post('/api/admin/create-fake-comments', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { count = 1 } = await c.req.json()
+  
+  // Comment templates
+  const comments = [
+    '아멘! 함께 기도합니다.',
+    '은혜로운 말씀 감사합니다.',
+    '좋은 글 잘 읽었습니다!',
+    '저도 동감합니다.',
+    '정말 공감이 가네요.',
+    '축복합니다!',
+    '할렐루야! 주님께 영광!',
+    '감사한 나눔이네요.',
+    '함께 응원합니다!',
+    '기도하겠습니다.',
+    '너무 좋은 내용이에요.',
+    '감동받았습니다.',
+    '이 글 너무 좋아요!',
+    '저도 참여하고 싶습니다.',
+    '정말 필요한 말씀이었어요.',
+    '주님의 은혜가 함께하시길!',
+    '멋진 생각입니다!',
+    '감사한 마음으로 읽었습니다.',
+    '하나님의 축복이 가득하시길!',
+    '정말 귀한 나눔입니다.'
+  ]
+  
+  // Get all posts
+  const posts = await DB.prepare('SELECT id FROM posts ORDER BY RANDOM() LIMIT 50').all()
+  
+  if (!posts.results || posts.results.length === 0) {
+    return c.json({ success: false, error: 'No posts found. Create posts first.' }, 400)
+  }
+  
+  // Get all users
+  const users = await DB.prepare('SELECT id FROM users ORDER BY RANDOM() LIMIT 50').all()
+  
+  if (!users.results || users.results.length === 0) {
+    return c.json({ success: false, error: 'No users found. Create users first.' }, 400)
+  }
+  
+  const createdComments = []
+  
+  for (let i = 0; i < Math.min(count, 200); i++) {
+    const post = posts.results[Math.floor(Math.random() * posts.results.length)]
+    const user = users.results[Math.floor(Math.random() * users.results.length)]
+    const content = comments[Math.floor(Math.random() * comments.length)]
+    
+    try {
+      const result = await DB.prepare(
+        'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)'
+      ).bind(post.id, user.id, content).run()
+      
+      createdComments.push({
+        id: result.meta.last_row_id,
+        post_id: post.id,
+        content
+      })
+    } catch (error) {
+      console.error('Error creating fake comment:', error)
+    }
+  }
+  
+  return c.json({
+    success: true,
+    count: createdComments.length
+  })
+})
+
+// Admin: Create fake likes (reactions)
+app.post('/api/admin/create-fake-likes', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { count = 1 } = await c.req.json()
+  
+  // Get all posts with their background colors
+  const posts = await DB.prepare('SELECT id, background_color FROM posts ORDER BY RANDOM() LIMIT 100').all()
+  
+  if (!posts.results || posts.results.length === 0) {
+    return c.json({ success: false, error: 'No posts found. Create posts first.' }, 400)
+  }
+  
+  // Get all users
+  const users = await DB.prepare('SELECT id FROM users ORDER BY RANDOM() LIMIT 100').all()
+  
+  if (!users.results || users.results.length === 0) {
+    return c.json({ success: false, error: 'No users found. Create users first.' }, 400)
+  }
+  
+  const createdLikes = []
+  
+  for (let i = 0; i < Math.min(count, 500); i++) {
+    const post = posts.results[Math.floor(Math.random() * posts.results.length)]
+    const user = users.results[Math.floor(Math.random() * users.results.length)]
+    
+    try {
+      // Check if like already exists
+      const existing = await DB.prepare(
+        'SELECT id FROM likes WHERE post_id = ? AND user_id = ?'
+      ).bind(post.id, user.id).first()
+      
+      if (!existing) {
+        await DB.prepare(
+          'INSERT INTO likes (post_id, user_id) VALUES (?, ?)'
+        ).bind(post.id, user.id).run()
+        
+        createdLikes.push({
+          post_id: post.id,
+          user_id: user.id
+        })
+      }
+    } catch (error) {
+      console.error('Error creating fake like:', error)
+    }
+  }
+  
+  // Also create some prayer clicks for prayer posts
+  const prayerPosts = await DB.prepare(
+    'SELECT id FROM posts WHERE background_color = ? ORDER BY RANDOM() LIMIT 20'
+  ).bind('#FCA5A5').all()
+  
+  if (prayerPosts.results && prayerPosts.results.length > 0) {
+    for (let i = 0; i < Math.min(50, count / 2); i++) {
+      const post = prayerPosts.results[Math.floor(Math.random() * prayerPosts.results.length)]
+      const user = users.results[Math.floor(Math.random() * users.results.length)]
+      
+      try {
+        const existing = await DB.prepare(
+          'SELECT id FROM prayer_clicks WHERE post_id = ? AND user_id = ?'
+        ).bind(post.id, user.id).first()
+        
+        if (!existing) {
+          await DB.prepare(
+            'INSERT INTO prayer_clicks (post_id, user_id) VALUES (?, ?)'
+          ).bind(post.id, user.id).run()
+        }
+      } catch (error) {
+        console.error('Error creating prayer click:', error)
+      }
+    }
+  }
+  
+  return c.json({
+    success: true,
+    count: createdLikes.length
+  })
+})
+
 // Admin: Delete fake posts (optional - delete all posts created by fake users)
 app.delete('/api/admin/delete-fake-posts', requireAdmin, async (c) => {
   const { DB } = c.env
@@ -1250,6 +1399,8 @@ app.get('/admin', (c) => {
             window.deleteAdminPost = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteAllPosts = function() { console.log('Function will be replaced after DOM loads'); };
             window.createFakePosts = function() { console.log('Function will be replaced after DOM loads'); };
+            window.createFakeComments = function() { console.log('Function will be replaced after DOM loads'); };
+            window.createFakeLikes = function() { console.log('Function will be replaced after DOM loads'); };
         </script>
     </head>
     <body class="bg-gray-50">
@@ -1352,15 +1503,21 @@ app.get('/admin', (c) => {
                     <h2 class="text-2xl font-bold text-gray-800">
                         <i class="fas fa-newspaper text-blue-600 mr-2"></i>게시물 관리
                     </h2>
-                    <div class="flex space-x-2">
-                        <button onclick="createFakePosts()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-                            <i class="fas fa-plus mr-2"></i>테스트 게시물 생성
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="createFakePosts()" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition text-sm">
+                            <i class="fas fa-plus mr-1"></i>게시물 생성
                         </button>
-                        <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
-                            <i class="fas fa-sync-alt mr-2"></i>새로고침
+                        <button onclick="createFakeComments()" class="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition text-sm">
+                            <i class="fas fa-comment mr-1"></i>댓글 생성
                         </button>
-                        <button onclick="deleteAllPosts()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
-                            <i class="fas fa-trash-alt mr-2"></i>모든 게시물 삭제
+                        <button onclick="createFakeLikes()" class="bg-pink-500 text-white px-3 py-2 rounded-lg hover:bg-pink-600 transition text-sm">
+                            <i class="fas fa-heart mr-1"></i>반응 생성
+                        </button>
+                        <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
+                            <i class="fas fa-sync-alt mr-1"></i>새로고침
+                        </button>
+                        <button onclick="deleteAllPosts()" class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition text-sm">
+                            <i class="fas fa-trash-alt mr-1"></i>모두 삭제
                         </button>
                     </div>
                 </div>
@@ -1650,6 +1807,50 @@ app.get('/admin', (c) => {
                         alert(error.response.data.error || '게시물 생성에 실패했습니다. 먼저 사용자를 생성해주세요.');
                     } else {
                         alert('테스트 게시물 생성에 실패했습니다.');
+                    }
+                }
+            }
+
+            window.createFakeComments = async function() {
+                const count = prompt('생성할 테스트 댓글 수를 입력하세요 (최대 200개):', '50');
+                if (!count) return;
+                
+                try {
+                    const response = await axios.post('/api/admin/create-fake-comments', 
+                        { count: parseInt(count) },
+                        { headers: { 'X-Admin-ID': adminId } }
+                    );
+                    alert(\`\${response.data.count}개의 테스트 댓글이 생성되었습니다.\\n\\n랜덤으로 게시물에 배치되었습니다.\`);
+                    loadStats();
+                    loadAdminPosts();
+                } catch (error) {
+                    console.error('Failed to create fake comments:', error);
+                    if (error.response && error.response.status === 400) {
+                        alert(error.response.data.error || '댓글 생성에 실패했습니다. 먼저 게시물을 생성해주세요.');
+                    } else {
+                        alert('테스트 댓글 생성에 실패했습니다.');
+                    }
+                }
+            }
+
+            window.createFakeLikes = async function() {
+                const count = prompt('생성할 테스트 반응(좋아요/아멘/할렐루야 등) 수를 입력하세요 (최대 500개):', '100');
+                if (!count) return;
+                
+                try {
+                    const response = await axios.post('/api/admin/create-fake-likes', 
+                        { count: parseInt(count) },
+                        { headers: { 'X-Admin-ID': adminId } }
+                    );
+                    alert(\`\${response.data.count}개의 테스트 반응이 생성되었습니다.\\n\\n7가지 포스팅 타입에 맞는 반응:\\n- 중보 기도: 기도했어요\\n- 말씀: 아멘\\n- 일상: 좋아요\\n- 사역: 하나님 함께하시길\\n- 찬양: 할렐루야\\n- 교회: Body of Christ\\n- 자유: 좋아요\`);
+                    loadStats();
+                    loadAdminPosts();
+                } catch (error) {
+                    console.error('Failed to create fake likes:', error);
+                    if (error.response && error.response.status === 400) {
+                        alert(error.response.data.error || '반응 생성에 실패했습니다. 먼저 게시물을 생성해주세요.');
+                    } else {
+                        alert('테스트 반응 생성에 실패했습니다.');
                     }
                 }
             }

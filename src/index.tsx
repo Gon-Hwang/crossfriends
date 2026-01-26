@@ -636,7 +636,7 @@ app.get('/api/users/:id/scores', async (c) => {
   const userId = c.req.param('id')
   
   const user = await DB.prepare(
-    'SELECT typing_score, video_score, prayer_score, completed_videos, completed_verses FROM users WHERE id = ?'
+    'SELECT typing_score, video_score, prayer_score, activity_score, completed_videos, completed_verses FROM users WHERE id = ?'
   ).bind(userId).first()
   
   if (!user) {
@@ -665,6 +665,7 @@ app.get('/api/users/:id/scores', async (c) => {
     typing_score: user.typing_score || 0,
     video_score: user.video_score || 0,
     prayer_score: user.prayer_score || 0,
+    activity_score: user.activity_score || 0,
     total_score: totalScore,
     completed_videos: completedVideos,
     completed_verses: completedVerses
@@ -865,6 +866,58 @@ app.post('/api/users/:id/scores/prayer', async (c) => {
   })
 })
 
+// Add activity points
+app.post('/api/users/:id/scores/activity', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { points } = await c.req.json()
+  
+  // Get current activity score
+  const user = await DB.prepare(
+    'SELECT activity_score FROM users WHERE id = ?'
+  ).bind(userId).first()
+  
+  const currentScore = user?.activity_score || 0
+  const newScore = currentScore + points
+  
+  // Update activity score
+  await DB.prepare(
+    'UPDATE users SET activity_score = ? WHERE id = ?'
+  ).bind(newScore, userId).run()
+  
+  return c.json({ 
+    success: true, 
+    activity_score: newScore,
+    points_earned: points
+  })
+})
+
+// Add scripture (bible) points
+app.post('/api/users/:id/scores/scripture', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  const { points } = await c.req.json()
+  
+  // Get current typing score (scripture score)
+  const user = await DB.prepare(
+    'SELECT typing_score FROM users WHERE id = ?'
+  ).bind(userId).first()
+  
+  const currentScore = user?.typing_score || 0
+  const newScore = currentScore + points
+  
+  // Update typing score (scripture score)
+  await DB.prepare(
+    'UPDATE users SET typing_score = ? WHERE id = ?'
+  ).bind(newScore, userId).run()
+  
+  return c.json({ 
+    success: true, 
+    scripture_score: newScore,
+    points_earned: points
+  })
+})
+
 // =====================
 // Admin API Routes
 // =====================
@@ -893,6 +946,7 @@ app.get('/api/admin/users', requireAdmin, async (c) => {
   const { results } = await DB.prepare(`
     SELECT 
       u.id, u.email, u.name, u.church, u.denomination, u.location, u.role, u.created_at,
+      u.typing_score, u.video_score, u.prayer_score, u.activity_score,
       (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as post_count,
       (SELECT COUNT(*) FROM comments WHERE user_id = u.id) as comment_count,
       (SELECT COUNT(*) FROM prayer_requests WHERE user_id = u.id) as prayer_count
@@ -1486,6 +1540,9 @@ app.get('/admin', (c) => {
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">교회</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">역할</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">게시물</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">성경점수</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">기도점수</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">활동점수</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">가입일</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
                             </tr>
@@ -1586,6 +1643,24 @@ app.get('/admin', (c) => {
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-sm">\${user.post_count}</td>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-bible text-xs mr-1"></i>
+                                    \${user.typing_score || 0}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800">
+                                    <i class="fas fa-praying-hands text-xs mr-1"></i>
+                                    \${user.prayer_score || 0}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-800">
+                                    <i class="fas fa-chart-line text-xs mr-1"></i>
+                                    \${user.activity_score || 0}
+                                </span>
+                            </td>
                             <td class="px-4 py-3 text-sm">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</td>
                             <td class="px-4 py-3 text-sm">
                                 \${user.role === 'admin' 
@@ -2131,18 +2206,25 @@ app.get('/', (c) => {
                         </p>
                     </div>
                     <div class="flex items-center space-x-4" id="authButtons">
-                        <div class="bg-white px-4 py-2 rounded-lg border-2 border-purple-300">
+                        <div class="bg-white px-4 py-2 rounded-lg">
                             <div class="flex items-center space-x-2">
-                                <i class="fas fa-praying-hands text-purple-600"></i>
-                                <span class="text-sm font-semibold text-purple-800">기도 점수:</span>
-                                <span id="prayerScore" class="text-lg font-bold text-purple-900">0</span>
+                                <i class="fas fa-praying-hands text-gray-800"></i>
+                                <span class="text-sm font-semibold text-gray-800">기도 점수:</span>
+                                <span id="prayerScore" class="text-lg font-bold text-gray-900">0</span>
                             </div>
                         </div>
-                        <div class="bg-white px-4 py-2 rounded-lg border-2 border-blue-300">
+                        <div class="bg-white px-4 py-2 rounded-lg">
                             <div class="flex items-center space-x-2">
-                                <i class="fas fa-bible text-blue-600"></i>
-                                <span class="text-sm font-semibold text-blue-800">성경 점수:</span>
-                                <span id="typingScore" class="text-lg font-bold text-blue-900">0</span>
+                                <i class="fas fa-chart-line text-gray-800"></i>
+                                <span class="text-sm font-semibold text-gray-800">활동 점수:</span>
+                                <span id="activityScore" class="text-lg font-bold text-gray-900">0</span>
+                            </div>
+                        </div>
+                        <div class="bg-white px-4 py-2 rounded-lg">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-bible text-gray-800"></i>
+                                <span class="text-sm font-semibold text-gray-800">성경 점수:</span>
+                                <span id="typingScore" class="text-lg font-bold text-gray-900">0</span>
                             </div>
                         </div>
                         <button onclick="showLoginModal()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
@@ -2153,18 +2235,25 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <div class="bg-white px-4 py-2 rounded-lg border-2 border-purple-300">
+                        <div class="bg-white px-4 py-2 rounded-lg">
                             <div class="flex items-center space-x-2">
-                                <i class="fas fa-praying-hands text-purple-600"></i>
-                                <span class="text-sm font-semibold text-purple-800">기도 점수:</span>
-                                <span id="prayerScoreUser" class="text-lg font-bold text-purple-900">0</span>
+                                <i class="fas fa-praying-hands text-gray-800"></i>
+                                <span class="text-sm font-semibold text-gray-800">기도 점수:</span>
+                                <span id="prayerScoreUser" class="text-lg font-bold text-gray-900">0</span>
                             </div>
                         </div>
-                        <div id="scriptureScoreBtn" class="bg-white px-4 py-2 rounded-lg border-2 border-blue-300">
+                        <div class="bg-white px-4 py-2 rounded-lg">
                             <div class="flex items-center space-x-2">
-                                <i class="fas fa-bible text-blue-600"></i>
-                                <span class="text-sm font-semibold text-blue-800">성경 점수:</span>
-                                <span id="typingScoreUser" class="text-lg font-bold text-blue-900">0</span>
+                                <i class="fas fa-chart-line text-gray-800"></i>
+                                <span class="text-sm font-semibold text-gray-800">활동 점수:</span>
+                                <span id="activityScoreUser" class="text-lg font-bold text-gray-900">0</span>
+                            </div>
+                        </div>
+                        <div id="scriptureScoreBtn" class="bg-white px-4 py-2 rounded-lg">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-bible text-gray-800"></i>
+                                <span class="text-sm font-semibold text-gray-800">성경 점수:</span>
+                                <span id="typingScoreUser" class="text-lg font-bold text-gray-900">0</span>
                             </div>
                         </div>
                         <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-3 py-2 rounded-lg hover:bg-red-50 transition" title="관리자 패널">

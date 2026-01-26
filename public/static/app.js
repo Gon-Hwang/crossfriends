@@ -218,6 +218,7 @@ function showVideoAlreadyCompleted() {
 let typingScore = 0;
 let videoScore = 0;
 let prayerScore = 0;
+let activityScore = 0; // Activity score based on user engagement
 let completedVerses = new Set(); // Track completed verses
 
 // Load user scores from API
@@ -241,6 +242,8 @@ async function loadUserScores() {
             completedVideos = new Set(JSON.parse(savedVideos));
         }
         
+        activityScore = 0; // Not logged in, no activity score
+        
         updateTypingScoreDisplay();
         return;
     }
@@ -252,6 +255,7 @@ async function loadUserScores() {
         typingScore = data.typing_score || 0;
         videoScore = data.video_score || 0;
         prayerScore = data.prayer_score || 0;
+        activityScore = data.activity_score || 0;
         
         // Load completed videos
         if (data.completed_videos && Array.isArray(data.completed_videos)) {
@@ -267,6 +271,13 @@ async function loadUserScores() {
     } catch (error) {
         console.error('Failed to load user scores:', error);
     }
+}
+
+// Calculate activity score based on user engagement (deprecated - now tracked directly)
+async function calculateActivityScore() {
+    // Activity score is now tracked directly in the database
+    // No need to calculate from posts
+    return;
 }
 
 // Save typing score to API
@@ -358,6 +369,8 @@ function updateTypingScoreDisplay() {
     const scoreUserElement = document.getElementById('typingScoreUser');
     const prayerScoreElement = document.getElementById('prayerScore');
     const prayerScoreUserElement = document.getElementById('prayerScoreUser');
+    const activityScoreElement = document.getElementById('activityScore');
+    const activityScoreUserElement = document.getElementById('activityScoreUser');
     
     if (scoreElement) {
         scoreElement.textContent = totalScore;
@@ -370,6 +383,12 @@ function updateTypingScoreDisplay() {
     }
     if (prayerScoreUserElement) {
         prayerScoreUserElement.textContent = prayerScore;
+    }
+    if (activityScoreElement) {
+        activityScoreElement.textContent = activityScore;
+    }
+    if (activityScoreUserElement) {
+        activityScoreUserElement.textContent = activityScore;
     }
 }
 
@@ -1722,10 +1741,75 @@ function removePostVideo() {
 
 // Toggle like
 async function toggleLike(postId) {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        showLoginModal();
+        return;
+    }
+    
     try {
+        // Get post info to determine background color
+        const postResponse = await axios.get(`/api/posts/${postId}?user_id=${currentUserId}`);
+        const post = postResponse.data.post;
+        const backgroundColor = post.background_color;
+        
+        // Toggle like
         const response = await axios.post(`/api/posts/${postId}/like`, {
             user_id: currentUserId
         });
+        
+        const liked = response.data.liked;
+        
+        // Update scores based on post type
+        if (liked) {
+            // Liked: add points
+            if (backgroundColor === '#FDE68A') {
+                // 말씀 포스팅 - 아멘 버튼: 성경 점수 +1점
+                await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: 1 });
+                typingScore += 1;
+                showToast('아멘! 성경 점수 +1점', 'success');
+            } else if (backgroundColor === '#FED7AA') {
+                // 일상 포스팅 - 샬롬 버튼: 활동 점수 +1점
+                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
+                activityScore += 1;
+                showToast('샬롬! 활동 점수 +1점', 'success');
+            } else if (backgroundColor === '#A7F3D0') {
+                // 사역 포스팅 - 하나님 함께하시길: 활동 점수 +1점
+                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
+                activityScore += 1;
+                showToast('하나님 함께하시길! 활동 점수 +1점', 'success');
+            } else if (backgroundColor === '#BAE6FD') {
+                // 찬양 포스팅 - 할렐루야: 활동 점수 +1점
+                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
+                activityScore += 1;
+                showToast('할렐루야! 활동 점수 +1점', 'success');
+            } else if (backgroundColor === '#DDD6FE') {
+                // 교회 포스팅 - Body of Christ: 활동 점수 +1점
+                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
+                activityScore += 1;
+                showToast('Body of Christ! 활동 점수 +1점', 'success');
+            } else {
+                // 자유 포스팅 - 좋아요: 활동 점수 +1점
+                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
+                activityScore += 1;
+                showToast('좋아요! 활동 점수 +1점', 'success');
+            }
+        } else {
+            // Unliked: subtract points
+            if (backgroundColor === '#FDE68A') {
+                // 말씀 포스팅: 성경 점수 -1점
+                await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: -1 });
+                typingScore = Math.max(0, typingScore - 1);
+                showToast('취소: 성경 점수 -1점', 'warning');
+            } else {
+                // 다른 포스팅: 활동 점수 -1점
+                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: -1 });
+                activityScore = Math.max(0, activityScore - 1);
+                showToast('취소: 활동 점수 -1점', 'warning');
+            }
+        }
+        
+        updateTypingScoreDisplay();
         loadPosts();
     } catch (error) {
         console.error('Error toggling like:', error);
@@ -2733,8 +2817,8 @@ async function loadPosts() {
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>
                                 ` : `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">
-                                        <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition" title="샬롬">
+                                        <i class="fas fa-dove ${isLiked ? 'text-blue-600' : ''} text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>
                                 `}

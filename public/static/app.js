@@ -1820,9 +1820,12 @@ async function sharePost(postId) {
         // Create shared post card preview (액자 안의 액자 - 첨부파일처럼)
         const sharedPostPreview = document.getElementById('sharedPostPreview');
         
-        const avatarHtml = post.user_avatar 
-            ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
-            : '<i class="fas fa-user"></i>';
+        // Avatar HTML - Admin shows crown icon
+        const avatarHtml = post.user_role === 'admin'
+            ? '<i class="fas fa-crown text-yellow-400 text-xl"></i>'
+            : post.user_avatar 
+                ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                : '<i class="fas fa-user"></i>';
         
         // Role badge for shared post (skip admin badge since they have crown icon as avatar)
         let roleBadgeHtml = '';
@@ -1930,9 +1933,12 @@ async function loadComments(postId) {
             
             let commentsHtml = '';
             comments.forEach(comment => {
-                const avatarHtml = comment.user_avatar 
-                    ? `<img src="${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
-                    : '<i class="fas fa-user"></i>';
+                // Avatar HTML - Admin shows crown icon
+                const avatarHtml = comment.user_role === 'admin'
+                    ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
+                    : comment.user_avatar 
+                        ? `<img src="${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                        : '<i class="fas fa-user"></i>';
                 
                 // Role badge for comments (skip admin badge since they have crown icon as avatar)
                 let roleBadgeHtml = '';
@@ -2035,9 +2041,13 @@ async function loadPosts() {
         posts.forEach(post => {
             console.log('🔍 Post ID:', post.id, 'is_prayer_request:', post.is_prayer_request, 'type:', typeof post.is_prayer_request);
             const isLiked = post.is_liked > 0;
-            const avatarHtml = post.user_avatar 
-                ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
-                : '<i class="fas fa-user"></i>';
+            
+            // Avatar HTML - Admin shows crown icon
+            const avatarHtml = post.user_role === 'admin'
+                ? '<i class="fas fa-crown text-yellow-400 text-2xl"></i>'
+                : post.user_avatar 
+                    ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                    : '<i class="fas fa-user"></i>';
             
             // Role badge HTML (skip admin badge since they have crown icon as avatar)
             let roleBadgeHtml = '';
@@ -2071,9 +2081,12 @@ async function loadPosts() {
             // Shared post card (액자 안의 액자)
             let sharedPostHtml = '';
             if (post.shared_post_id) {
-                const sharedAvatarHtml = post.shared_user_avatar 
-                    ? `<img src="${post.shared_user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
-                    : '<i class="fas fa-user"></i>';
+                // Shared Avatar HTML - Admin shows crown icon
+                const sharedAvatarHtml = post.shared_user_role === 'admin'
+                    ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
+                    : post.shared_user_avatar 
+                        ? `<img src="${post.shared_user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                        : '<i class="fas fa-user"></i>';
                 
                 let sharedRoleBadgeHtml = '';
                 if (post.shared_user_role === 'moderator') {

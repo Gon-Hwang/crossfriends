@@ -1065,6 +1065,15 @@ app.get('/admin', (c) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script>
+            // Define global functions immediately for onclick handlers
+            window.createFakeUsers = function() { console.log('Function will be replaced after DOM loads'); };
+            window.deleteFakeUsers = function() { console.log('Function will be replaced after DOM loads'); };
+            window.deleteUser = function() { console.log('Function will be replaced after DOM loads'); };
+            window.loadAdminPosts = function() { console.log('Function will be replaced after DOM loads'); };
+            window.deleteAdminPost = function() { console.log('Function will be replaced after DOM loads'); };
+            window.deleteAllPosts = function() { console.log('Function will be replaced after DOM loads'); };
+        </script>
     </head>
     <body class="bg-gray-50">
         <nav class="bg-red-600 text-white shadow-lg">

@@ -1634,10 +1634,10 @@ app.get('/admin', (c) => {
                     </div>
                     
                     <!-- 자유 -->
-                    <div class="bg-gray-50 border-2 border-gray-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-gray-600 text-2xl font-bold mb-1" id="freePostCount">0</div>
-                        <div class="text-gray-700 text-sm font-medium">자유</div>
-                        <div class="w-8 h-8 bg-gray-200 rounded-full mx-auto mt-2"></div>
+                    <div class="bg-white border-2 border-gray-300 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-gray-700 text-2xl font-bold mb-1" id="freePostCount">0</div>
+                        <div class="text-gray-600 text-sm font-medium">자유</div>
+                        <div class="w-8 h-8 bg-white border-2 border-gray-300 rounded-full mx-auto mt-2"></div>
                     </div>
                 </div>
             </div>

@@ -1726,10 +1726,103 @@ async function toggleCommentLike(commentId, postId) {
         await axios.post(`/api/comments/${commentId}/like`, {
             user_id: currentUserId
         });
-        // Reload comments to show updated like count
-        loadComments(postId);
+        // Refresh comments without toggling (keep them open)
+        refreshComments(postId);
     } catch (error) {
         console.error('Error toggling comment like:', error);
+    }
+}
+
+// Refresh comments (without toggling visibility)
+async function refreshComments(postId) {
+    const commentsDiv = document.getElementById(`comments-${postId}`);
+    
+    // Only refresh if comments are currently visible
+    if (!commentsDiv.classList.contains('hidden')) {
+        try {
+            const response = await axios.get(`/api/posts/${postId}/comments?user_id=${currentUserId || 0}`);
+            const comments = response.data.comments;
+            
+            let commentsHtml = '';
+            comments.forEach(comment => {
+                const isLiked = comment.is_liked > 0;
+                
+                // Avatar HTML - Admin shows crown icon
+                const avatarHtml = comment.user_role === 'admin'
+                    ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
+                    : comment.user_avatar 
+                        ? `<img src="${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                        : '<i class="fas fa-user"></i>';
+                
+                // Role badge for comments (skip admin badge since they have crown icon as avatar)
+                let roleBadgeHtml = '';
+                if (comment.user_role === 'moderator') {
+                    roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+                }
+                
+                commentsHtml += `
+                    <div class="flex space-x-3">
+                        <div class="admin-badge-container">
+                            <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">${avatarHtml}</div>
+                            ${roleBadgeHtml}
+                        </div>
+                        <div class="flex-1">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
+                                <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
+                            </div>
+                            <div class="flex items-center space-x-4 mt-1">
+                                <p class="text-xs text-gray-500">${formatDate(comment.created_at)}</p>
+                                <button 
+                                    onclick="toggleCommentLike(${comment.id}, ${postId})" 
+                                    class="flex items-center space-x-1 text-xs ${isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'} transition"
+                                    title="좋아요">
+                                    <i class="fas fa-heart"></i>
+                                    <span>${comment.likes_count || 0}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const html = `
+                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-200">
+                    ${commentsHtml}
+                    <div class="flex space-x-2 mt-3">
+                        <input 
+                            id="comment-input-${postId}"
+                            type="text"
+                            placeholder="댓글을 작성하세요..."
+                            class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                        <button 
+                            id="comment-submit-${postId}"
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            commentsDiv.innerHTML = html;
+            
+            // Re-add event listeners after HTML is updated
+            const submitBtn = document.getElementById(`comment-submit-${postId}`);
+            const inputField = document.getElementById(`comment-input-${postId}`);
+            
+            if (submitBtn) {
+                submitBtn.addEventListener('click', () => createComment(postId));
+            }
+            
+            if (inputField) {
+                inputField.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') createComment(postId);
+                });
+            }
+        } catch (error) {
+            console.error('Error refreshing comments:', error);
+        }
     }
 }
 
@@ -2041,7 +2134,7 @@ async function createComment(postId) {
             content
         });
         input.value = '';
-        loadComments(postId);
+        refreshComments(postId); // Use refreshComments instead of loadComments to keep comments open
         loadPosts();
     } catch (error) {
         console.error('Error creating comment:', error);

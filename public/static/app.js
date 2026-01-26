@@ -2207,8 +2207,22 @@ async function deletePost(postId) {
     }
 
     try {
+        // 삭제 전에 포스트 정보 가져오기 (기도 포스팅인지 확인)
+        const postResponse = await axios.get(`/api/posts/${postId}?user_id=${currentUserId}`);
+        const post = postResponse.data.post;
+        
+        // 삭제 실행
         await axios.delete(`/api/posts/${postId}`);
-        alert('게시물이 삭제되었습니다.');
+        
+        // 기도 포스팅(중보 기도)이면 점수 즉시 차감
+        if (post.background_color === '#FCA5A5' && post.user_id === currentUserId) {
+            prayerScore = Math.max(0, prayerScore - 20);
+            updateTypingScoreDisplay();
+            showToast('기도 포스팅 삭제! 기도 점수 -20점', 'warning');
+        } else {
+            alert('게시물이 삭제되었습니다.');
+        }
+        
         togglePostMenu(postId);
         loadPosts();
     } catch (error) {

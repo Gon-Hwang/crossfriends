@@ -388,6 +388,19 @@ app.delete('/api/posts/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
   
+  // 삭제 전에 포스트 정보 조회 (기도 포스팅인지 확인)
+  const post = await DB.prepare('SELECT user_id, background_color FROM posts WHERE id = ?').bind(id).first()
+  
+  if (post) {
+    // 기도 포스팅(중보 기도 - 빨간색 배경)이면 점수 차감
+    if (post.background_color === '#FCA5A5') {
+      const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(post.user_id).first()
+      const currentScore = user?.prayer_score || 0
+      const newScore = Math.max(0, currentScore - 20) // 0점 이하로 내려가지 않도록
+      await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
+    }
+  }
+  
   await DB.prepare('DELETE FROM posts WHERE id = ?').bind(id).run()
   return c.json({ success: true })
 })

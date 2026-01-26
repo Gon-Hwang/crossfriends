@@ -2577,8 +2577,8 @@ app.get('/', (c) => {
                                 <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
                             </h3>
                             <div class="border-l-4 border-blue-600 pl-4 py-2 mb-4">
-                                <p class="font-bold text-blue-600 mb-2">요한복음 3:16</p>
-                                <p id="verseText" class="text-gray-800 leading-relaxed">
+                                <p class="font-bold text-blue-600 mb-2" id="verseReference">요한복음 3:16</p>
+                                <p id="verseText" class="text-gray-800 leading-relaxed" style="transition: opacity 0.5s ease-in-out;">
                                     하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라
                                 </p>
                             </div>

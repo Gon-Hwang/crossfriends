@@ -4,6 +4,93 @@ let currentUser = null;
 let selectedBackgroundColor = null; // 선택된 배경색
 
 // =====================
+// Bible Verses Rotation
+// =====================
+const bibleVerses = [
+    {
+        reference: "요한복음 3:16",
+        text: "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라"
+    },
+    {
+        reference: "시편 23:1",
+        text: "여호와는 나의 목자시니 내게 부족함이 없으리로다"
+    },
+    {
+        reference: "빌립보서 4:13",
+        text: "내게 능력 주시는 자 안에서 내가 모든 것을 할 수 있느니라"
+    },
+    {
+        reference: "로마서 8:28",
+        text: "우리가 알거니와 하나님을 사랑하는 자 곧 그의 뜻대로 부르심을 입은 자들에게는 모든 것이 합력하여 선을 이루느니라"
+    },
+    {
+        reference: "잠언 3:5-6",
+        text: "너는 마음을 다하여 여호와를 신뢰하고 네 명철을 의지하지 말라 너는 범사에 그를 인정하라 그리하면 네 길을 지도하시리라"
+    },
+    {
+        reference: "이사야 40:31",
+        text: "오직 여호와를 앙망하는 자는 새 힘을 얻으리니 독수리가 날개치며 올라감 같을 것이요 달음박질하여도 곤비하지 아니하겠고 걸어가도 피곤하지 아니하리로다"
+    },
+    {
+        reference: "마태복음 11:28",
+        text: "수고하고 무거운 짐 진 자들아 다 내게로 오라 내가 너희를 쉬게 하리라"
+    },
+    {
+        reference: "시편 46:1",
+        text: "하나님은 우리의 피난처시요 힘이시니 환난 중에 만날 큰 도움이시라"
+    },
+    {
+        reference: "고린도후서 5:17",
+        text: "그런즉 누구든지 그리스도 안에 있으면 새로운 피조물이라 이전 것은 지나갔으니 보라 새 것이 되었도다"
+    },
+    {
+        reference: "요한복음 14:6",
+        text: "예수께서 이르시되 내가 곧 길이요 진리요 생명이니 나로 말미암지 않고는 아버지께로 올 자가 없느니라"
+    },
+    {
+        reference: "시편 119:105",
+        text: "주의 말씀은 내 발에 등이요 내 길에 빛이니이다"
+    },
+    {
+        reference: "예레미야 29:11",
+        text: "여호와의 말씀이니라 너희를 향한 나의 생각을 내가 아나니 평안이요 재앙이 아니니라 너희에게 미래와 희망을 주는 것이니라"
+    }
+];
+
+let currentVerseIndex = 0;
+
+// Rotate bible verse
+function rotateBibleVerse() {
+    currentVerseIndex = (currentVerseIndex + 1) % bibleVerses.length;
+    const verse = bibleVerses[currentVerseIndex];
+    
+    // Update verse reference
+    const verseRefElement = document.getElementById('verseReference');
+    if (verseRefElement) {
+        verseRefElement.textContent = verse.reference;
+    }
+    
+    // Update verse text with fade animation
+    const verseTextElement = document.getElementById('verseText');
+    if (verseTextElement) {
+        // Fade out
+        verseTextElement.style.opacity = '0';
+        verseTextElement.style.transition = 'opacity 0.5s ease-in-out';
+        
+        setTimeout(() => {
+            verseTextElement.textContent = verse.text;
+            // Fade in
+            verseTextElement.style.opacity = '1';
+        }, 500);
+    }
+    
+    console.log('성경 구절 변경:', verse.reference);
+}
+
+// Start bible verse rotation (every 5 minutes = 300000ms)
+setInterval(rotateBibleVerse, 5 * 60 * 1000);
+
+// =====================
 // YouTube Video Tracking
 // =====================
 let player;

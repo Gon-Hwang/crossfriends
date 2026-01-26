@@ -1049,6 +1049,128 @@ app.delete('/api/admin/delete-fake-users', requireAdmin, async (c) => {
   }
 })
 
+// Admin: Create fake posts
+app.post('/api/admin/create-fake-posts', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { count = 1 } = await c.req.json()
+  
+  // Post categories with background colors
+  const categories = [
+    { name: '중보 기도', color: '#FCA5A5', contents: [
+      '힘든 시기를 보내고 있는 친구를 위해 기도해주세요.',
+      '가족의 건강을 위해 함께 기도 부탁드립니다.',
+      '취업을 준비하는 청년들을 위해 기도합니다.',
+      '코로나로 어려움을 겪는 이웃을 위해 기도해요.',
+      '북한 주민들의 자유를 위해 함께 기도합시다.'
+    ]},
+    { name: '말씀', color: '#FDE68A', contents: [
+      '요한복음 3:16 - 하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니',
+      '시편 23:1 - 여호와는 나의 목자시니 내게 부족함이 없으리로다',
+      '빌립보서 4:13 - 내게 능력 주시는 자 안에서 내가 모든 것을 할 수 있느니라',
+      '로마서 8:28 - 우리가 알거니와 하나님을 사랑하는 자 곧 그의 뜻대로 부르심을 입은 자들에게는 모든 것이 합력하여 선을 이루느니라',
+      '잠언 3:5-6 - 너는 마음을 다하여 여호와를 신뢰하고 네 명철을 의지하지 말라'
+    ]},
+    { name: '일상', color: '#FED7AA', contents: [
+      '오늘 날씨가 정말 좋네요! 산책하기 딱 좋은 날입니다.',
+      '아침에 일어나서 맛있는 커피 한 잔 마셨어요 ☕',
+      '주말에 가족들과 맛있는 식사 했습니다!',
+      '오랜만에 친구들을 만나서 행복한 시간 보냈어요.',
+      '새로운 취미를 시작했습니다. 기대되네요!'
+    ]},
+    { name: '사역', color: '#A7F3D0', contents: [
+      '다음 주 토요일에 지역 봉사활동이 있습니다. 많은 참여 부탁드립니다!',
+      '청년부 여름 수련회를 준비하고 있습니다.',
+      '어린이 성경학교 교사를 모집합니다.',
+      '노숙자 급식 봉사에 함께하실 분들을 찾습니다.',
+      '해외 선교 후원을 위한 바자회를 진행합니다.'
+    ]},
+    { name: '찬양', color: '#BAE6FD', contents: [
+      '오늘 예배 찬양이 너무 은혜로웠습니다! 할렐루야!',
+      '이 찬양을 들으면 힘이 납니다 - "주님의 마음"',
+      '새벽 기도회 찬양팀을 모집합니다.',
+      '찬양으로 하루를 시작하니 마음이 평안합니다.',
+      '이번 주 금요일 찬양집회에 초대합니다!'
+    ]},
+    { name: '교회', color: '#DDD6FE', contents: [
+      '다음 주일 특별 찬양예배가 있습니다.',
+      '교회 창립 30주년 감사예배 안내',
+      '새가족 환영회를 준비하고 있습니다.',
+      '수요 예배 시간이 변경되었습니다.',
+      '교회 건축 헌금에 동참해주세요.'
+    ]},
+    { name: '자유', color: '#FFFFFF', contents: [
+      '오늘 하루도 감사합니다!',
+      '여러분의 기도 제목을 나누어주세요.',
+      '추천할 만한 좋은 책이 있나요?',
+      '이번 주말 날씨가 어떨까요?',
+      '좋은 하루 되세요! 함께 힘내요!'
+    ]}
+  ]
+  
+  // Get all users to assign as post authors
+  const users = await DB.prepare('SELECT id FROM users ORDER BY RANDOM() LIMIT 50').all()
+  
+  if (!users.results || users.results.length === 0) {
+    return c.json({ success: false, error: 'No users found. Create users first.' }, 400)
+  }
+  
+  const createdPosts = []
+  
+  for (let i = 0; i < Math.min(count, 100); i++) {
+    // Randomly select category
+    const category = categories[Math.floor(Math.random() * categories.length)]
+    const content = category.contents[Math.floor(Math.random() * category.contents.length)]
+    const user = users.results[Math.floor(Math.random() * users.results.length)]
+    
+    // Add verse reference for scripture posts
+    const verseReference = category.name === '말씀' 
+      ? content.split(' - ')[0] 
+      : null
+    
+    try {
+      const result = await DB.prepare(
+        'INSERT INTO posts (user_id, content, verse_reference, background_color) VALUES (?, ?, ?, ?)'
+      ).bind(user.id, content, verseReference, category.color).run()
+      
+      createdPosts.push({
+        id: result.meta.last_row_id,
+        content: content.substring(0, 50) + '...',
+        category: category.name
+      })
+    } catch (error) {
+      console.error('Error creating fake post:', error)
+    }
+  }
+  
+  return c.json({
+    success: true,
+    count: createdPosts.length,
+    posts: createdPosts
+  })
+})
+
+// Admin: Delete fake posts (optional - delete all posts created by fake users)
+app.delete('/api/admin/delete-fake-posts', requireAdmin, async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // Delete posts from fake users
+    const result = await DB.prepare(`
+      DELETE FROM posts WHERE user_id IN (
+        SELECT id FROM users WHERE email LIKE 'fake%@cf.com'
+      )
+    `).run()
+    
+    return c.json({
+      success: true,
+      deleted_count: result.meta.changes || 0
+    })
+  } catch (error) {
+    console.error('Error deleting fake posts:', error)
+    return c.json({ success: false, error: 'Failed to delete fake posts' }, 500)
+  }
+})
+
 // =====================
 // Frontend Routes
 // =====================
@@ -1073,6 +1195,7 @@ app.get('/admin', (c) => {
             window.loadAdminPosts = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteAdminPost = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteAllPosts = function() { console.log('Function will be replaced after DOM loads'); };
+            window.createFakePosts = function() { console.log('Function will be replaced after DOM loads'); };
         </script>
     </head>
     <body class="bg-gray-50">
@@ -1176,6 +1299,9 @@ app.get('/admin', (c) => {
                         <i class="fas fa-newspaper text-blue-600 mr-2"></i>게시물 관리
                     </h2>
                     <div class="flex space-x-2">
+                        <button onclick="createFakePosts()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                            <i class="fas fa-plus mr-2"></i>테스트 게시물 생성
+                        </button>
                         <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
                             <i class="fas fa-sync-alt mr-2"></i>새로고침
                         </button>
@@ -1449,6 +1575,28 @@ app.get('/admin', (c) => {
                 } catch (error) {
                     console.error('Failed to delete all posts:', error);
                     alert('게시물 삭제에 실패했습니다.');
+                }
+            }
+
+            window.createFakePosts = async function() {
+                const count = prompt('생성할 테스트 게시물 수를 입력하세요 (최대 100개):', '20');
+                if (!count) return;
+                
+                try {
+                    const response = await axios.post('/api/admin/create-fake-posts', 
+                        { count: parseInt(count) },
+                        { headers: { 'X-Admin-ID': adminId } }
+                    );
+                    alert(\`\${response.data.count}개의 테스트 게시물이 생성되었습니다.\\n\\n7가지 카테고리로 랜덤 생성되었습니다:\\n- 중보 기도\\n- 말씀\\n- 일상\\n- 사역\\n- 찬양\\n- 교회\\n- 자유\`);
+                    loadStats();
+                    loadAdminPosts();
+                } catch (error) {
+                    console.error('Failed to create fake posts:', error);
+                    if (error.response && error.response.status === 400) {
+                        alert(error.response.data.error || '게시물 생성에 실패했습니다. 먼저 사용자를 생성해주세요.');
+                    } else {
+                        alert('테스트 게시물 생성에 실패했습니다.');
+                    }
                 }
             }
 

@@ -1396,17 +1396,6 @@ function updateAuthUI() {
             adminPanelBtn.classList.add('hidden');
         }
         
-        // Hide photo/video upload buttons for admin
-        const postImageLabel = document.querySelector('label[for="postImageFile"]');
-        const postVideoLabel = document.querySelector('label[for="postVideoFile"]');
-        if (currentUser.role === 'admin') {
-            if (postImageLabel) postImageLabel.style.display = 'none';
-            if (postVideoLabel) postVideoLabel.style.display = 'none';
-        } else {
-            if (postImageLabel) postImageLabel.style.display = 'inline-flex';
-            if (postVideoLabel) postVideoLabel.style.display = 'inline-flex';
-        }
-        
         // Save to localStorage for admin panel access
         localStorage.setItem('currentUserId', currentUserId);
         localStorage.setItem('currentUser', JSON.stringify(currentUser));

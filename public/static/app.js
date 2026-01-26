@@ -328,14 +328,19 @@ async function loadUserScores() {
         const response = await axios.get(`/api/users/${currentUserId}/scores`);
         const data = response.data;
         
-        typingScore = data.typing_score || 0;
-        videoScore = data.scripture_score || 0;
+        typingScore = data.scripture_score || 0;
+        videoScore = 0; // Video score is already included in scripture_score
         prayerScore = data.prayer_score || 0;
         activityScore = data.activity_score || 0;
         
         // Load completed videos
         if (data.completed_videos && Array.isArray(data.completed_videos)) {
             completedVideos = new Set(data.completed_videos);
+        }
+        
+        // Load completed verses
+        if (data.completed_verses && Array.isArray(data.completed_verses)) {
+            completedVerses = new Set(data.completed_verses);
         }
         
         updateTypingScoreDisplay();
@@ -369,7 +374,10 @@ async function saveTypingScore(score) {
     }
     
     try {
-        await axios.post(`/api/users/${currentUserId}/scores/typing`, { score });
+        await axios.post(`/api/users/${currentUserId}/scores/typing`, { 
+            score,
+            completed_verses: [...completedVerses]
+        });
     } catch (error) {
         console.error('Failed to save typing score:', error);
     }
@@ -651,17 +659,15 @@ function checkTyping() {
     // Calculate accuracy
     const accuracy = calculateAccuracy(verseText, userInput);
     
-    // Calculate points earned (accuracy percentage = points)
+    // Calculate points earned (only 100% accuracy = 100 points, saved permanently)
     let pointsEarned = 0;
     let bonusMessage = '';
     
-    if (!isAlreadyCompleted) {
-        pointsEarned = accuracy;
-        // Mark as completed if accuracy is high enough
-        if (accuracy >= 90) {
-            completedVerses.add(verseId);
-        }
-    } else {
+    if (!isAlreadyCompleted && accuracy === 100) {
+        // Only perfect match earns points and marks as completed
+        pointsEarned = 100;
+        completedVerses.add(verseId);
+    } else if (isAlreadyCompleted) {
         bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 완료한 구절입니다 (점수 미지급)</p>';
     }
     
@@ -676,25 +682,39 @@ function checkTyping() {
     
     let resultColor = 'text-red-600';
     let resultIcon = 'fa-times-circle';
-    let resultMessage = '다시 도전해보세요!';
+    let resultMessage = '100% 정확해야 점수를 받습니다!';
     
     if (accuracy === 100) {
-        resultColor = 'text-green-600';
-        resultIcon = 'fa-check-circle';
-        resultMessage = isAlreadyCompleted ? '완벽합니다! (이미 완료)' : '완벽합니다! 🎉';
+        if (isAlreadyCompleted) {
+            resultColor = 'text-gray-600';
+            resultIcon = 'fa-check-circle';
+            resultMessage = '이미 완료한 구절입니다';
+        } else {
+            resultColor = 'text-green-600';
+            resultIcon = 'fa-check-circle';
+            resultMessage = '완벽합니다! 100점 획득! 🎉';
+        }
     } else if (accuracy >= 90) {
         resultColor = 'text-blue-600';
-        resultIcon = 'fa-smile';
-        resultMessage = isAlreadyCompleted ? '훌륭합니다! (이미 완료)' : '훌륭합니다! 😊';
+        resultIcon = 'fa-meh';
+        resultMessage = '아쉽습니다! 100%를 달성해보세요!';
     } else if (accuracy >= 70) {
         resultColor = 'text-yellow-600';
-        resultIcon = 'fa-meh';
-        resultMessage = '좋아요! 조금만 더!';
+        resultIcon = 'fa-frown';
+        resultMessage = '조금 더 정확하게 입력해주세요!';
     }
     
     typingResult.innerHTML = `
-        <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-3 text-center">
-            <p class="text-sm text-gray-700">타이핑을 완료하고 엔터를 누르면 <strong class="text-blue-600">100점</strong></p>
+        <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-3">
+            <div class="flex items-center justify-center ${resultColor}">
+                <i class="fas ${resultIcon} text-xl mr-2"></i>
+                <p class="text-sm font-semibold">${resultMessage}</p>
+            </div>
+            <p class="text-xs text-gray-600 mt-2 text-center">
+                정확도: <strong class="${resultColor}">${accuracy}%</strong>
+                ${pointsEarned > 0 ? ` | 획득 점수: <strong class="text-green-600">+${pointsEarned}점</strong>` : ' | 획득 점수: 0점'}
+            </p>
+            ${bonusMessage}
         </div>
     `;
     

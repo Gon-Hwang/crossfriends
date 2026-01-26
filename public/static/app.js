@@ -2054,6 +2054,127 @@ async function submitEditPost() {
 }
 
 // Delete post
+// Edit post
+async function editPost(postId) {
+    try {
+        // Fetch post data
+        const response = await axios.get(`/api/posts/${postId}`);
+        const post = response.data;
+        
+        // Check permission
+        if (currentUser.role !== 'admin' && post.user_id !== currentUserId) {
+            alert('권한이 없습니다.');
+            return;
+        }
+        
+        // Fill modal with current data
+        document.getElementById('editPostId').value = postId;
+        document.getElementById('editPostContent').value = post.content || '';
+        document.getElementById('editPostVerseReference').value = post.verse_reference || '';
+        document.getElementById('editPostBackgroundColor').value = post.background_color || '#FFFFFF';
+        
+        // Update color selection display
+        selectEditBackgroundColor(post.background_color || '#FFFFFF');
+        
+        // Show modal
+        document.getElementById('editPostModal').classList.remove('hidden');
+        
+        // Close post menu
+        togglePostMenu(postId);
+    } catch (error) {
+        console.error('Failed to load post:', error);
+        showToast('게시물을 불러오는데 실패했습니다.', 'error');
+    }
+}
+
+function hideEditPostModal() {
+    document.getElementById('editPostModal').classList.add('hidden');
+}
+
+function selectEditBackgroundColor(color) {
+    document.getElementById('editPostBackgroundColor').value = color;
+    
+    // Update UI to show selected color
+    const colorButtons = document.querySelectorAll('#editPostModal button[onclick^="selectEditBackgroundColor"]');
+    colorButtons.forEach(btn => {
+        const btnColor = btn.style.backgroundColor;
+        const normalizedBtnColor = btnColor ? rgbToHex(btnColor) : '#FFFFFF';
+        
+        if (normalizedBtnColor.toLowerCase() === color.toLowerCase()) {
+            btn.classList.remove('border-transparent');
+            btn.classList.add('border-blue-500');
+        } else {
+            btn.classList.add('border-transparent');
+            btn.classList.remove('border-blue-500');
+        }
+    });
+    
+    // Update color name
+    const colorNames = {
+        '#FCA5A5': '중보 기도',
+        '#fca5a5': '중보 기도',
+        '#FDE68A': '말씀',
+        '#fde68a': '말씀',
+        '#FED7AA': '일상',
+        '#fed7aa': '일상',
+        '#A7F3D0': '사역',
+        '#a7f3d0': '사역',
+        '#BAE6FD': '찬양',
+        '#bae6fd': '찬양',
+        '#DDD6FE': '교회',
+        '#ddd6fe': '교회',
+        '#FFFFFF': '자유',
+        '#ffffff': '자유'
+    };
+    document.getElementById('editSelectedColorName').textContent = colorNames[color.toLowerCase()] || '자유';
+}
+
+// Helper function to convert RGB to Hex
+function rgbToHex(rgb) {
+    if (rgb.startsWith('#')) return rgb;
+    
+    const result = rgb.match(/\d+/g);
+    if (!result || result.length < 3) return '#FFFFFF';
+    
+    const r = parseInt(result[0]).toString(16).padStart(2, '0');
+    const g = parseInt(result[1]).toString(16).padStart(2, '0');
+    const b = parseInt(result[2]).toString(16).padStart(2, '0');
+    
+    return `#${r}${g}${b}`.toUpperCase();
+}
+
+async function saveEditedPost() {
+    const postId = document.getElementById('editPostId').value;
+    const content = document.getElementById('editPostContent').value.trim();
+    const verseReference = document.getElementById('editPostVerseReference').value.trim();
+    const backgroundColor = document.getElementById('editPostBackgroundColor').value;
+    
+    if (!content) {
+        showToast('내용을 입력해주세요.', 'error');
+        return;
+    }
+    
+    try {
+        await axios.put(`/api/posts/${postId}`, {
+            content,
+            verse_reference: verseReference || null,
+            background_color: backgroundColor
+        });
+        
+        // Show success message
+        showToast('게시물이 수정되었습니다.', 'success');
+        
+        // Hide modal
+        hideEditPostModal();
+        
+        // Reload posts to show updated content
+        loadPosts();
+    } catch (error) {
+        console.error('Failed to update post:', error);
+        showToast('게시물 수정에 실패했습니다.', 'error');
+    }
+}
+
 async function deletePost(postId) {
     if (!currentUser || (currentUser.role !== 'admin' && currentUser.id !== currentUserId)) {
         alert('권한이 없습니다.');

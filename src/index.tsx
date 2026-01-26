@@ -1627,6 +1627,95 @@ app.get('/admin', (c) => {
                 }
             }
 
+            // Edit post functions (for main app)
+            window.editPost = async function(postId) {
+                try {
+                    // Fetch post data
+                    const response = await axios.get(\`/api/posts/\${postId}\`);
+                    const post = response.data;
+                    
+                    // Fill modal with current data
+                    document.getElementById('editPostId').value = postId;
+                    document.getElementById('editPostContent').value = post.content || '';
+                    document.getElementById('editPostVerseReference').value = post.verse_reference || '';
+                    document.getElementById('editPostBackgroundColor').value = post.background_color || '#FFFFFF';
+                    
+                    // Update color selection display
+                    selectEditBackgroundColor(post.background_color || '#FFFFFF');
+                    
+                    // Show modal
+                    document.getElementById('editPostModal').classList.remove('hidden');
+                } catch (error) {
+                    console.error('Failed to load post:', error);
+                    alert('게시물을 불러오는데 실패했습니다.');
+                }
+            }
+
+            window.hideEditPostModal = function() {
+                document.getElementById('editPostModal').classList.add('hidden');
+            }
+
+            window.selectEditBackgroundColor = function(color) {
+                document.getElementById('editPostBackgroundColor').value = color;
+                
+                // Update UI to show selected color
+                const colorButtons = document.querySelectorAll('#editPostModal button[onclick^="selectEditBackgroundColor"]');
+                colorButtons.forEach(btn => {
+                    if (btn.style.backgroundColor.toLowerCase() === color.toLowerCase() || 
+                        (color === '#FFFFFF' && btn.classList.contains('bg-white'))) {
+                        btn.classList.remove('border-transparent');
+                        btn.classList.add('border-blue-500');
+                    } else {
+                        btn.classList.add('border-transparent');
+                        btn.classList.remove('border-blue-500');
+                    }
+                });
+                
+                // Update color name
+                const colorNames = {
+                    '#FCA5A5': '중보 기도',
+                    '#FDE68A': '말씀',
+                    '#FED7AA': '일상',
+                    '#A7F3D0': '사역',
+                    '#BAE6FD': '찬양',
+                    '#DDD6FE': '교회',
+                    '#FFFFFF': '자유'
+                };
+                document.getElementById('editSelectedColorName').textContent = colorNames[color] || '자유';
+            }
+
+            window.saveEditedPost = async function() {
+                const postId = document.getElementById('editPostId').value;
+                const content = document.getElementById('editPostContent').value.trim();
+                const verseReference = document.getElementById('editPostVerseReference').value.trim();
+                const backgroundColor = document.getElementById('editPostBackgroundColor').value;
+                
+                if (!content) {
+                    alert('내용을 입력해주세요.');
+                    return;
+                }
+                
+                try {
+                    await axios.put(\`/api/posts/\${postId}\`, {
+                        content,
+                        verse_reference: verseReference || null,
+                        background_color: backgroundColor
+                    });
+                    
+                    // Show success message
+                    showToast('게시물이 수정되었습니다.', 'success');
+                    
+                    // Hide modal
+                    hideEditPostModal();
+                    
+                    // Reload posts to show updated content
+                    loadPosts();
+                } catch (error) {
+                    console.error('Failed to update post:', error);
+                    alert('게시물 수정에 실패했습니다.');
+                }
+            }
+
 
             // Initialize
             if (!adminId) {
@@ -2300,6 +2389,101 @@ app.get('/', (c) => {
         </div>
 
         <!-- Signup Modal -->
+        <!-- Edit Post Modal -->
+        <div id="editPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-edit text-blue-600 mr-2"></i>게시물 수정
+                    </h2>
+                    <button onclick="hideEditPostModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <input type="hidden" id="editPostId" />
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">내용</label>
+                        <textarea 
+                            id="editPostContent"
+                            rows="6"
+                            placeholder="게시물 내용을 입력하세요..."
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none resize-none"
+                        ></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">성경 구절 (선택사항)</label>
+                        <input 
+                            id="editPostVerseReference"
+                            type="text"
+                            placeholder="예: 요한복음 3:16"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">배경색 선택</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="selectEditBackgroundColor('#FCA5A5')" 
+                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
+                                style="background-color: #FCA5A5"
+                                title="중보 기도">
+                            </button>
+                            <button onclick="selectEditBackgroundColor('#FDE68A')" 
+                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
+                                style="background-color: #FDE68A"
+                                title="말씀">
+                            </button>
+                            <button onclick="selectEditBackgroundColor('#FED7AA')" 
+                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
+                                style="background-color: #FED7AA"
+                                title="일상">
+                            </button>
+                            <button onclick="selectEditBackgroundColor('#A7F3D0')" 
+                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
+                                style="background-color: #A7F3D0"
+                                title="사역">
+                            </button>
+                            <button onclick="selectEditBackgroundColor('#BAE6FD')" 
+                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
+                                style="background-color: #BAE6FD"
+                                title="찬양">
+                            </button>
+                            <button onclick="selectEditBackgroundColor('#DDD6FE')" 
+                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all"
+                                style="background-color: #DDD6FE"
+                                title="교회">
+                            </button>
+                            <button onclick="selectEditBackgroundColor('#FFFFFF')" 
+                                class="w-12 h-12 rounded-full border-4 border-transparent hover:border-blue-500 transition-all bg-white"
+                                title="자유">
+                            </button>
+                        </div>
+                        <input type="hidden" id="editPostBackgroundColor" value="#FFFFFF" />
+                        <div class="mt-2 text-sm text-gray-600">
+                            현재 선택: <span id="editSelectedColorName" class="font-semibold">자유</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-4">
+                        <button 
+                            onclick="saveEditedPost()"
+                            class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
+                        <button 
+                            onclick="hideEditPostModal()"
+                            class="flex-1 bg-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-400 transition-colors font-semibold">
+                            <i class="fas fa-times mr-2"></i>취소
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="signupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 pb-4">

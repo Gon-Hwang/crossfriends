@@ -1255,7 +1255,7 @@ app.get('/admin', (c) => {
             }
 
 
-            async function createFakeUsers() {
+            window.createFakeUsers = async function() {
                 const count = prompt('생성할 테스트 사용자 수를 입력하세요 (최대 50명):', '10');
                 if (!count) return;
                 
@@ -1273,7 +1273,7 @@ app.get('/admin', (c) => {
                 }
             }
 
-            async function deleteFakeUsers() {
+            window.deleteFakeUsers = async function() {
                 if (!confirm('모든 테스트 사용자를 삭제하시겠습니까?')) return;
                 
                 try {
@@ -1289,7 +1289,7 @@ app.get('/admin', (c) => {
                 }
             }
 
-            async function deleteUser(userId, userRole) {
+            window.deleteUser = async function(userId, userRole) {
                 if (userRole === 'admin') {
                     alert('관리자 계정은 삭제할 수 없습니다.');
                     return;
@@ -1402,7 +1402,7 @@ app.get('/admin', (c) => {
                 }
             }
 
-            async function deleteAdminPost(postId) {
+            window.deleteAdminPost = async function(postId) {
                 if (!confirm('이 게시물을 삭제하시겠습니까? 관련된 댓글과 좋아요도 함께 삭제됩니다.')) return;
                 
                 try {
@@ -1418,7 +1418,7 @@ app.get('/admin', (c) => {
                 }
             }
 
-            async function deleteAllPosts() {
+            window.deleteAllPosts = async function() {
                 if (!confirm('⚠️ 경고: 모든 게시물을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 모든 게시물과 관련된 댓글, 좋아요가 함께 삭제됩니다.')) {
                     return;
                 }

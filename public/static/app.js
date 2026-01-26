@@ -2302,6 +2302,11 @@ async function loadPosts() {
                                         <i class="fas fa-cross text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>
+                                ` : post.background_color === '#A7F3D0' ? `
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-green-600' : 'hover:text-green-600'} transition" title="하나님 함께하시길!">
+                                        <i class="fas fa-hands text-lg"></i>
+                                        <span class="text-sm">${post.likes_count || 0}</span>
+                                    </button>
                                 ` : `
                                     <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-red-600 transition" title="좋아요">
                                         <i class="fas fa-heart ${isLiked ? 'text-red-600' : ''} text-lg"></i>

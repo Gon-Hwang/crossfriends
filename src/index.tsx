@@ -1535,7 +1535,7 @@ app.get('/admin', (c) => {
 
         <div class="max-w-7xl mx-auto px-4 py-8">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
@@ -1563,16 +1563,6 @@ app.get('/admin', (c) => {
                             <p class="text-3xl font-bold" id="totalComments">0</p>
                         </div>
                         <i class="fas fa-comments text-4xl opacity-50"></i>
-                    </div>
-                </div>
-                
-                <div class="bg-orange-500 text-white rounded-xl shadow-lg p-6">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-orange-100 text-sm">기도 제목</p>
-                            <p class="text-3xl font-bold" id="totalPrayers">0</p>
-                        </div>
-                        <i class="fas fa-praying-hands text-4xl opacity-50"></i>
                     </div>
                 </div>
             </div>
@@ -1679,7 +1669,6 @@ app.get('/admin', (c) => {
                     document.getElementById('totalUsers').textContent = response.data.users;
                     document.getElementById('totalPosts').textContent = response.data.posts;
                     document.getElementById('totalComments').textContent = response.data.comments;
-                    document.getElementById('totalPrayers').textContent = response.data.prayers;
                 } catch (error) {
                     console.error('Failed to load stats:', error);
                     if (error.response && (error.response.status === 401 || error.response.status === 403)) {

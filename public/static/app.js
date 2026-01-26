@@ -1873,19 +1873,78 @@ async function togglePray(postId) {
 }
 
 // Delete post (Admin only)
+// Toggle post menu
+function togglePostMenu(postId) {
+    const menu = document.getElementById(`post-menu-${postId}`);
+    
+    // Close all other menus
+    document.querySelectorAll('[id^="post-menu-"]').forEach(m => {
+        if (m.id !== `post-menu-${postId}`) {
+            m.classList.add('hidden');
+        }
+    });
+    
+    // Toggle this menu
+    menu.classList.toggle('hidden');
+}
+
+// Close post menus when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('[id^="post-menu-"]') && !event.target.closest('button[onclick*="togglePostMenu"]')) {
+        document.querySelectorAll('[id^="post-menu-"]').forEach(menu => {
+            menu.classList.add('hidden');
+        });
+    }
+});
+
+// Copy post link
+function copyPostLink(postId) {
+    const url = `${window.location.origin}/#post-${postId}`;
+    
+    // Create temporary input element
+    const tempInput = document.createElement('input');
+    tempInput.value = url;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+    
+    // Show success message
+    const successMsg = document.createElement('div');
+    successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+    successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>링크가 복사되었습니다!';
+    document.body.appendChild(successMsg);
+    
+    setTimeout(() => {
+        successMsg.remove();
+    }, 2000);
+    
+    // Close menu
+    togglePostMenu(postId);
+}
+
+// Edit post
+function editPost(postId) {
+    alert('게시물 수정 기능은 곧 추가될 예정입니다.');
+    togglePostMenu(postId);
+}
+
+// Delete post
 async function deletePost(postId) {
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.id !== currentUserId)) {
         alert('권한이 없습니다.');
         return;
     }
 
     if (!confirm('정말로 이 게시물을 삭제하시겠습니까?')) {
+        togglePostMenu(postId);
         return;
     }
 
     try {
         await axios.delete(`/api/posts/${postId}`);
         alert('게시물이 삭제되었습니다.');
+        togglePostMenu(postId);
         loadPosts();
     } catch (error) {
         console.error('Error deleting post:', error);
@@ -2276,13 +2335,40 @@ async function loadPosts() {
                                 </div>
                                 <div class="flex items-center space-x-2">
                                     <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
-                                    ${currentUser && currentUser.role === 'admin' ? `
-                                        <button 
-                                            onclick="deletePost(${post.id})" 
-                                            class="text-red-500 hover:text-red-700 transition ml-2" 
-                                            title="게시물 삭제">
-                                            <i class="fas fa-trash-alt text-sm"></i>
-                                        </button>
+                                    ${currentUser ? `
+                                        <div class="relative">
+                                            <button 
+                                                onclick="togglePostMenu(${post.id})"
+                                                class="text-gray-500 hover:text-gray-700 transition p-1" 
+                                                title="더보기">
+                                                <i class="fas fa-ellipsis-v text-sm"></i>
+                                            </button>
+                                            <div id="post-menu-${post.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                                ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
+                                                    <button 
+                                                        onclick="editPost(${post.id})"
+                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center space-x-2 text-sm">
+                                                        <i class="fas fa-edit text-blue-600"></i>
+                                                        <span>게시물 수정</span>
+                                                    </button>
+                                                ` : ''}
+                                                <button 
+                                                    onclick="copyPostLink(${post.id})"
+                                                    class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center space-x-2 text-sm">
+                                                    <i class="fas fa-link text-green-600"></i>
+                                                    <span>링크 복사</span>
+                                                </button>
+                                                ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
+                                                    <hr class="my-1">
+                                                    <button 
+                                                        onclick="deletePost(${post.id})"
+                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center space-x-2 text-sm text-red-600">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                        <span>게시물 삭제</span>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                        </div>
                                     ` : ''}
                                 </div>
                             </div>

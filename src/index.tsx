@@ -244,6 +244,14 @@ app.post('/api/posts', async (c) => {
     'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0, background_color || null).run()
   
+  // 기도 포스팅(중보 기도 - 빨간색 배경)일 경우 기도 점수 20점 추가
+  if (background_color === '#FCA5A5') {
+    const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
+    const currentScore = user?.prayer_score || 0
+    const newScore = currentScore + 20
+    await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
+  }
+  
   return c.json({ id: result.meta.last_row_id, user_id, content }, 201)
 })
 

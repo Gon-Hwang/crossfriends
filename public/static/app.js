@@ -2304,12 +2304,12 @@ async function loadPosts() {
                                     </button>
                                 ` : post.background_color === '#A7F3D0' ? `
                                     <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-green-600' : 'hover:text-green-600'} transition" title="하나님 함께하시길!">
-                                        <i class="fas fa-hands text-lg"></i>
+                                        <i class="fas fa-dove text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>
                                 ` : post.background_color === '#BAE6FD' ? `
                                     <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-sky-600' : 'hover:text-sky-600'} transition" title="할렐루야!">
-                                        <i class="fas fa-music text-lg"></i>
+                                        <i class="fas fa-hands-clapping text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                     </button>
                                 ` : post.background_color === '#DDD6FE' ? `

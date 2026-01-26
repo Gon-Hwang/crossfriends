@@ -1586,6 +1586,14 @@ async function createPost() {
             updateTypingScoreDisplay();
             showToast('기도 포스팅 작성! 기도 점수 +20점', 'success');
         }
+        
+        // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 즉시 업데이트
+        const activityPostColors = ['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF'];
+        if (activityPostColors.includes(selectedBackgroundColor)) {
+            activityScore += 10;
+            updateTypingScoreDisplay();
+            showToast('포스팅 작성! 활동 점수 +10점', 'success');
+        }
 
         // 2. Upload image if selected
         if (imageFile) {
@@ -2219,7 +2227,14 @@ async function deletePost(postId) {
             prayerScore = Math.max(0, prayerScore - 20);
             updateTypingScoreDisplay();
             showToast('기도 포스팅 삭제! 기도 점수 -20점', 'warning');
-        } else {
+        } 
+        // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 즉시 차감
+        else if (['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF'].includes(post.background_color) && post.user_id === currentUserId) {
+            activityScore = Math.max(0, activityScore - 10);
+            updateTypingScoreDisplay();
+            showToast('포스팅 삭제! 활동 점수 -10점', 'warning');
+        } 
+        else {
             alert('게시물이 삭제되었습니다.');
         }
         

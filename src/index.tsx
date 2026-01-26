@@ -252,6 +252,23 @@ app.post('/api/posts', async (c) => {
     await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
   }
   
+  // 말씀 포스팅(노란색 배경)일 경우 성경 점수 10점 추가
+  if (background_color === '#FDE68A') {
+    const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
+    const currentScore = user?.scripture_score || 0
+    const newScore = currentScore + 10
+    await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user_id).run()
+  }
+  
+  // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 10점 추가
+  const activityPostColors = ['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF']
+  if (activityPostColors.includes(background_color)) {
+    const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+    const currentScore = user?.activity_score || 0
+    const newScore = currentScore + 10
+    await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
+  }
+  
   return c.json({ id: result.meta.last_row_id, user_id, content }, 201)
 })
 
@@ -398,6 +415,23 @@ app.delete('/api/posts/:id', async (c) => {
       const currentScore = user?.prayer_score || 0
       const newScore = Math.max(0, currentScore - 20) // 0점 이하로 내려가지 않도록
       await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
+    }
+    
+    // 말씀 포스팅(노란색 배경)이면 성경 점수 차감
+    if (post.background_color === '#FDE68A') {
+      const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(post.user_id).first()
+      const currentScore = user?.scripture_score || 0
+      const newScore = Math.max(0, currentScore - 10) // 0점 이하로 내려가지 않도록
+      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
+    }
+    
+    // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 차감
+    const activityPostColors = ['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF']
+    if (activityPostColors.includes(post.background_color)) {
+      const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
+      const currentScore = user?.activity_score || 0
+      const newScore = Math.max(0, currentScore - 10) // 0점 이하로 내려가지 않도록
+      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
     }
   }
   

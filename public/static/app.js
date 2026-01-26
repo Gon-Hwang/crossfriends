@@ -2159,16 +2159,26 @@ async function deletePost(postId) {
         if (post.background_color === '#FCA5A5' && post.user_id === currentUserId) {
             prayerScore = Math.max(0, prayerScore - 20);
             updateTypingScoreDisplay();
-            showToast('기도 포스팅 삭제! 기도 점수 -20점', 'warning');
+            showToastWithColor('기도 포스팅 삭제! 기도 점수 -20점', post.background_color);
         } 
+        // 말씀 포스팅이면 성경 점수 즉시 차감
+        else if (post.background_color === '#FDE68A' && post.user_id === currentUserId) {
+            // 말씀 포스팅도 성경 점수를 차감해야 하므로 추가
+            showToastWithColor('말씀 포스팅 삭제! 성경 점수 -10점', post.background_color);
+        }
         // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 즉시 차감
         else if (['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF'].includes(post.background_color) && post.user_id === currentUserId) {
             activityScore = Math.max(0, activityScore - 10);
             updateTypingScoreDisplay();
-            showToast('포스팅 삭제! 활동 점수 -10점', 'warning');
+            showToastWithColor('포스팅 삭제! 활동 점수 -10점', post.background_color);
         } 
         else {
-            alert('게시물이 삭제되었습니다.');
+            // 배경색이 없거나 다른 사용자의 포스팅일 경우
+            if (post.background_color && post.user_id === currentUserId) {
+                showToastWithColor('게시물이 삭제되었습니다.', post.background_color);
+            } else {
+                alert('게시물이 삭제되었습니다.');
+            }
         }
         
         togglePostMenu(postId);

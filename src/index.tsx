@@ -1143,6 +1143,37 @@ app.get('/admin', (c) => {
                 </div>
             </div>
 
+            <!-- Posts Management -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-newspaper text-blue-600 mr-2"></i>게시물 관리
+                    </h2>
+                    <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                        <i class="fas fa-sync-alt mr-2"></i>새로고침
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">ID</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작성자</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">내용</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">유형</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">좋아요</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">댓글</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작성일</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="postsTableBody" class="divide-y divide-gray-200">
+                            <!-- Posts will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
 
         </div>
 
@@ -1261,6 +1292,110 @@ app.get('/admin', (c) => {
                 }
             }
 
+            async function loadAdminPosts() {
+                try {
+                    const response = await axios.get('/api/admin/posts', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    
+                    const tbody = document.getElementById('postsTableBody');
+                    tbody.innerHTML = response.data.posts.map(post => {
+                        // Determine post type based on background color
+                        let postType = '자유';
+                        let typeColor = 'bg-gray-100 text-gray-800';
+                        
+                        if (post.background_color === '#FCA5A5') {
+                            postType = '중보 기도';
+                            typeColor = 'bg-red-100 text-red-800';
+                        } else if (post.background_color === '#FDE68A') {
+                            postType = '말씀';
+                            typeColor = 'bg-yellow-100 text-yellow-800';
+                        } else if (post.background_color === '#FED7AA') {
+                            postType = '일상';
+                            typeColor = 'bg-orange-100 text-orange-800';
+                        } else if (post.background_color === '#A7F3D0') {
+                            postType = '사역';
+                            typeColor = 'bg-green-100 text-green-800';
+                        } else if (post.background_color === '#BAE6FD') {
+                            postType = '찬양';
+                            typeColor = 'bg-sky-100 text-sky-800';
+                        } else if (post.background_color === '#DDD6FE') {
+                            postType = '교회';
+                            typeColor = 'bg-violet-100 text-violet-800';
+                        }
+                        
+                        // Truncate content for display
+                        const truncatedContent = post.content.length > 50 
+                            ? post.content.substring(0, 50) + '...' 
+                            : post.content;
+                        
+                        // Format date
+                        const date = new Date(post.created_at);
+                        const formattedDate = date.toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        return \`
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm">\${post.id}</td>
+                                <td class="px-4 py-3 text-sm">
+                                    <div class="font-semibold">\${post.user_name}</div>
+                                    <div class="text-xs text-gray-500">\${post.user_email}</div>
+                                </td>
+                                <td class="px-4 py-3 text-sm max-w-xs">
+                                    <div class="truncate" title="\${post.content}">\${truncatedContent}</div>
+                                    \${post.verse_reference ? \`<div class="text-xs text-blue-600 mt-1"><i class="fas fa-bible mr-1"></i>\${post.verse_reference}</div>\` : ''}
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <span class="px-2 py-1 rounded-full text-xs \${typeColor}">
+                                        \${postType}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <span class="text-red-600"><i class="fas fa-heart mr-1"></i>\${post.likes_count}</span>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <span class="text-blue-600"><i class="fas fa-comment mr-1"></i>\${post.comments_count}</span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-500">\${formattedDate}</td>
+                                <td class="px-4 py-3 text-sm">
+                                    <button 
+                                        onclick="deleteAdminPost(\${post.id})"
+                                        class="text-red-600 hover:text-red-800 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        \`;
+                    }).join('');
+                } catch (error) {
+                    console.error('Failed to load posts:', error);
+                    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                        alert('관리자 권한이 필요합니다.');
+                    }
+                }
+            }
+
+            async function deleteAdminPost(postId) {
+                if (!confirm('이 게시물을 삭제하시겠습니까? 관련된 댓글과 좋아요도 함께 삭제됩니다.')) return;
+                
+                try {
+                    await axios.delete(\`/api/admin/posts/\${postId}\`, {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    alert('게시물이 삭제되었습니다.');
+                    loadStats();
+                    loadAdminPosts();
+                } catch (error) {
+                    console.error('Failed to delete post:', error);
+                    alert('게시물 삭제에 실패했습니다.');
+                }
+            }
+
 
             // Initialize
             if (!adminId) {
@@ -1269,6 +1404,7 @@ app.get('/admin', (c) => {
             } else {
                 loadStats();
                 loadUsers();
+                loadAdminPosts();
             }
         </script>
     </body>

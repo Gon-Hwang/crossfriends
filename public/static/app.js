@@ -627,7 +627,6 @@ function checkTyping() {
             </div>
             <div class="text-sm text-gray-700">
                 <p class="mb-1">획득 점수: <strong class="${pointsEarned > 0 ? 'text-yellow-600' : 'text-gray-500'}">+${pointsEarned}점</strong></p>
-                <p>총 점수: <strong class="text-blue-600">${newScore}점</strong></p>
                 ${bonusMessage}
             </div>
         </div>

@@ -424,6 +424,33 @@ app.post('/api/posts/:id/comments', async (c) => {
   return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content }, 201)
 })
 
+// Update comment
+app.put('/api/comments/:id', async (c) => {
+  const { DB } = c.env
+  const commentId = c.req.param('id')
+  const { content } = await c.req.json()
+  
+  await DB.prepare(
+    'UPDATE comments SET content = ? WHERE id = ?'
+  ).bind(content, commentId).run()
+  
+  return c.json({ success: true })
+})
+
+// Delete comment
+app.delete('/api/comments/:id', async (c) => {
+  const { DB } = c.env
+  const commentId = c.req.param('id')
+  
+  // Delete comment likes first
+  await DB.prepare('DELETE FROM comment_likes WHERE comment_id = ?').bind(commentId).run()
+  
+  // Delete comment
+  await DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run()
+  
+  return c.json({ success: true })
+})
+
 // =====================
 // API Routes - Likes
 // =====================

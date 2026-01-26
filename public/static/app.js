@@ -2449,6 +2449,7 @@ async function loadComments(postId) {
             let commentsHtml = '';
             comments.forEach(comment => {
                 const isLiked = comment.is_liked > 0;
+                const canEdit = currentUser && (currentUser.id === comment.user_id || currentUser.role === 'admin');
                 
                 // Avatar HTML - Admin shows crown icon
                 const avatarHtml = comment.user_role === 'admin'
@@ -2464,15 +2465,60 @@ async function loadComments(postId) {
                 }
                 
                 commentsHtml += `
-                    <div class="flex space-x-3">
+                    <div class="flex space-x-3" id="comment-${comment.id}">
                         <div class="admin-badge-container">
                             <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">${avatarHtml}</div>
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
-                                <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
+                                <div class="flex justify-between items-start">
+                                    <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
+                                    ${canEdit ? `
+                                        <div class="relative">
+                                            <button 
+                                                onclick="toggleCommentMenu(${comment.id})"
+                                                class="text-gray-400 hover:text-gray-600 transition">
+                                                <i class="fas fa-ellipsis-v text-sm"></i>
+                                            </button>
+                                            <div id="comment-menu-${comment.id}" class="hidden absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1">
+                                                <button 
+                                                    onclick="editComment(${comment.id}, ${postId})"
+                                                    class="w-full text-left px-3 py-2 hover:bg-gray-50 transition flex items-center text-xs">
+                                                    <i class="fas fa-edit text-blue-600 w-4"></i>
+                                                    <span class="ml-2">수정</span>
+                                                </button>
+                                                <button 
+                                                    onclick="deleteComment(${comment.id}, ${postId})"
+                                                    class="w-full text-left px-3 py-2 hover:bg-gray-50 transition flex items-center text-xs">
+                                                    <i class="fas fa-trash text-red-600 w-4"></i>
+                                                    <span class="ml-2">삭제</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <p class="text-sm text-gray-700 mt-1" id="comment-content-${comment.id}">${comment.content}</p>
+                                <div id="comment-edit-form-${comment.id}" class="hidden mt-2">
+                                    <input 
+                                        type="text" 
+                                        id="comment-edit-input-${comment.id}"
+                                        value="${comment.content.replace(/"/g, '&quot;')}"
+                                        class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                                    />
+                                    <div class="flex space-x-2 mt-2">
+                                        <button 
+                                            onclick="saveCommentEdit(${comment.id}, ${postId})"
+                                            class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition">
+                                            <i class="fas fa-save mr-1"></i>저장
+                                        </button>
+                                        <button 
+                                            onclick="cancelCommentEdit(${comment.id})"
+                                            class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-400 transition">
+                                            <i class="fas fa-times mr-1"></i>취소
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="flex items-center space-x-4 mt-1">
                                 <p class="text-xs text-gray-500">${formatDate(comment.created_at)}</p>
@@ -2553,6 +2599,89 @@ async function createComment(postId) {
     } catch (error) {
         console.error('Error creating comment:', error);
         alert('댓글 작성에 실패했습니다.');
+    }
+}
+
+// Toggle comment menu
+function toggleCommentMenu(commentId) {
+    const menu = document.getElementById(`comment-menu-${commentId}`);
+    if (menu) {
+        menu.classList.toggle('hidden');
+        
+        // Close other comment menus
+        document.querySelectorAll('[id^="comment-menu-"]').forEach(m => {
+            if (m.id !== `comment-menu-${commentId}`) {
+                m.classList.add('hidden');
+            }
+        });
+    }
+}
+
+// Edit comment
+function editComment(commentId, postId) {
+    // Hide menu
+    toggleCommentMenu(commentId);
+    
+    // Hide display, show edit form
+    document.getElementById(`comment-content-${commentId}`).classList.add('hidden');
+    document.getElementById(`comment-edit-form-${commentId}`).classList.remove('hidden');
+    
+    // Focus on input
+    const input = document.getElementById(`comment-edit-input-${commentId}`);
+    if (input) {
+        input.focus();
+        input.select();
+    }
+}
+
+// Cancel comment edit
+function cancelCommentEdit(commentId) {
+    // Show display, hide edit form
+    document.getElementById(`comment-content-${commentId}`).classList.remove('hidden');
+    document.getElementById(`comment-edit-form-${commentId}`).classList.add('hidden');
+}
+
+// Save comment edit
+async function saveCommentEdit(commentId, postId) {
+    const input = document.getElementById(`comment-edit-input-${commentId}`);
+    const content = input.value.trim();
+    
+    if (!content) {
+        showToast('댓글 내용을 입력해주세요.', 'error');
+        return;
+    }
+    
+    try {
+        await axios.put(`/api/comments/${commentId}`, {
+            content
+        });
+        
+        showToast('댓글이 수정되었습니다.', 'success');
+        
+        // Refresh comments to show updated content
+        refreshComments(postId);
+    } catch (error) {
+        console.error('Failed to update comment:', error);
+        showToast('댓글 수정에 실패했습니다.', 'error');
+    }
+}
+
+// Delete comment
+async function deleteComment(commentId, postId) {
+    if (!confirm('정말로 이 댓글을 삭제하시겠습니까?')) {
+        toggleCommentMenu(commentId);
+        return;
+    }
+    
+    try {
+        await axios.delete(`/api/comments/${commentId}`);
+        showToast('댓글이 삭제되었습니다.', 'success');
+        
+        // Refresh comments
+        refreshComments(postId);
+    } catch (error) {
+        console.error('Failed to delete comment:', error);
+        showToast('댓글 삭제에 실패했습니다.', 'error');
     }
 }
 

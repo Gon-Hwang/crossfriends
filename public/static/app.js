@@ -2321,7 +2321,7 @@ async function loadPosts() {
             const backgroundStyle = post.background_color ? `style="background-color: ${post.background_color};"` : '';
             
             postsHtml += `
-                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1 overflow-hidden" ${backgroundStyle}>
+                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1" ${backgroundStyle}>
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
                             <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">${avatarHtml}</div>
@@ -2343,28 +2343,28 @@ async function loadPosts() {
                                                 title="더보기">
                                                 <i class="fas fa-ellipsis-v text-sm"></i>
                                             </button>
-                                            <div id="post-menu-${post.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                            <div id="post-menu-${post.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1">
                                                 ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
                                                     <button 
                                                         onclick="editPost(${post.id})"
-                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center space-x-2 text-sm">
-                                                        <i class="fas fa-edit text-blue-600"></i>
-                                                        <span>게시물 수정</span>
+                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center text-sm">
+                                                        <i class="fas fa-edit text-blue-600 w-5"></i>
+                                                        <span class="ml-2">게시물 수정</span>
                                                     </button>
                                                 ` : ''}
                                                 <button 
                                                     onclick="copyPostLink(${post.id})"
-                                                    class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center space-x-2 text-sm">
-                                                    <i class="fas fa-link text-green-600"></i>
-                                                    <span>링크 복사</span>
+                                                    class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center text-sm">
+                                                    <i class="fas fa-link text-green-600 w-5"></i>
+                                                    <span class="ml-2">링크 복사</span>
                                                 </button>
                                                 ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
                                                     <hr class="my-1">
                                                     <button 
                                                         onclick="deletePost(${post.id})"
-                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center space-x-2 text-sm text-red-600">
-                                                        <i class="fas fa-trash-alt"></i>
-                                                        <span>게시물 삭제</span>
+                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center text-sm text-red-600">
+                                                        <i class="fas fa-trash-alt w-5"></i>
+                                                        <span class="ml-2">게시물 삭제</span>
                                                     </button>
                                                 ` : ''}
                                             </div>

@@ -1008,6 +1008,30 @@ app.put('/api/admin/users/:id/scores', requireAdmin, async (c) => {
   })
 })
 
+// Admin: Reset all user scores to 0
+app.post('/api/admin/users/reset-scores', requireAdmin, async (c) => {
+  const { DB } = c.env
+  
+  try {
+    // Reset all scores to 0 for all users
+    const result = await DB.prepare(
+      'UPDATE users SET typing_score = 0, video_score = 0, prayer_score = 0, activity_score = 0'
+    ).run()
+    
+    // Get count of affected users
+    const userCount = await DB.prepare('SELECT COUNT(*) as count FROM users').first()
+    
+    return c.json({ 
+      success: true, 
+      affected_users: userCount?.count || 0,
+      message: '모든 회원의 점수가 0으로 초기화되었습니다.'
+    })
+  } catch (error) {
+    console.error('Failed to reset scores:', error)
+    return c.json({ error: '점수 초기화에 실패했습니다.' }, 500)
+  }
+})
+
 // Admin: Delete user
 app.delete('/api/admin/users/:id', requireAdmin, async (c) => {
   const { DB } = c.env
@@ -1486,6 +1510,7 @@ app.get('/admin', (c) => {
             window.deleteFakeUsers = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteUser = function() { console.log('Function will be replaced after DOM loads'); };
             window.editUserScore = function() { console.log('Function will be replaced after DOM loads'); };
+            window.resetAllScores = function() { console.log('Function will be replaced after DOM loads'); };
             window.loadAdminPosts = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteAdminPost = function() { console.log('Function will be replaced after DOM loads'); };
             window.deleteAllPosts = function() { console.log('Function will be replaced after DOM loads'); };
@@ -1559,6 +1584,9 @@ app.get('/admin', (c) => {
                         <i class="fas fa-users text-red-600 mr-2"></i>회원 관리
                     </h2>
                     <div class="flex space-x-2">
+                        <button onclick="resetAllScores()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition">
+                            <i class="fas fa-undo mr-2"></i>모든 점수 초기화
+                        </button>
                         <button onclick="createFakeUsers()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
                             <i class="fas fa-user-plus mr-2"></i>테스트 사용자 생성
                         </button>
@@ -1826,6 +1854,31 @@ app.get('/admin', (c) => {
                     } else {
                         alert('사용자 삭제에 실패했습니다.');
                     }
+                }
+            }
+
+            window.resetAllScores = async function() {
+                if (!confirm('⚠️ 경고: 모든 회원의 모든 점수를 0으로 초기화하시겠습니까?\\n\\n이 작업은 되돌릴 수 없습니다.\\n- 성경점수 (typing_score)\\n- 영상점수 (video_score)\\n- 기도점수 (prayer_score)\\n- 활동점수 (activity_score)')) {
+                    return;
+                }
+                
+                // Double confirmation
+                const confirmText = prompt('정말로 초기화하시려면 "RESET"을 입력하세요:');
+                if (confirmText !== 'RESET') {
+                    alert('초기화가 취소되었습니다.');
+                    return;
+                }
+                
+                try {
+                    const response = await axios.post('/api/admin/users/reset-scores', {}, {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    
+                    alert(\`✅ \${response.data.message}\\n\\n영향받은 회원 수: \${response.data.affected_users}명\`);
+                    loadUsers();
+                } catch (error) {
+                    console.error('Failed to reset scores:', error);
+                    alert('점수 초기화에 실패했습니다.');
                 }
             }
 

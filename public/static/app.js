@@ -975,10 +975,25 @@ async function showEditProfileModal() {
         
         // Show current avatar
         const editAvatarPreview = document.getElementById('editAvatarPreview');
-        if (user.avatar_url) {
+        const editAvatarButtons = document.getElementById('editAvatarButtons');
+        const editAvatarNote = document.getElementById('editAvatarNote');
+        
+        if (user.role === 'admin') {
+            // Admin always shows crown icon
+            editAvatarPreview.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
+            // Hide avatar buttons and note for admin
+            if (editAvatarButtons) editAvatarButtons.style.display = 'none';
+            if (editAvatarNote) editAvatarNote.style.display = 'none';
+        } else if (user.avatar_url) {
             editAvatarPreview.innerHTML = '<img src="' + user.avatar_url + '" class="w-full h-full object-cover" />';
+            // Show avatar buttons and note for regular users
+            if (editAvatarButtons) editAvatarButtons.style.display = 'flex';
+            if (editAvatarNote) editAvatarNote.style.display = 'block';
         } else {
             editAvatarPreview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+            // Show avatar buttons and note for regular users
+            if (editAvatarButtons) editAvatarButtons.style.display = 'flex';
+            if (editAvatarNote) editAvatarNote.style.display = 'block';
         }
     } catch (error) {
         console.error('Failed to load user data:', error);

@@ -2262,7 +2262,7 @@ app.get('/', (c) => {
                                     onchange="previewEditAvatar(event)"
                                     class="hidden"
                                 />
-                                <div class="flex space-x-2">
+                                <div id="editAvatarButtons" class="flex space-x-2">
                                     <label 
                                         for="editAvatar"
                                         class="cursor-pointer inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
@@ -2275,7 +2275,7 @@ app.get('/', (c) => {
                                         <i class="fas fa-trash mr-2"></i>사진 삭제
                                     </button>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-2">JPG, PNG (최대 5MB)</p>
+                                <p id="editAvatarNote" class="text-xs text-gray-500 mt-2">JPG, PNG (최대 5MB)</p>
                             </div>
                         </div>
                     </div>

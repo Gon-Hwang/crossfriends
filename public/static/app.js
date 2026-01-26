@@ -617,18 +617,8 @@ function checkTyping() {
     }
     
     typingResult.innerHTML = `
-        <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-4">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center space-x-2">
-                    <i class="fas ${resultIcon} ${resultColor} text-xl"></i>
-                    <span class="font-bold ${resultColor}">${resultMessage}</span>
-                </div>
-                <span class="text-sm text-gray-600">정확도: <strong>${accuracy}%</strong></span>
-            </div>
-            <div class="text-sm text-gray-700">
-                <p class="mb-1">획득 점수: <strong class="${pointsEarned > 0 ? 'text-yellow-600' : 'text-gray-500'}">+${pointsEarned}점</strong></p>
-                ${bonusMessage}
-            </div>
+        <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-3 text-center">
+            <p class="text-sm text-gray-700">타이핑을 완료하고 엔터를 누르면 <strong class="text-blue-600">100점</strong></p>
         </div>
     `;
     

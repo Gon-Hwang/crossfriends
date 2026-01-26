@@ -2774,6 +2774,48 @@ function formatDate(dateString) {
     return date.toLocaleDateString('ko-KR');
 }
 
+// Show toast notification
+function showToast(message, type = 'info') {
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    existingToasts.forEach(toast => toast.remove());
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-[10000] transform transition-all duration-300 translate-x-0';
+    
+    // Set color based on type
+    if (type === 'success') {
+        toast.classList.add('bg-green-600');
+        toast.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+    } else if (type === 'error') {
+        toast.classList.add('bg-red-600');
+        toast.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${message}`;
+    } else if (type === 'warning') {
+        toast.classList.add('bg-yellow-600');
+        toast.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i>${message}`;
+    } else {
+        toast.classList.add('bg-blue-600');
+        toast.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
+    }
+    
+    // Add to body
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.transform = 'translateX(400px)';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+
 // Auto-login from localStorage
 async function autoLogin() {
     const savedUserId = localStorage.getItem('currentUserId');

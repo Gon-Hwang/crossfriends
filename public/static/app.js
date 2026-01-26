@@ -155,7 +155,7 @@ async function checkVideoCompletion() {
         
         // Show reward with actual points earned from server
         const pointsEarned = result ? result.points_earned : 100;
-        const totalScore = result ? result.video_score : (videoScore + 100);
+        const totalScore = result ? result.scripture_score : (videoScore + 100);
         
         showVideoCompletionReward(pointsEarned, typingScore + totalScore);
         
@@ -253,7 +253,7 @@ async function loadUserScores() {
         const data = response.data;
         
         typingScore = data.typing_score || 0;
-        videoScore = data.video_score || 0;
+        videoScore = data.scripture_score || 0;
         prayerScore = data.prayer_score || 0;
         activityScore = data.activity_score || 0;
         
@@ -313,14 +313,14 @@ async function saveVideoScore(videoId) {
         });
         
         // Update local score with the response
-        videoScore = response.data.video_score;
+        videoScore = response.data.scripture_score;
         updateTypingScoreDisplay();
         
         // Show notification
         if (response.data.already_completed) {
             showToast(response.data.message, 'warning');
         } else {
-            showToast(`${response.data.message} (총 ${response.data.video_score}점)`, 'success');
+            showToast(`${response.data.message} (총 ${response.data.scripture_score}점)`, 'success');
         }
         
         return response.data;

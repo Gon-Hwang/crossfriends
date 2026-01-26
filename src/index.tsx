@@ -636,7 +636,7 @@ app.get('/api/users/:id/scores', async (c) => {
   const userId = c.req.param('id')
   
   const user = await DB.prepare(
-    'SELECT typing_score, video_score, prayer_score, activity_score, completed_videos, completed_verses FROM users WHERE id = ?'
+    'SELECT scripture_score, prayer_score, activity_score, completed_videos, completed_verses FROM users WHERE id = ?'
   ).bind(userId).first()
   
   if (!user) {
@@ -659,11 +659,10 @@ app.get('/api/users/:id/scores', async (c) => {
     completedVerses = []
   }
   
-  const totalScore = (user.typing_score || 0) + (user.video_score || 0) + (user.prayer_score || 0)
+  const totalScore = (user.scripture_score || 0) + (user.prayer_score || 0)
   
   return c.json({
-    typing_score: user.typing_score || 0,
-    video_score: user.video_score || 0,
+    scripture_score: user.scripture_score || 0,
     prayer_score: user.prayer_score || 0,
     activity_score: user.activity_score || 0,
     total_score: totalScore,
@@ -672,7 +671,7 @@ app.get('/api/users/:id/scores', async (c) => {
   })
 })
 
-// Update typing score
+// Update scripture (typing) score
 app.post('/api/users/:id/scores/typing', async (c) => {
   const { DB } = c.env
   const userId = c.req.param('id')
@@ -682,16 +681,16 @@ app.post('/api/users/:id/scores/typing', async (c) => {
   if (completed_verses !== undefined) {
     // Update both score and completed verses
     await DB.prepare(
-      'UPDATE users SET typing_score = ?, completed_verses = ? WHERE id = ?'
+      'UPDATE users SET scripture_score = ?, completed_verses = ? WHERE id = ?'
     ).bind(score, JSON.stringify(completed_verses), userId).run()
   } else {
     // Update only score
     await DB.prepare(
-      'UPDATE users SET typing_score = ? WHERE id = ?'
+      'UPDATE users SET scripture_score = ? WHERE id = ?'
     ).bind(score, userId).run()
   }
   
-  return c.json({ success: true, typing_score: score })
+  return c.json({ success: true, scripture_score: score })
 })
 
 // Update video score and completed videos (when fully completed)
@@ -702,7 +701,7 @@ app.post('/api/users/:id/scores/video', async (c) => {
   
   // Get current completed videos and score
   const user = await DB.prepare(
-    'SELECT completed_videos, video_score FROM users WHERE id = ?'
+    'SELECT completed_videos, scripture_score FROM users WHERE id = ?'
   ).bind(userId).first()
   
   if (!user) {
@@ -725,7 +724,7 @@ app.post('/api/users/:id/scores/video', async (c) => {
   if (existingVideo && existingVideo.completed) {
     return c.json({ 
       success: true, 
-      video_score: user.video_score,
+      scripture_score: user.scripture_score,
       completed_videos: completedVideos,
       already_completed: true,
       message: '이미 시청 완료한 설교입니다. 점수는 한 번만 지급됩니다.'
@@ -733,7 +732,7 @@ app.post('/api/users/:id/scores/video', async (c) => {
   }
   
   // Calculate new score (add 100 points)
-  const currentScore = parseInt(user.video_score) || 0
+  const currentScore = parseInt(user.scripture_score) || 0
   const newScore = currentScore + 100
   
   const existingIndex = completedVideos.findIndex((v: any) => 
@@ -762,12 +761,12 @@ app.post('/api/users/:id/scores/video', async (c) => {
   
   // Update with new score
   await DB.prepare(
-    'UPDATE users SET video_score = ?, completed_videos = ? WHERE id = ?'
+    'UPDATE users SET scripture_score = ?, completed_videos = ? WHERE id = ?'
   ).bind(newScore, JSON.stringify(completedVideos), userId).run()
   
   return c.json({ 
     success: true, 
-    video_score: newScore,
+    scripture_score: newScore,
     completed_videos: completedVideos,
     already_completed: false,
     points_earned: 100,
@@ -898,17 +897,17 @@ app.post('/api/users/:id/scores/scripture', async (c) => {
   const userId = c.req.param('id')
   const { points } = await c.req.json()
   
-  // Get current typing score (scripture score)
+  // Get current scripture score
   const user = await DB.prepare(
-    'SELECT typing_score FROM users WHERE id = ?'
+    'SELECT scripture_score FROM users WHERE id = ?'
   ).bind(userId).first()
   
-  const currentScore = user?.typing_score || 0
+  const currentScore = user?.scripture_score || 0
   const newScore = currentScore + points
   
-  // Update typing score (scripture score)
+  // Update scripture score
   await DB.prepare(
-    'UPDATE users SET typing_score = ? WHERE id = ?'
+    'UPDATE users SET scripture_score = ? WHERE id = ?'
   ).bind(newScore, userId).run()
   
   return c.json({ 
@@ -946,6 +945,7 @@ app.get('/api/admin/users', requireAdmin, async (c) => {
   const { results } = await DB.prepare(`
     SELECT 
       u.id, u.email, u.name, u.church, u.denomination, u.location, u.role, u.created_at,
+      u.scripture_score, u.prayer_score, u.activity_score,
       (SELECT COUNT(*) FROM posts WHERE user_id = u.id) as post_count,
       (SELECT COUNT(*) FROM comments WHERE user_id = u.id) as comment_count,
       (SELECT COUNT(*) FROM prayer_requests WHERE user_id = u.id) as prayer_count
@@ -975,11 +975,11 @@ app.put('/api/admin/users/:id/role', requireAdmin, async (c) => {
 app.put('/api/admin/users/:id/scores', requireAdmin, async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const { typing_score, prayer_score, activity_score } = await c.req.json()
+  const { scripture_score, prayer_score, activity_score } = await c.req.json()
   
   // Validate scores are numbers
-  if (typing_score !== undefined && (typeof typing_score !== 'number' || typing_score < 0)) {
-    return c.json({ error: 'Invalid typing_score' }, 400)
+  if (scripture_score !== undefined && (typeof scripture_score !== 'number' || scripture_score < 0)) {
+    return c.json({ error: 'Invalid scripture_score' }, 400)
   }
   if (prayer_score !== undefined && (typeof prayer_score !== 'number' || prayer_score < 0)) {
     return c.json({ error: 'Invalid prayer_score' }, 400)
@@ -990,9 +990,9 @@ app.put('/api/admin/users/:id/scores', requireAdmin, async (c) => {
   
   // Update scores
   await DB.prepare(
-    'UPDATE users SET typing_score = ?, prayer_score = ?, activity_score = ? WHERE id = ?'
+    'UPDATE users SET scripture_score = ?, prayer_score = ?, activity_score = ? WHERE id = ?'
   ).bind(
-    typing_score !== undefined ? typing_score : 0,
+    scripture_score !== undefined ? scripture_score : 0,
     prayer_score !== undefined ? prayer_score : 0,
     activity_score !== undefined ? activity_score : 0,
     id
@@ -1001,7 +1001,7 @@ app.put('/api/admin/users/:id/scores', requireAdmin, async (c) => {
   return c.json({ 
     success: true, 
     id, 
-    typing_score, 
+    scripture_score, 
     prayer_score, 
     activity_score 
   })
@@ -1014,7 +1014,7 @@ app.post('/api/admin/users/reset-scores', requireAdmin, async (c) => {
   try {
     // Reset all scores to 0 for all users
     const result = await DB.prepare(
-      'UPDATE users SET typing_score = 0, video_score = 0, prayer_score = 0, activity_score = 0'
+      'UPDATE users SET scripture_score = 0, prayer_score = 0, activity_score = 0'
     ).run()
     
     // Get count of affected users
@@ -1784,10 +1784,10 @@ app.get('/admin', (c) => {
                             <td class="px-4 py-3 text-sm">\${user.post_count}</td>
                             <td class="px-4 py-3 text-sm">
                                 <button 
-                                    onclick="editUserScore(\${user.id}, 'typing_score', \${user.typing_score || 0}, '성경점수')"
+                                    onclick="editUserScore(\${user.id}, 'scripture_score', \${user.scripture_score || 0}, '성경점수')"
                                     class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer transition">
                                     <i class="fas fa-bible text-xs mr-1"></i>
-                                    \${user.typing_score || 0}
+                                    \${user.scripture_score || 0}
                                     <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
                                 </button>
                             </td>
@@ -1837,7 +1837,7 @@ app.get('/admin', (c) => {
                 
                 try {
                     const scores = {
-                        typing_score: scoreType === 'typing_score' ? score : undefined,
+                        scripture_score: scoreType === 'scripture_score' ? score : undefined,
                         prayer_score: scoreType === 'prayer_score' ? score : undefined,
                         activity_score: scoreType === 'activity_score' ? score : undefined
                     };
@@ -1855,7 +1855,7 @@ app.get('/admin', (c) => {
                     
                     // Set all scores (keep existing ones for other score types)
                     const updateData = {
-                        typing_score: scoreType === 'typing_score' ? score : (user.typing_score || 0),
+                        scripture_score: scoreType === 'scripture_score' ? score : (user.scripture_score || 0),
                         prayer_score: scoreType === 'prayer_score' ? score : (user.prayer_score || 0),
                         activity_score: scoreType === 'activity_score' ? score : (user.activity_score || 0)
                     };
@@ -1932,7 +1932,7 @@ app.get('/admin', (c) => {
             }
 
             window.resetAllScores = async function() {
-                if (!confirm('⚠️ 경고: 모든 회원의 모든 점수를 0으로 초기화하시겠습니까?\\n\\n이 작업은 되돌릴 수 없습니다.\\n- 성경점수 (typing_score)\\n- 영상점수 (video_score)\\n- 기도점수 (prayer_score)\\n- 활동점수 (activity_score)')) {
+                if (!confirm('⚠️ 경고: 모든 회원의 모든 점수를 0으로 초기화하시겠습니까?\\n\\n이 작업은 되돌릴 수 없습니다.\\n- 성경점수 (scripture_score)\\n- 기도점수 (prayer_score)\\n- 활동점수 (activity_score)')) {
                     return;
                 }
                 

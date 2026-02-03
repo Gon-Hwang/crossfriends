@@ -26,7 +26,7 @@ app.get('/api/users', async (c) => {
 app.get('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers FROM users WHERE id = ?').bind(id).first()
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.json({ error: 'User not found' }, 404)
@@ -38,7 +38,7 @@ app.get('/api/users/:id', async (c) => {
 // Create new user
 app.post('/api/users', async (c) => {
   const { DB } = c.env
-  const { email, name, bio, church, pastor, denomination, location, position, gender, faith_answers } = await c.req.json()
+  const { email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, marital_status } = await c.req.json()
   
   // Check if this is the first user (will become admin)
   const userCountResult = await DB.prepare('SELECT COUNT(*) as count FROM users').first()
@@ -46,8 +46,8 @@ app.post('/api/users', async (c) => {
   const role = userCount === 0 ? 'admin' : 'user'
   
   const result = await DB.prepare(
-    'INSERT INTO users (email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(email, name, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role).run()
+    'INSERT INTO users (email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, role, marital_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(email, name, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role, marital_status || null).run()
   
   return c.json({ id: result.meta.last_row_id, email, name, role }, 201)
 })
@@ -56,11 +56,11 @@ app.post('/api/users', async (c) => {
 app.put('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers } = await c.req.json()
+  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status } = await c.req.json()
   
   await DB.prepare(
-    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, id).run()
+    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, id).run()
   
   return c.json({ success: true })
 })
@@ -3193,6 +3193,18 @@ app.get('/', (c) => {
                         </select>
                     </div>
                     
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼 유무 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <select 
+                            id="signupMaritalStatus"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            <option value="">선택하세요</option>
+                            <option value="single">미혼</option>
+                            <option value="married">기혼</option>
+                            <option value="other">기타</option>
+                        </select>
+                    </div>
+                    
                     <!-- 신앙 고백 질문 섹션 -->
                     <div class="border-t pt-4 mt-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">
@@ -3521,6 +3533,18 @@ app.get('/', (c) => {
                             <option value="새가족">새가족</option>
                             <option value="잘모름">잘모름</option>
                             <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼 유무</label>
+                        <select 
+                            id="editMaritalStatus"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            <option value="">선택하세요</option>
+                            <option value="single">미혼</option>
+                            <option value="married">기혼</option>
+                            <option value="other">기타</option>
                         </select>
                     </div>
                     

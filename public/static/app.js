@@ -1051,6 +1051,17 @@ async function showEditProfileModal() {
                                     <option value="선교사" ${user.position === '선교사' ? 'selected' : ''}>선교사</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">결혼 유무</label>
+                                <select 
+                                    id="editMaritalStatusInline"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
+                                    <option value="">선택</option>
+                                    <option value="single" ${user.marital_status === 'single' ? 'selected' : ''}>미혼</option>
+                                    <option value="married" ${user.marital_status === 'married' ? 'selected' : ''}>기혼</option>
+                                    <option value="other" ${user.marital_status === 'other' ? 'selected' : ''}>기타</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     
@@ -1461,6 +1472,7 @@ async function handleEditProfileSubmit(event) {
     const church = document.getElementById('editChurchInline').value;
     const pastor = document.getElementById('editPastorInline').value;
     const position = document.getElementById('editPositionInline').value;
+    const maritalStatus = document.getElementById('editMaritalStatusInline').value;
     const avatarFile = document.getElementById('editAvatarInline')?.files[0];
     
     // 학교 정보 수집 (기존 방식)
@@ -1554,6 +1566,7 @@ async function handleEditProfileSubmit(event) {
             church,
             pastor,
             position,
+            marital_status: maritalStatus,
             faith_answers: JSON.stringify(faithAnswers),
             elementary_school,
             middle_school,
@@ -1661,6 +1674,7 @@ async function handleEditProfile() {
     const church = document.getElementById('editChurch').value;
     const pastor = document.getElementById('editPastor').value;
     const position = document.getElementById('editPosition').value;
+    const maritalStatus = document.getElementById('editMaritalStatus').value;
     const avatarFile = document.getElementById('editAvatar').files[0];
     
     // 신앙 고백 답변 수집
@@ -1690,6 +1704,7 @@ async function handleEditProfile() {
             church,
             pastor,
             position,
+            marital_status: maritalStatus,
             faith_answers: JSON.stringify(faithAnswers)
         });
 
@@ -1781,6 +1796,7 @@ async function handleEditProfile() {
     const church = document.getElementById('editChurch').value;
     const pastor = document.getElementById('editPastor').value;
     const position = document.getElementById('editPosition').value;
+    const maritalStatus = document.getElementById('editMaritalStatus').value;
     const avatarFile = document.getElementById('editAvatar').files[0];
     
     // 신앙 고백 답변 수집
@@ -1810,6 +1826,7 @@ async function handleEditProfile() {
             church,
             pastor,
             position,
+            marital_status: maritalStatus,
             faith_answers: JSON.stringify(faithAnswers)
         });
 
@@ -1853,6 +1870,7 @@ async function handleSignup() {
     const city = document.getElementById('signupCity').value;
     const gender = document.getElementById('signupGender').value;
     const position = document.getElementById('signupPosition').value;
+    const maritalStatus = document.getElementById('signupMaritalStatus').value;
     const avatarFile = document.getElementById('signupAvatar').files[0];
     
     // 신앙 고백 답변 수집
@@ -1906,6 +1924,7 @@ async function handleSignup() {
             location,
             position,
             gender,
+            marital_status: maritalStatus,
             faith_answers: JSON.stringify(faithAnswers)
         });
 
@@ -3794,6 +3813,7 @@ async function showUserProfileModal(userId) {
                         <div class="space-y-2 text-sm text-gray-700">
                             <p><strong>이메일:</strong> ${user.email || '미입력'}</p>
                             <p><strong>성별:</strong> ${user.gender || '미입력'}</p>
+                            <p><strong>결혼 유무:</strong> ${user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : '미입력'}</p>
                         </div>
                     </div>
                     

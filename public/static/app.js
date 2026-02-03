@@ -1052,7 +1052,7 @@ async function showEditProfileModal() {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">결혼 유무</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">결혼</label>
                                 <select 
                                     id="editMaritalStatusInline"
                                     class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
@@ -1061,6 +1061,24 @@ async function showEditProfileModal() {
                                     <option value="married" ${user.marital_status === 'married' ? 'selected' : ''}>기혼</option>
                                     <option value="other" ${user.marital_status === 'other' ? 'selected' : ''}>기타</option>
                                 </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+                                <input 
+                                    type="tel" 
+                                    id="editPhoneInline"
+                                    placeholder="010-1234-5678"
+                                    value="${user.phone || ''}"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">주소</label>
+                                <input 
+                                    type="text" 
+                                    id="editAddressInline"
+                                    placeholder="서울특별시 강남구..."
+                                    value="${user.address || ''}"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
                             </div>
                         </div>
                     </div>
@@ -1473,6 +1491,8 @@ async function handleEditProfileSubmit(event) {
     const pastor = document.getElementById('editPastorInline').value;
     const position = document.getElementById('editPositionInline').value;
     const maritalStatus = document.getElementById('editMaritalStatusInline').value;
+    const phone = document.getElementById('editPhoneInline').value;
+    const address = document.getElementById('editAddressInline').value;
     const avatarFile = document.getElementById('editAvatarInline')?.files[0];
     
     // 학교 정보 수집 (기존 방식)
@@ -1567,6 +1587,8 @@ async function handleEditProfileSubmit(event) {
             pastor,
             position,
             marital_status: maritalStatus,
+            phone,
+            address,
             faith_answers: JSON.stringify(faithAnswers),
             elementary_school,
             middle_school,
@@ -3842,7 +3864,9 @@ async function showUserProfileModal(userId) {
                         <div class="space-y-2 text-sm text-gray-700">
                             <p><strong>이메일:</strong> ${user.email || '미입력'}</p>
                             <p><strong>성별:</strong> ${user.gender || '미입력'}</p>
-                            <p><strong>결혼 유무:</strong> ${user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : '미입력'}</p>
+                            <p><strong>결혼:</strong> ${user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : '미입력'}</p>
+                            <p><strong>전화번호:</strong> ${user.phone || '미입력'}</p>
+                            <p><strong>주소:</strong> ${user.address || '미입력'}</p>
                         </div>
                     </div>
                     

@@ -3282,7 +3282,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼 유무 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼 <span class="text-xs text-gray-500">(선택)</span></label>
                         <select 
                             id="signupMaritalStatus"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -3648,7 +3648,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼 유무</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼</label>
                         <select 
                             id="editMaritalStatus"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">

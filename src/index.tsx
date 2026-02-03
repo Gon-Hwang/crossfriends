@@ -15,6 +15,66 @@ app.use('/static/*', serveStatic({ root: './public' }))
 // API Routes - Users
 // =====================
 
+// Login endpoint
+app.post('/api/login', async (c) => {
+  const { DB } = c.env
+  const { email } = await c.req.json()
+  
+  // Normalize email (trim and lowercase)
+  const normalizedEmail = email.trim().toLowerCase()
+  
+  // Special handling for admin email - auto-create if doesn't exist
+  if (normalizedEmail === 'holofa518@gmail.com') {
+    // Check if admin account exists
+    let user = await DB.prepare('SELECT * FROM users WHERE LOWER(email) = ?').bind(normalizedEmail).first()
+    
+    if (!user) {
+      // Create admin account automatically
+      const result = await DB.prepare(
+        'INSERT INTO users (email, name, role) VALUES (?, ?, ?)'
+      ).bind('holofa518@gmail.com', '관리자', 'admin').run()
+      
+      // Fetch the newly created user
+      user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(result.meta.last_row_id).first()
+    } else {
+      // Ensure this user is admin
+      if (user.role !== 'admin') {
+        await DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind('admin', user.id).run()
+        user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first()
+      }
+    }
+    
+    return c.json({ 
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar_url: user.avatar_url,
+        church: user.church
+      }
+    })
+  }
+  
+  // Regular login for other users
+  const user = await DB.prepare('SELECT * FROM users WHERE LOWER(email) = ?').bind(normalizedEmail).first()
+  
+  if (!user) {
+    return c.json({ error: '등록되지 않은 이메일입니다. 회원가입을 진행해주세요.' }, 404)
+  }
+  
+  return c.json({ 
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      avatar_url: user.avatar_url,
+      church: user.church
+    }
+  })
+})
+
 // Get all users
 app.get('/api/users', async (c) => {
   const { DB } = c.env

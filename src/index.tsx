@@ -3265,6 +3265,29 @@ app.get('/', (c) => {
                         </select>
                     </div>
                     
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">주소 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <input 
+                            id="signupAddress"
+                            type="text"
+                            placeholder="예) 서울특별시 강남구 테헤란로 123"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">도로명 주소 또는 지번 주소를 입력해주세요</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">전화번호 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <input 
+                            id="signupPhone"
+                            type="tel"
+                            placeholder="예) 010-1234-5678"
+                            pattern="[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}"
+                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">하이픈(-)을 포함하여 입력해주세요</p>
+                    </div>
+                    
                     <!-- 신앙 고백 질문 섹션 -->
                     <div class="border-t pt-4 mt-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">

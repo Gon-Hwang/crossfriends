@@ -1871,6 +1871,8 @@ async function handleSignup() {
     const gender = document.getElementById('signupGender').value;
     const position = document.getElementById('signupPosition').value;
     const maritalStatus = document.getElementById('signupMaritalStatus').value;
+    const address = document.getElementById('signupAddress').value;
+    const phone = document.getElementById('signupPhone').value;
     const avatarFile = document.getElementById('signupAvatar').files[0];
     
     // 신앙 고백 답변 수집
@@ -1909,6 +1911,15 @@ async function handleSignup() {
         alert('올바른 이메일 형식을 입력해주세요.');
         return;
     }
+    
+    // Phone validation (optional, only if provided)
+    if (phone) {
+        const phoneRegex = /^[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}$/;
+        if (!phoneRegex.test(phone)) {
+            alert('전화번호는 하이픈(-)을 포함하여 입력해주세요. 예) 010-1234-5678');
+            return;
+        }
+    }
 
     // 교회 위치 조합: 도 + 시 (둘 다 있을 경우만)
     const location = (province && city) ? (province + ' ' + city) : '';
@@ -1925,6 +1936,8 @@ async function handleSignup() {
             position,
             gender,
             marital_status: maritalStatus,
+            address,
+            phone,
             faith_answers: JSON.stringify(faithAnswers)
         });
 

@@ -2004,16 +2004,21 @@ async function handleLogin() {
     console.log('로그인 시도:', trimmedEmail);
 
     try {
-        // Find user by email
-        const response = await axios.get('/api/users');
-        console.log('사용자 목록 조회 성공:', response.data.users.length, '명');
+        // Use /api/login endpoint (handles admin auto-creation)
+        const response = await axios.post('/api/login', {
+            email: trimmedEmail
+        });
         
-        const user = response.data.users.find(u => u.email.toLowerCase() === trimmedEmail.toLowerCase());
-
-        if (user) {
-            console.log('사용자 찾음:', user);
+        if (response.data.user) {
+            const user = response.data.user;
+            console.log('로그인 성공:', user);
+            
             currentUserId = user.id;
             currentUser = user;
+            
+            // Save to localStorage
+            localStorage.setItem('currentUserId', user.id);
+            localStorage.setItem('currentUserEmail', user.email);
             
             // Save email to history
             saveEmailToHistory(trimmedEmail);
@@ -2024,15 +2029,23 @@ async function handleLogin() {
             updateAuthUI();
             hideLoginModal();
             loadPosts();
-            alert(`환영합니다, ${user.name}님! 😊`);
-        } else {
-            console.log('사용자를 찾을 수 없음. 입력된 이메일:', trimmedEmail);
-            console.log('등록된 이메일 목록:', response.data.users.map(u => u.email));
-            alert('가입되지 않은 이메일입니다. 회원가입을 먼저 해주세요.');
+            
+            // Special welcome for admin
+            if (user.role === 'admin') {
+                alert(`🎉 관리자님 환영합니다! (${user.name})`);
+            } else {
+                alert(`환영합니다, ${user.name}님! 😊`);
+            }
         }
     } catch (error) {
         console.error('Login error:', error);
-        alert('로그인에 실패했습니다. 콘솔을 확인해주세요.');
+        
+        if (error.response && error.response.status === 404) {
+            // User not found - redirect to signup
+            alert('가입되지 않은 이메일입니다. 회원가입을 먼저 해주세요.');
+        } else {
+            alert('로그인에 실패했습니다. 다시 시도해주세요.');
+        }
     }
 }
 
@@ -3659,33 +3672,36 @@ function showToastWithColor(message, backgroundColor) {
 // Auto-login from localStorage
 async function autoLogin() {
     const savedUserId = localStorage.getItem('currentUserId');
-    const savedUser = localStorage.getItem('currentUser');
+    const savedEmail = localStorage.getItem('currentUserEmail');
     
-    if (savedUserId && savedUser) {
+    if (savedUserId && savedEmail) {
         try {
-            // Verify user still exists in database
-            const response = await axios.get('/api/users/' + savedUserId);
+            // Use /api/login endpoint (handles admin auto-creation)
+            const response = await axios.post('/api/login', {
+                email: savedEmail
+            });
             
             if (response.data.user) {
                 // User exists, restore session
-                currentUserId = parseInt(savedUserId);
+                currentUserId = response.data.user.id;
                 currentUser = response.data.user;
+                
+                // Update localStorage with latest data
+                localStorage.setItem('currentUserId', response.data.user.id);
+                
                 updateAuthUI();
                 
                 // Load user scores from API
                 await loadUserScores();
                 
                 loadPosts();
-                console.log('자동 로그인 성공:', currentUser.name);
-            } else {
-                // User doesn't exist, clear localStorage
-                localStorage.removeItem('currentUserId');
-                localStorage.removeItem('currentUser');
+                console.log('자동 로그인 성공:', currentUser.name, '(역할:', currentUser.role + ')');
             }
         } catch (error) {
             // Error fetching user, clear localStorage
             console.error('자동 로그인 실패:', error);
             localStorage.removeItem('currentUserId');
+            localStorage.removeItem('currentUserEmail');
             localStorage.removeItem('currentUser');
         }
     }

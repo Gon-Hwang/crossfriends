@@ -10,5 +10,22 @@ export default defineConfig({
       adapter,
       entry: 'src/index.tsx'
     })
-  ]
+  ],
+  server: {
+    // Disable service worker warnings in development
+    strictPort: false,
+    hmr: {
+      overlay: false // Disable error overlay for warnings
+    }
+  },
+  build: {
+    // Suppress warnings during build
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Ignore service worker warnings
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return
+        warn(warning)
+      }
+    }
+  }
 })

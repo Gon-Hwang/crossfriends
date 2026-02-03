@@ -1005,6 +1005,35 @@ async function showEditProfileModal() {
                                     <option value="여성" ${user.gender === '여성' ? 'selected' : ''}>여성</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">결혼</label>
+                                <select 
+                                    id="editMaritalStatusInline"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                    <option value="">선택</option>
+                                    <option value="single" ${user.marital_status === 'single' ? 'selected' : ''}>미혼</option>
+                                    <option value="married" ${user.marital_status === 'married' ? 'selected' : ''}>기혼</option>
+                                    <option value="other" ${user.marital_status === 'other' ? 'selected' : ''}>기타</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+                                <input 
+                                    type="tel" 
+                                    id="editPhoneInline"
+                                    placeholder="010-1234-5678"
+                                    value="${user.phone || ''}"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">주소</label>
+                                <input 
+                                    type="text" 
+                                    id="editAddressInline"
+                                    placeholder="서울특별시 강남구..."
+                                    value="${user.address || ''}"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
+                            </div>
                         </div>
                     </div>
                     
@@ -1050,35 +1079,6 @@ async function showEditProfileModal() {
                                     <option value="목사" ${user.position === '목사' ? 'selected' : ''}>목사</option>
                                     <option value="선교사" ${user.position === '선교사' ? 'selected' : ''}>선교사</option>
                                 </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">결혼</label>
-                                <select 
-                                    id="editMaritalStatusInline"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
-                                    <option value="">선택</option>
-                                    <option value="single" ${user.marital_status === 'single' ? 'selected' : ''}>미혼</option>
-                                    <option value="married" ${user.marital_status === 'married' ? 'selected' : ''}>기혼</option>
-                                    <option value="other" ${user.marital_status === 'other' ? 'selected' : ''}>기타</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
-                                <input 
-                                    type="tel" 
-                                    id="editPhoneInline"
-                                    placeholder="010-1234-5678"
-                                    value="${user.phone || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">주소</label>
-                                <input 
-                                    type="text" 
-                                    id="editAddressInline"
-                                    placeholder="서울특별시 강남구..."
-                                    value="${user.address || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
                             </div>
                         </div>
                     </div>

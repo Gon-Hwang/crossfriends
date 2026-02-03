@@ -26,7 +26,7 @@ app.get('/api/users', async (c) => {
 app.get('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at FROM users WHERE id = ?').bind(id).first()
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, masters, phd FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.json({ error: 'User not found' }, 404)
@@ -56,11 +56,11 @@ app.post('/api/users', async (c) => {
 app.put('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const { name, gender, church, pastor, position, faith_answers } = await c.req.json()
+  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, masters, phd } = await c.req.json()
   
   await DB.prepare(
-    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, id).run()
+    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, masters = ?, phd = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, masters || null, phd || null, id).run()
   
   return c.json({ success: true })
 })
@@ -194,6 +194,7 @@ app.get('/api/posts', async (c) => {
       sp.video_url as shared_video_url,
       sp.verse_reference as shared_verse_reference,
       sp.created_at as shared_created_at,
+      sp.user_id as shared_user_id,
       su.name as shared_user_name,
       su.avatar_url as shared_user_avatar,
       su.church as shared_user_church,
@@ -245,7 +246,7 @@ app.post('/api/posts', async (c) => {
   ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0, background_color || null).run()
   
   // 기도 포스팅(중보 기도 - 빨간색 배경)일 경우 기도 점수 20점 추가
-  if (background_color === '#FCA5A5') {
+  if (background_color === '#F87171') {
     const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.prayer_score || 0
     const newScore = currentScore + 20
@@ -253,7 +254,7 @@ app.post('/api/posts', async (c) => {
   }
   
   // 말씀 포스팅(노란색 배경)일 경우 성경 점수 10점 추가
-  if (background_color === '#FDE68A') {
+  if (background_color === '#F5E398') {
     const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.scripture_score || 0
     const newScore = currentScore + 10
@@ -261,7 +262,7 @@ app.post('/api/posts', async (c) => {
   }
   
   // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 10점 추가
-  const activityPostColors = ['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF']
+  const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF']
   if (activityPostColors.includes(background_color)) {
     const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.activity_score || 0
@@ -410,7 +411,7 @@ app.delete('/api/posts/:id', async (c) => {
   
   if (post) {
     // 기도 포스팅(중보 기도 - 빨간색 배경)이면 점수 차감
-    if (post.background_color === '#FCA5A5') {
+    if (post.background_color === '#F87171') {
       const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(post.user_id).first()
       const currentScore = user?.prayer_score || 0
       const newScore = Math.max(0, currentScore - 20) // 0점 이하로 내려가지 않도록
@@ -418,7 +419,7 @@ app.delete('/api/posts/:id', async (c) => {
     }
     
     // 말씀 포스팅(노란색 배경)이면 성경 점수 차감
-    if (post.background_color === '#FDE68A') {
+    if (post.background_color === '#F5E398') {
       const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(post.user_id).first()
       const currentScore = user?.scripture_score || 0
       const newScore = Math.max(0, currentScore - 10) // 0점 이하로 내려가지 않도록
@@ -426,7 +427,7 @@ app.delete('/api/posts/:id', async (c) => {
     }
     
     // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 차감
-    const activityPostColors = ['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF']
+    const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF']
     if (activityPostColors.includes(post.background_color)) {
       const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
       const currentScore = user?.activity_score || 0
@@ -1172,12 +1173,12 @@ app.get('/api/admin/stats', requireAdmin, async (c) => {
   const prayerCount = await DB.prepare('SELECT COUNT(*) as count FROM prayer_requests').first()
   
   // Post type counts by background color
-  const prayerPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FCA5A5'").first()
-  const versePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FDE68A'").first()
-  const dailyPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FED7AA'").first()
-  const ministryPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#A7F3D0'").first()
-  const praisePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#BAE6FD'").first()
-  const churchPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#DDD6FE'").first()
+  const prayerPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#F87171'").first()
+  const versePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#F5E398'").first()
+  const dailyPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#F5D4B3'").first()
+  const ministryPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#B3EDD8'").first()
+  const praisePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#C4E5F8'").first()
+  const churchPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#E2DBFB'").first()
   const freePostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#FFFFFF' OR background_color IS NULL").first()
   
   return c.json({
@@ -1296,42 +1297,42 @@ app.post('/api/admin/create-fake-posts', requireAdmin, async (c) => {
   
   // Post categories with background colors
   const categories = [
-    { name: '중보 기도', color: '#FCA5A5', contents: [
+    { name: '중보 기도', color: '#F87171', contents: [
       '힘든 시기를 보내고 있는 친구를 위해 기도해주세요.',
       '가족의 건강을 위해 함께 기도 부탁드립니다.',
       '취업을 준비하는 청년들을 위해 기도합니다.',
       '코로나로 어려움을 겪는 이웃을 위해 기도해요.',
       '북한 주민들의 자유를 위해 함께 기도합시다.'
     ]},
-    { name: '말씀', color: '#FDE68A', contents: [
+    { name: '말씀', color: '#F5E398', contents: [
       '요한복음 3:16 - 하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니',
       '시편 23:1 - 여호와는 나의 목자시니 내게 부족함이 없으리로다',
       '빌립보서 4:13 - 내게 능력 주시는 자 안에서 내가 모든 것을 할 수 있느니라',
       '로마서 8:28 - 우리가 알거니와 하나님을 사랑하는 자 곧 그의 뜻대로 부르심을 입은 자들에게는 모든 것이 합력하여 선을 이루느니라',
       '잠언 3:5-6 - 너는 마음을 다하여 여호와를 신뢰하고 네 명철을 의지하지 말라'
     ]},
-    { name: '일상', color: '#FED7AA', contents: [
+    { name: '일상', color: '#F5D4B3', contents: [
       '오늘 날씨가 정말 좋네요! 산책하기 딱 좋은 날입니다.',
       '아침에 일어나서 맛있는 커피 한 잔 마셨어요 ☕',
       '주말에 가족들과 맛있는 식사 했습니다!',
       '오랜만에 친구들을 만나서 행복한 시간 보냈어요.',
       '새로운 취미를 시작했습니다. 기대되네요!'
     ]},
-    { name: '사역', color: '#A7F3D0', contents: [
+    { name: '사역', color: '#B3EDD8', contents: [
       '다음 주 토요일에 지역 봉사활동이 있습니다. 많은 참여 부탁드립니다!',
       '청년부 여름 수련회를 준비하고 있습니다.',
       '어린이 성경학교 교사를 모집합니다.',
       '노숙자 급식 봉사에 함께하실 분들을 찾습니다.',
       '해외 선교 후원을 위한 바자회를 진행합니다.'
     ]},
-    { name: '찬양', color: '#BAE6FD', contents: [
+    { name: '찬양', color: '#C4E5F8', contents: [
       '오늘 예배 찬양이 너무 은혜로웠습니다! 할렐루야!',
       '이 찬양을 들으면 힘이 납니다 - "주님의 마음"',
       '새벽 기도회 찬양팀을 모집합니다.',
       '찬양으로 하루를 시작하니 마음이 평안합니다.',
       '이번 주 금요일 찬양집회에 초대합니다!'
     ]},
-    { name: '교회', color: '#DDD6FE', contents: [
+    { name: '교회', color: '#E2DBFB', contents: [
       '다음 주일 특별 찬양예배가 있습니다.',
       '교회 창립 30주년 감사예배 안내',
       '새가족 환영회를 준비하고 있습니다.',
@@ -1509,7 +1510,7 @@ app.post('/api/admin/create-fake-likes', requireAdmin, async (c) => {
   // Also create some prayer clicks for prayer posts
   const prayerPosts = await DB.prepare(
     'SELECT id FROM posts WHERE background_color = ? ORDER BY RANDOM() LIMIT 20'
-  ).bind('#FCA5A5').all()
+  ).bind('#F87171').all()
   
   if (prayerPosts.results && prayerPosts.results.length > 0) {
     for (let i = 0; i < Math.min(50, count / 2); i++) {
@@ -2023,22 +2024,22 @@ app.get('/admin', (c) => {
                         let postType = '자유';
                         let typeColor = 'bg-gray-100 text-gray-800';
                         
-                        if (post.background_color === '#FCA5A5') {
+                        if (post.background_color === '#F87171') {
                             postType = '중보 기도';
                             typeColor = 'bg-red-100 text-red-800';
-                        } else if (post.background_color === '#FDE68A') {
+                        } else if (post.background_color === '#F5E398') {
                             postType = '말씀';
                             typeColor = 'bg-yellow-100 text-yellow-800';
-                        } else if (post.background_color === '#FED7AA') {
+                        } else if (post.background_color === '#F5D4B3') {
                             postType = '일상';
                             typeColor = 'bg-orange-100 text-orange-800';
-                        } else if (post.background_color === '#A7F3D0') {
+                        } else if (post.background_color === '#B3EDD8') {
                             postType = '사역';
                             typeColor = 'bg-green-100 text-green-800';
-                        } else if (post.background_color === '#BAE6FD') {
+                        } else if (post.background_color === '#C4E5F8') {
                             postType = '찬양';
                             typeColor = 'bg-sky-100 text-sky-800';
-                        } else if (post.background_color === '#DDD6FE') {
+                        } else if (post.background_color === '#E2DBFB') {
                             postType = '교회';
                             typeColor = 'bg-violet-100 text-violet-800';
                         }
@@ -2252,12 +2253,12 @@ app.get('/admin', (c) => {
                 
                 // Update color name
                 const colorNames = {
-                    '#FCA5A5': '중보 기도',
-                    '#FDE68A': '말씀',
-                    '#FED7AA': '일상',
-                    '#A7F3D0': '사역',
-                    '#BAE6FD': '찬양',
-                    '#DDD6FE': '교회',
+                    '#F87171': '중보 기도',
+                    '#F5E398': '말씀',
+                    '#F5D4B3': '일상',
+                    '#B3EDD8': '사역',
+                    '#C4E5F8': '찬양',
+                    '#E2DBFB': '교회',
                     '#FFFFFF': '자유'
                 };
                 document.getElementById('editSelectedColorName').textContent = colorNames[color] || '자유';
@@ -2466,7 +2467,7 @@ app.get('/', (c) => {
         <nav class="bg-white shadow-md sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
-                    <div class="flex flex-col">
+                    <div class="flex flex-col cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
                         <h1 class="text-2xl font-bold text-gray-800 flex items-center" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
                             <span>CROSS</span>
                             <div class="cross-icon mx-3">
@@ -2482,27 +2483,6 @@ app.get('/', (c) => {
                         </p>
                     </div>
                     <div class="flex items-center space-x-4" id="authButtons">
-                        <div class="bg-white px-4 py-2 rounded-lg">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-praying-hands text-gray-800"></i>
-                                <span class="text-sm font-semibold text-gray-800">기도 점수:</span>
-                                <span id="prayerScore" class="text-lg font-bold text-gray-900">0</span>
-                            </div>
-                        </div>
-                        <div class="bg-white px-4 py-2 rounded-lg">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-chart-line text-gray-800"></i>
-                                <span class="text-sm font-semibold text-gray-800">활동 점수:</span>
-                                <span id="activityScore" class="text-lg font-bold text-gray-900">0</span>
-                            </div>
-                        </div>
-                        <div class="bg-white px-4 py-2 rounded-lg">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-bible text-gray-800"></i>
-                                <span class="text-sm font-semibold text-gray-800">성경 점수:</span>
-                                <span id="typingScore" class="text-lg font-bold text-gray-900">0</span>
-                            </div>
-                        </div>
                         <button onclick="showLoginModal()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                             로그인
                         </button>
@@ -2511,52 +2491,21 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <div class="bg-white px-4 py-2 rounded-lg">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-praying-hands text-gray-800"></i>
-                                <span class="text-sm font-semibold text-gray-800">기도 점수:</span>
-                                <span id="prayerScoreUser" class="text-lg font-bold text-gray-900">0</span>
-                            </div>
-                        </div>
-                        <div class="bg-white px-4 py-2 rounded-lg">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-chart-line text-gray-800"></i>
-                                <span class="text-sm font-semibold text-gray-800">활동 점수:</span>
-                                <span id="activityScoreUser" class="text-lg font-bold text-gray-900">0</span>
-                            </div>
-                        </div>
-                        <div id="scriptureScoreBtn" class="bg-white px-4 py-2 rounded-lg">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-bible text-gray-800"></i>
-                                <span class="text-sm font-semibold text-gray-800">성경 점수:</span>
-                                <span id="typingScoreUser" class="text-lg font-bold text-gray-900">0</span>
-                            </div>
-                        </div>
                         <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-3 py-2 rounded-lg hover:bg-red-50 transition" title="관리자 패널">
                             <i class="fas fa-shield-alt mr-1"></i>
                             <span class="hidden md:inline">관리자 모드</span>
                         </button>
                         <div class="relative">
-                            <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-200 transition" onclick="toggleProfileMenu()">
+                            <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg">
                                 <div class="admin-badge-container">
-                                    <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0">
+                                    <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
                                         <i class="fas fa-user"></i>
                                     </div>
                                     <!-- Admin/Moderator badge will be added here dynamically -->
                                 </div>
                                 <span id="userName" class="text-gray-800 font-medium whitespace-nowrap"></span>
-                                <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
-                            </div>
-                            <!-- Profile Dropdown Menu -->
-                            <div id="profileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                                <button onclick="showViewProfileModal(); toggleProfileMenu();" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center">
-                                    <i class="fas fa-user-circle text-blue-600 mr-3"></i>
-                                    <span>내 프로필 보기</span>
-                                </button>
-                                <hr class="my-1">
-                                <button onclick="logout()" class="w-full text-left px-4 py-3 hover:bg-gray-50 transition flex items-center text-red-600">
-                                    <i class="fas fa-sign-out-alt mr-3"></i>
-                                    <span>로그아웃</span>
+                                <button onclick="logout()" class="text-red-600 hover:text-red-700 transition cursor-pointer ml-2" title="로그아웃">
+                                    <i class="fas fa-sign-out-alt text-lg"></i>
                                 </button>
                             </div>
                         </div>
@@ -2681,7 +2630,7 @@ app.get('/', (c) => {
                     <div id="newPostCard" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
                         <div class="flex items-start space-x-4">
                             <div class="admin-badge-container">
-                                <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                                <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
                                     <i class="fas fa-user"></i>
                                 </div>
                                 <!-- Badge will be added here dynamically -->
@@ -2707,48 +2656,54 @@ app.get('/', (c) => {
                                     <div class="flex items-start space-x-3">
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#FCA5A5', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-red-300 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#F87171', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                style="background-color: #F87171;"
                                                 title="중보">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">중보</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#FED7AA', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-orange-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#F5D4B3', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                style="background-color: #FED7B0;"
                                                 title="일상">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">일상</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#FDE68A', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-yellow-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#F5E398', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                style="background-color: #FEF08A;"
                                                 title="말씀">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">말씀</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#A7F3D0', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-green-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#B3EDD8', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                style="background-color: #BBF7D0;"
                                                 title="사역">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">사역</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#BAE6FD', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-sky-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#C4E5F8', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                style="background-color: #BAE6FD;"
                                                 title="찬양">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">찬양</span>
                                         </div>
                                         <div class="flex flex-col items-center space-y-1">
                                             <button 
-                                                onclick="selectBackgroundColor('#DDD6FE', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-violet-200 border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                onclick="selectBackgroundColor('#E2DBFB', this)" 
+                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                style="background-color: #DDD6FE;"
                                                 title="교회">
                                             </button>
                                             <span class="text-xs font-medium text-gray-600">교회</span>
@@ -2850,6 +2805,23 @@ app.get('/', (c) => {
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile View (Hidden by default) -->
+                    <div id="profileView" class="hidden space-y-4">
+                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-2xl font-bold text-gray-800">
+                                    <i class="fas fa-user-circle text-blue-600 mr-2"></i>프로필
+                                </h2>
+                                <button onclick="hideProfile()" class="text-gray-500 hover:text-gray-700 transition">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
+                            <div id="profileViewContent">
+                                <!-- Profile content will be loaded here -->
                             </div>
                         </div>
                     </div>

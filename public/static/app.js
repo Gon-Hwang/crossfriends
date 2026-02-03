@@ -889,169 +889,8 @@ document.addEventListener('click', function(event) {
 async function showViewProfileModal() {
     if (!currentUser) return;
     
-    try {
-        // Fetch latest user data
-        const response = await axios.get('/api/users/' + currentUserId);
-        const user = response.data.user;
-        
-        // Parse faith answers if exists
-        let faithAnswers = null;
-        if (user.faith_answers) {
-            try {
-                faithAnswers = JSON.parse(user.faith_answers);
-                console.log('Parsed faith answers:', faithAnswers);
-            } catch (e) {
-                console.error('Failed to parse faith_answers:', e);
-            }
-        } else {
-            console.log('No faith_answers data for user');
-        }
-        
-        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
-        const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
-        
-        const content = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Profile Section -->
-                <div class="md:col-span-1">
-                    <div class="bg-gray-50 rounded-lg p-6 text-center">
-                        <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
-                            ${user.avatar_url ? `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />` : '<i class="fas fa-user"></i>'}
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
-                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
-                            ${roleName}
-                        </span>
-                        <div class="mt-4 text-xs text-gray-500">
-                            <p>회원 ID: #${user.id}</p>
-                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            ${user.updated_at && user.updated_at !== user.created_at ? `<p>최근 수정: ${new Date(user.updated_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ''}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Details Section -->
-                <div class="md:col-span-2 space-y-4">
-                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                        <h4 class="font-semibold text-blue-800 mb-3">
-                            <i class="fas fa-info-circle mr-2"></i>기본 정보
-                        </h4>
-                        <div class="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                                <span class="text-gray-600">이메일:</span>
-                                <p class="font-medium text-gray-800 break-all">${user.email}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">이름:</span>
-                                <p class="font-medium text-gray-800">${user.name}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">성별:</span>
-                                <p class="font-medium text-gray-800">${user.gender || '-'}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">역할:</span>
-                                <p class="font-medium text-gray-800">${roleName}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
-                        <h4 class="font-semibold text-green-800 mb-3">
-                            <i class="fas fa-church mr-2"></i>교회 정보
-                        </h4>
-                        <div class="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                                <span class="text-gray-600">소속 교회:</span>
-                                <p class="font-medium text-gray-800">${user.church || '-'}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">담임목사:</span>
-                                <p class="font-medium text-gray-800">${user.pastor || '-'}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">교단:</span>
-                                <p class="font-medium text-gray-800">${user.denomination || '-'}</p>
-                            </div>
-                            <div>
-                                <span class="text-gray-600">교회 직분:</span>
-                                <p class="font-medium text-gray-800">${user.position || '-'}</p>
-                            </div>
-                            <div class="col-span-2">
-                                <span class="text-gray-600">교회 위치:</span>
-                                <p class="font-medium text-gray-800">${user.location || '-'}</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    ${user.bio ? `
-                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
-                        <h4 class="font-semibold text-purple-800 mb-2">
-                            <i class="fas fa-comment-dots mr-2"></i>소개
-                        </h4>
-                        <p class="text-sm text-gray-700">${user.bio}</p>
-                    </div>
-                    ` : ''}
-                    
-                    ${faithAnswers ? `
-                    <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
-                        <h4 class="font-semibold text-yellow-800 mb-3">
-                            <i class="fas fa-cross mr-2"></i>신앙 고백
-                        </h4>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">1. 예수님이 창조주 하나님임을 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q1 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">2. 십자가 대속을 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q2 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">3. 예수님의 부활을 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q3 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">4. 예수님을 주님으로 영접했습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q4 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">5. 성령님이 계십니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q5 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">6. 천국 갈 것을 확신합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q6 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">7. 성경을 진리로 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q7 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">8. 정기적으로 예배에 참석합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q8 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">9. 정기적으로 기도합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q9 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">10. 가끔 전도합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q10 || '-'}</span>
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-        
-        document.getElementById('viewProfileContent').innerHTML = content;
-        document.getElementById('viewProfileModal').classList.remove('hidden');
-    } catch (error) {
-        console.error('Failed to load profile:', error);
-        alert('프로필 정보를 불러오는데 실패했습니다.');
-    }
+    // Simply call showUserProfileModal with current user's ID
+    showUserProfileModal(currentUserId);
 }
 
 function hideViewProfileModal() {
@@ -1067,58 +906,561 @@ async function showEditProfileModal() {
         const response = await axios.get('/api/users/' + currentUserId);
         const user = response.data.user;
         
-        document.getElementById('editProfileModal').classList.remove('hidden');
-        
-        // Populate form with current user data
-        document.getElementById('editEmail').value = user.email || '';
-        document.getElementById('editName').value = user.name || '';
-        document.getElementById('editGender').value = user.gender || '';
-        document.getElementById('editChurch').value = user.church || '';
-        document.getElementById('editPastor').value = user.pastor || '';
-        document.getElementById('editPosition').value = user.position || '';
-        
-        // Parse and populate faith answers
+        // Parse faith answers if exists
+        let faithAnswers = {};
         if (user.faith_answers) {
             try {
-                const faithAnswers = JSON.parse(user.faith_answers);
-                for (let i = 1; i <= 10; i++) {
-                    const element = document.getElementById('edit_faith_q' + i);
-                    if (element && faithAnswers['q' + i]) {
-                        element.value = faithAnswers['q' + i];
-                    }
-                }
+                faithAnswers = JSON.parse(user.faith_answers);
             } catch (e) {
                 console.error('Failed to parse faith_answers:', e);
             }
         }
         
-        // Show current avatar
-        const editAvatarPreview = document.getElementById('editAvatarPreview');
-        const editAvatarButtons = document.getElementById('editAvatarButtons');
-        const editAvatarNote = document.getElementById('editAvatarNote');
+        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
+        const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
         
-        if (user.role === 'admin') {
-            // Admin always shows crown icon
-            editAvatarPreview.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
-            // Hide avatar buttons and note for admin
-            if (editAvatarButtons) editAvatarButtons.style.display = 'none';
-            if (editAvatarNote) editAvatarNote.style.display = 'none';
-        } else if (user.avatar_url) {
-            editAvatarPreview.innerHTML = '<img src="' + user.avatar_url + '" class="w-full h-full object-cover" />';
-            // Show avatar buttons and note for regular users
-            if (editAvatarButtons) editAvatarButtons.style.display = 'flex';
-            if (editAvatarNote) editAvatarNote.style.display = 'block';
-        } else {
-            editAvatarPreview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
-            // Show avatar buttons and note for regular users
-            if (editAvatarButtons) editAvatarButtons.style.display = 'flex';
-            if (editAvatarNote) editAvatarNote.style.display = 'block';
+        const content = `
+            <form id="editProfileForm" onsubmit="handleEditProfileSubmit(event)" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Profile Section -->
+                <div class="md:col-span-1">
+                    <div class="bg-gray-50 rounded-lg p-6 text-center">
+                        <div 
+                            class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" 
+                            id="editAvatarPreviewInline"
+                            onclick="cancelEditProfile()"
+                            title="프로필 보기로 돌아가기">
+                            ${user.role === 'admin' 
+                                ? '<i class="fas fa-crown text-yellow-400"></i>'
+                                : user.avatar_url 
+                                    ? `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" />` 
+                                    : '<i class="fas fa-user"></i>'}
+                        </div>
+                        
+                        ${user.role !== 'admin' ? `
+                        <div class="space-y-2">
+                            <input 
+                                type="file" 
+                                id="editAvatarInline" 
+                                accept="image/*"
+                                onchange="previewEditAvatarInline(event)"
+                                class="hidden" />
+                            <label 
+                                for="editAvatarInline"
+                                class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition text-sm">
+                                <i class="fas fa-upload mr-2"></i>사진 변경
+                            </label>
+                            <button 
+                                type="button"
+                                onclick="deleteAvatarInline()"
+                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
+                                <i class="fas fa-trash mr-2"></i>사진 삭제
+                            </button>
+                            <p class="text-xs text-gray-500 mt-2">JPG, PNG 파일 (최대 5MB)</p>
+                        </div>
+                        ` : ''}
+                        
+                        <h3 class="text-xl font-bold text-gray-800 mb-2 mt-4">${user.name}</h3>
+                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
+                            ${roleName}
+                        </span>
+                        <div class="mt-4 text-xs text-gray-500">
+                            <p>회원 ID: #${user.id}</p>
+                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Edit Form Section -->
+                <div class="md:col-span-2 space-y-4">
+                    <!-- Basic Info -->
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                        <h4 class="font-semibold text-blue-800 mb-3">
+                            <i class="fas fa-info-circle mr-2"></i>기본 정보
+                        </h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">이메일 (수정 불가)</label>
+                                <input 
+                                    type="email" 
+                                    value="${user.email || ''}"
+                                    disabled
+                                    class="w-full p-2 border rounded-lg bg-gray-100 text-gray-600 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">이름 *</label>
+                                <input 
+                                    type="text" 
+                                    id="editNameInline"
+                                    value="${user.name || ''}"
+                                    required
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">성별</label>
+                                <select 
+                                    id="editGenderInline"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                    <option value="">선택</option>
+                                    <option value="남성" ${user.gender === '남성' ? 'selected' : ''}>남성</option>
+                                    <option value="여성" ${user.gender === '여성' ? 'selected' : ''}>여성</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Church Info -->
+                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
+                        <h4 class="font-semibold text-green-800 mb-3">
+                            <i class="fas fa-church mr-2"></i>교회 정보
+                        </h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">소속 교회</label>
+                                <input 
+                                    type="text" 
+                                    id="editChurchInline"
+                                    value="${user.church || ''}"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">담임목사</label>
+                                <input 
+                                    type="text" 
+                                    id="editPastorInline"
+                                    value="${user.pastor || ''}"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">직분</label>
+                                <select 
+                                    id="editPositionInline"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
+                                    <option value="">선택</option>
+                                    <option value="평신도" ${user.position === '평신도' ? 'selected' : ''}>평신도</option>
+                                    <option value="새신자" ${user.position === '새신자' ? 'selected' : ''}>새신자</option>
+                                    <option value="초신자" ${user.position === '초신자' ? 'selected' : ''}>초신자</option>
+                                    <option value="청년부" ${user.position === '청년부' ? 'selected' : ''}>청년부</option>
+                                    <option value="장년부" ${user.position === '장년부' ? 'selected' : ''}>장년부</option>
+                                    <option value="권사" ${user.position === '권사' ? 'selected' : ''}>권사</option>
+                                    <option value="집사" ${user.position === '집사' ? 'selected' : ''}>집사</option>
+                                    <option value="안수집사" ${user.position === '안수집사' ? 'selected' : ''}>안수집사</option>
+                                    <option value="서리집사" ${user.position === '서리집사' ? 'selected' : ''}>서리집사</option>
+                                    <option value="장로" ${user.position === '장로' ? 'selected' : ''}>장로</option>
+                                    <option value="전도사" ${user.position === '전도사' ? 'selected' : ''}>전도사</option>
+                                    <option value="목사" ${user.position === '목사' ? 'selected' : ''}>목사</option>
+                                    <option value="선교사" ${user.position === '선교사' ? 'selected' : ''}>선교사</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Faith Confession -->
+                    <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+                        <h4 class="font-semibold text-yellow-800 mb-3">
+                            <i class="fas fa-cross mr-2"></i>신앙 고백
+                        </h4>
+                        <div class="space-y-2 text-sm">
+                            ${Array.from({length: 10}, (_, i) => {
+                                const questions = [
+                                    '1. 예수님이 창조주 하나님임을 믿습니까?',
+                                    '2. 십자가 대속을 믿습니까?',
+                                    '3. 예수님의 부활을 믿습니까?',
+                                    '4. 예수님을 주님으로 영접했습니까?',
+                                    '5. 성령님이 계십니까?',
+                                    '6. 천국 갈 것을 확신합니까?',
+                                    '7. 성경을 진리로 믿습니까?',
+                                    '8. 정기적으로 예배에 참석합니까?',
+                                    '9. 정기적으로 기도합니까?',
+                                    '10. 가끔 전도합니까?'
+                                ];
+                                const qNum = i + 1;
+                                const qKey = 'q' + qNum;
+                                return `
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-gray-700 flex-1">${questions[i]}</label>
+                                        <select 
+                                            id="editFaithQ${qNum}Inline"
+                                            class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-600">
+                                            <option value="">선택</option>
+                                            <option value="예" ${faithAnswers[qKey] === '예' ? 'selected' : ''}>예</option>
+                                            <option value="아니오" ${faithAnswers[qKey] === '아니오' ? 'selected' : ''}>아니오</option>
+                                            <option value="잘모름" ${faithAnswers[qKey] === '잘모름' ? 'selected' : ''}>잘모름</option>
+                                        </select>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- School Info -->
+                    <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
+                        <h4 class="font-semibold text-orange-800 mb-3">
+                            <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                        </h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">초등학교</label>
+                                <input 
+                                    type="text" 
+                                    id="editElementarySchoolInline"
+                                    value="${user.elementary_school || ''}"
+                                    placeholder="예: 서울초등학교"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">중학교</label>
+                                <input 
+                                    type="text" 
+                                    id="editMiddleSchoolInline"
+                                    value="${user.middle_school || ''}"
+                                    placeholder="예: 서울중학교"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">고등학교</label>
+                                <input 
+                                    type="text" 
+                                    id="editHighSchoolInline"
+                                    value="${user.high_school || ''}"
+                                    placeholder="예: 서울고등학교"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">대학교</label>
+                                <input 
+                                    type="text" 
+                                    id="editUniversityInline"
+                                    value="${user.university || ''}"
+                                    placeholder="예: 서울대학교"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">석사</label>
+                                <input 
+                                    type="text" 
+                                    id="editMastersInline"
+                                    value="${user.masters || ''}"
+                                    placeholder="예: 서울대학교 대학원"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">박사</label>
+                                <input 
+                                    type="text" 
+                                    id="editPhDInline"
+                                    value="${user.phd || ''}"
+                                    placeholder="예: 하버드대학교"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end space-x-3">
+                        <button 
+                            type="button"
+                            onclick="cancelEditProfile()"
+                            class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition">
+                            <i class="fas fa-times mr-2"></i>취소
+                        </button>
+                        <button 
+                            type="submit"
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-save mr-2"></i>저장
+                        </button>
+                    </div>
+                </div>
+            </form>
+        `;
+        
+        // Update profile view content
+        document.getElementById('profileViewContent').innerHTML = content;
+        
+        // Update header title to "프로필 수정"
+        const profileViewHeader = document.querySelector('#profileView .flex.items-center.justify-between h2');
+        if (profileViewHeader) {
+            profileViewHeader.innerHTML = '<i class="fas fa-user-edit text-blue-600 mr-2"></i>프로필 수정';
         }
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
         console.error('Failed to load user data:', error);
         alert('사용자 정보를 불러오는데 실패했습니다.');
     }
 }
+
+// Preview avatar in inline edit
+function previewEditAvatarInline(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            alert('파일 크기는 5MB를 초과할 수 없습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('editAvatarPreviewInline');
+            if (preview) {
+                preview.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover" />';
+                // Re-add click event after updating innerHTML
+                preview.onclick = cancelEditProfile;
+                preview.title = '프로필 보기로 돌아가기';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Delete avatar in inline edit
+async function deleteAvatarInline() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (!confirm('프로필 사진을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        await axios.delete('/api/users/' + currentUserId + '/avatar');
+        
+        // Update preview to default
+        const preview = document.getElementById('editAvatarPreviewInline');
+        if (preview) {
+            preview.innerHTML = '<i class="fas fa-user text-gray-400 text-4xl"></i>';
+            // Re-add click event after updating innerHTML
+            preview.onclick = cancelEditProfile;
+            preview.title = '프로필 보기로 돌아가기';
+        }
+        
+        // Clear file input
+        const fileInput = document.getElementById('editAvatarInline');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Refresh user data
+        const userResponse = await axios.get('/api/users/' + currentUserId);
+        currentUser = userResponse.data.user;
+        updateAuthUI();
+        
+        showToast('프로필 사진이 삭제되었습니다.', 'success');
+    } catch (error) {
+        console.error('Avatar delete error:', error);
+        showToast('프로필 사진 삭제에 실패했습니다.', 'error');
+    }
+}
+
+// Cancel edit and go back to profile view
+function cancelEditProfile() {
+    showUserProfileModal(currentUserId);
+}
+
+// Handle edit profile form submit
+async function handleEditProfileSubmit(event) {
+    event.preventDefault();
+    
+    const name = document.getElementById('editNameInline').value;
+    const gender = document.getElementById('editGenderInline').value;
+    const church = document.getElementById('editChurchInline').value;
+    const pastor = document.getElementById('editPastorInline').value;
+    const position = document.getElementById('editPositionInline').value;
+    const avatarFile = document.getElementById('editAvatarInline')?.files[0];
+    
+    // 학교 정보 수집
+    const elementary_school = document.getElementById('editElementarySchoolInline')?.value || '';
+    const middle_school = document.getElementById('editMiddleSchoolInline')?.value || '';
+    const high_school = document.getElementById('editHighSchoolInline')?.value || '';
+    const university = document.getElementById('editUniversityInline')?.value || '';
+    const masters = document.getElementById('editMastersInline')?.value || '';
+    const phd = document.getElementById('editPhDInline')?.value || '';
+    
+    // 신앙 고백 답변 수집
+    const faithAnswers = {};
+    for (let i = 1; i <= 10; i++) {
+        const element = document.getElementById('editFaithQ' + i + 'Inline');
+        if (element) {
+            faithAnswers['q' + i] = element.value;
+        }
+    }
+
+    if (!name) {
+        showToast('이름은 필수 항목입니다.', 'error');
+        return;
+    }
+
+    try {
+        // Update user info including faith_answers and school info
+        await axios.put('/api/users/' + currentUserId, {
+            name,
+            gender,
+            church,
+            pastor,
+            position,
+            faith_answers: JSON.stringify(faithAnswers),
+            elementary_school,
+            middle_school,
+            high_school,
+            university,
+            masters,
+            phd
+        });
+
+        // Upload new avatar if selected
+        if (avatarFile) {
+            const formData = new FormData();
+            formData.append('avatar', avatarFile);
+            
+            try {
+                await axios.post('/api/users/' + currentUserId + '/avatar', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+            }
+        }
+
+        // Refresh user data
+        const userResponse = await axios.get('/api/users/' + currentUserId);
+        currentUser = userResponse.data.user;
+        updateAuthUI();
+        
+        showToast('프로필이 수정되었습니다! 👍', 'success');
+        
+        // Go back to profile view
+        showUserProfileModal(currentUserId);
+        
+        // Reload posts to update user info in posts
+        loadPosts();
+    } catch (error) {
+        console.error('Edit profile error:', error);
+        showToast('프로필 수정에 실패했습니다.', 'error');
+    }
+}
+
+function hideEditProfileModal() {
+    document.getElementById('editProfileModal').classList.add('hidden');
+    document.getElementById('editAvatar').value = '';
+}
+
+function previewEditAvatar(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            alert('파일 크기는 5MB를 초과할 수 없습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('editAvatarPreview');
+            preview.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover" />';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Delete avatar
+async function deleteAvatar() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (!confirm('프로필 사진을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        await axios.delete('/api/users/' + currentUserId + '/avatar');
+        
+        // Update preview to default
+        const preview = document.getElementById('editAvatarPreview');
+        preview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+        
+        // Refresh user data
+        const userResponse = await axios.get('/api/users/' + currentUserId);
+        currentUser = userResponse.data.user;
+        updateAuthUI();
+        
+        alert('프로필 사진이 삭제되었습니다.');
+    } catch (error) {
+        console.error('Avatar delete error:', error);
+        alert('프로필 사진 삭제에 실패했습니다.');
+    }
+}
+
+async function handleEditProfile() {
+    const name = document.getElementById('editName').value;
+    const gender = document.getElementById('editGender').value;
+    const church = document.getElementById('editChurch').value;
+    const pastor = document.getElementById('editPastor').value;
+    const position = document.getElementById('editPosition').value;
+    const avatarFile = document.getElementById('editAvatar').files[0];
+    
+    // 신앙 고백 답변 수집
+    const faithAnswers = {
+        q1: document.getElementById('edit_faith_q1').value,
+        q2: document.getElementById('edit_faith_q2').value,
+        q3: document.getElementById('edit_faith_q3').value,
+        q4: document.getElementById('edit_faith_q4').value,
+        q5: document.getElementById('edit_faith_q5').value,
+        q6: document.getElementById('edit_faith_q6').value,
+        q7: document.getElementById('edit_faith_q7').value,
+        q8: document.getElementById('edit_faith_q8').value,
+        q9: document.getElementById('edit_faith_q9').value,
+        q10: document.getElementById('edit_faith_q10').value
+    };
+
+    if (!name) {
+        alert('이름은 필수 항목입니다.');
+        return;
+    }
+
+    try {
+        // Update user info including faith_answers
+        await axios.put('/api/users/' + currentUserId, {
+            name,
+            gender,
+            church,
+            pastor,
+            position,
+            faith_answers: JSON.stringify(faithAnswers)
+        });
+
+        // Upload new avatar if selected
+        if (avatarFile) {
+            const formData = new FormData();
+            formData.append('avatar', avatarFile);
+            
+            try {
+                await axios.post('/api/users/' + currentUserId + '/avatar', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } catch (uploadError) {
+                console.error('Avatar upload error:', uploadError);
+            }
+        }
+
+        // Refresh user data
+        const userResponse = await axios.get('/api/users/' + currentUserId);
+        currentUser = userResponse.data.user;
+        updateAuthUI();
+        
+        alert('회원정보가 수정되었습니다! 👍');
+        hideEditProfileModal();
+        loadPosts();
+    } catch (error) {
+        console.error('Edit profile error:', error);
+        alert('회원정보 수정에 실패했습니다. 다시 시도해주세요.');
+    }
+}
+
 
 function hideEditProfileModal() {
     document.getElementById('editProfileModal').classList.add('hidden');
@@ -1967,7 +2309,7 @@ async function refreshComments(postId) {
                 commentsHtml += `
                     <div class="flex space-x-3">
                         <div class="admin-badge-container">
-                            <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">${avatarHtml}</div>
+                            <div onclick="showUserProfileModal(${comment.user_id})" class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1">
@@ -2451,7 +2793,7 @@ async function loadComments(postId) {
                 commentsHtml += `
                     <div class="flex space-x-3" id="comment-${comment.id}">
                         <div class="admin-badge-container">
-                            <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0">${avatarHtml}</div>
+                            <div onclick="showUserProfileModal(${comment.user_id})" class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1">
@@ -2753,7 +3095,7 @@ async function loadPosts() {
                         </div>
                         <div class="flex items-start space-x-3">
                             <div class="admin-badge-container flex-shrink-0">
-                                <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                                <div onclick="showUserProfileModal(${post.shared_user_id})" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">
                                     ${sharedAvatarHtml}
                                 </div>
                                 ${sharedRoleBadgeHtml}
@@ -2782,7 +3124,7 @@ async function loadPosts() {
                 <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1" ${backgroundStyle}>
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
-                            <div class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">${avatarHtml}</div>
+                            <div onclick="showUserProfileModal(${post.user_id})" class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1 min-w-0">
@@ -3097,6 +3439,249 @@ function resetBackgroundColor() {
     const textarea = document.getElementById('newPostContent');
     textarea.style.backgroundColor = '';
     textarea.style.color = '';
+}
+
+// Show any user's profile (for clicking avatars in posts)
+async function showUserProfileModal(userId) {
+    try {
+        // Fetch user data
+        const response = await axios.get('/api/users/' + userId);
+        const user = response.data.user;
+        
+        // Parse faith answers if exists
+        let faithAnswers = null;
+        if (user.faith_answers) {
+            try {
+                faithAnswers = JSON.parse(user.faith_answers);
+            } catch (e) {
+                console.error('Failed to parse faith_answers:', e);
+            }
+        }
+        
+        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
+        const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
+        
+        // Check if viewing own profile
+        const isOwnProfile = currentUserId && currentUserId === user.id;
+        console.log('프로필 수정 아이콘 표시 체크:', {
+            currentUserId,
+            userId: user.id,
+            isOwnProfile,
+            currentUserRole: currentUser?.role,
+            viewedUserRole: user.role
+        });
+        
+        const content = `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Profile Section -->
+                <div class="md:col-span-1">
+                    <div class="bg-gray-50 rounded-lg p-6 text-center">
+                        <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
+                            ${user.role === 'admin' 
+                                ? '<i class="fas fa-crown text-yellow-400"></i>'
+                                : user.avatar_url 
+                                    ? `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />` 
+                                    : '<i class="fas fa-user"></i>'}
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
+                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
+                            ${roleName}
+                        </span>
+                        <div class="mt-4 text-xs text-gray-500">
+                            <p>회원 ID: #${user.id}</p>
+                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Details Section -->
+                <div class="md:col-span-2 space-y-4">
+                    ${isOwnProfile ? `
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                        <h4 class="font-semibold text-purple-800 mb-3">
+                            <i class="fas fa-trophy mr-2"></i>나의 점수
+                        </h4>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-praying-hands text-purple-600 text-2xl mb-2"></i>
+                                    <span class="text-xs text-gray-600 mb-1">기도 점수</span>
+                                    <span class="text-2xl font-bold text-purple-900">${user.prayer_score || 0}</span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-bible text-purple-600 text-2xl mb-2"></i>
+                                    <span class="text-xs text-gray-600 mb-1">성경 점수</span>
+                                    <span class="text-2xl font-bold text-purple-900">${user.scripture_score || 0}</span>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-chart-line text-purple-600 text-2xl mb-2"></i>
+                                    <span class="text-xs text-gray-600 mb-1">활동 점수</span>
+                                    <span class="text-2xl font-bold text-purple-900">${user.activity_score || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
+                        <h4 class="font-semibold text-blue-800 mb-3">
+                            <i class="fas fa-info-circle mr-2"></i>기본 정보
+                        </h4>
+                        <div class="space-y-2 text-sm text-gray-700">
+                            <p><strong>이메일:</strong> ${user.email || '미입력'}</p>
+                            <p><strong>성별:</strong> ${user.gender || '미입력'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
+                        <h4 class="font-semibold text-green-800 mb-3">
+                            <i class="fas fa-church mr-2"></i>교회 정보
+                        </h4>
+                        <div class="space-y-2 text-sm text-gray-700">
+                            <p><strong>소속 교회:</strong> ${user.church || '미입력'}</p>
+                            <p><strong>담임목사:</strong> ${user.pastor || '미입력'}</p>
+                            <p><strong>교단:</strong> ${user.denomination || '미입력'}</p>
+                            <p><strong>교회 위치:</strong> ${user.location || '미입력'}</p>
+                            <p><strong>직분:</strong> ${user.position || '미입력'}</p>
+                        </div>
+                    </div>
+                    
+                    ${faithAnswers ? `
+                    <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+                        <h4 class="font-semibold text-yellow-800 mb-3">
+                            <i class="fas fa-cross mr-2"></i>신앙 고백
+                        </h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">1. 예수님이 창조주 하나님임을 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q1 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">2. 십자가 대속을 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q2 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">3. 예수님의 부활을 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q3 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">4. 예수님을 주님으로 영접했습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q4 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">5. 성령님이 계십니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q5 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">6. 천국 갈 것을 확신합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q6 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">7. 성경을 진리로 믿습니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q7 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">8. 정기적으로 예배에 참석합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q8 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">9. 정기적으로 기도합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q9 || '-'}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">10. 가끔 전도합니까?</span>
+                                <span class="font-semibold text-gray-800">${faithAnswers.q10 || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${isOwnProfile ? `
+                    <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
+                        <h4 class="font-semibold text-orange-800 mb-3">
+                            <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                        </h4>
+                        <div class="space-y-2 text-sm text-gray-700">
+                            <p><strong>초등학교:</strong> ${user.elementary_school || '미입력'}</p>
+                            <p><strong>중학교:</strong> ${user.middle_school || '미입력'}</p>
+                            <p><strong>고등학교:</strong> ${user.high_school || '미입력'}</p>
+                            <p><strong>대학교:</strong> ${user.university || '미입력'}</p>
+                            <p><strong>석사:</strong> ${user.masters || '미입력'}</p>
+                            <p><strong>박사:</strong> ${user.phd || '미입력'}</p>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Hide posts feed and show profile view
+        document.getElementById('postsFeed').classList.add('hidden');
+        document.getElementById('newPostCard').classList.add('hidden');
+        document.getElementById('profileView').classList.remove('hidden');
+        document.getElementById('profileViewContent').innerHTML = content;
+        
+        // Update profile header with edit button if viewing own profile
+        const profileViewHeader = document.querySelector('#profileView .flex.items-center.justify-between');
+        console.log('프로필 헤더 업데이트:', { 
+            profileViewHeader: !!profileViewHeader, 
+            isOwnProfile 
+        });
+        
+        if (profileViewHeader) {
+            const h2 = profileViewHeader.querySelector('h2');
+            console.log('h2 요소:', { h2: !!h2 });
+            
+            if (h2) {
+                // Reset h2 content to default "프로필"
+                h2.innerHTML = '<i class="fas fa-user text-blue-600 mr-2"></i>프로필';
+                
+                // Add edit button inside h2 if viewing own profile
+                if (isOwnProfile) {
+                    console.log('수정 버튼 추가 중...');
+                    const editBtn = document.createElement('button');
+                    editBtn.onclick = function() { showEditProfileModal(); };
+                    editBtn.className = 'text-blue-600 hover:text-blue-700 transition ml-3 relative -top-0.5';
+                    editBtn.title = '프로필 수정';
+                    editBtn.innerHTML = '<i class="fas fa-edit text-lg"></i>';
+                    h2.appendChild(editBtn);
+                    console.log('수정 버튼 추가 완료!');
+                } else {
+                    console.log('본인 프로필이 아니므로 수정 버튼 미표시');
+                }
+            }
+        }
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+        console.error('Failed to load user profile:', error);
+        alert('프로필을 불러오는데 실패했습니다.');
+    }
+}
+
+// Hide profile and show posts feed
+function hideProfile() {
+    document.getElementById('profileView').classList.add('hidden');
+    document.getElementById('postsFeed').classList.remove('hidden');
+    document.getElementById('newPostCard').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Go to home (main feed)
+function goToHome() {
+    // Hide profile if it's open
+    const profileView = document.getElementById('profileView');
+    if (profileView && !profileView.classList.contains('hidden')) {
+        hideProfile();
+    } else {
+        // Already on home, just scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
 
 // Initialize

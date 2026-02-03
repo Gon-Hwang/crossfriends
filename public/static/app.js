@@ -1092,6 +1092,69 @@ async function showEditProfileModal() {
                         </div>
                     </div>
                     
+                    <!-- Career Info -->
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                        <h4 class="font-semibold text-purple-800 mb-3">
+                            <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                        </h4>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">경력</label>
+                                    <button 
+                                        type="button"
+                                        onclick="addCareerEntry()"
+                                        class="text-xs px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition">
+                                        <i class="fas fa-plus mr-1"></i>추가
+                                    </button>
+                                </div>
+                                <div id="careersContainer" class="space-y-2">
+                                    ${(() => {
+                                        const careers = user.careers ? JSON.parse(user.careers) : [];
+                                        // 항목이 없으면 빈 항목 하나 추가
+                                        if (careers.length === 0) {
+                                            careers.push({ company: '', position: '', period: '' });
+                                        }
+                                        return careers.map((career, idx) => `
+                                            <div class="career-entry border border-gray-200 rounded p-2" data-index="${idx}">
+                                                <div class="flex items-start gap-2">
+                                                    <div class="flex-1 space-y-2">
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                                            placeholder="회사/기관명 (예: 삼성전자)"
+                                                            value="${career.company || ''}"
+                                                            data-field="company" />
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                                            placeholder="직책/직위 (예: 책임연구원)"
+                                                            value="${career.position || ''}"
+                                                            data-field="position" />
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                                            placeholder="재직기간 (예: 2020-2023 또는 2020-현재)"
+                                                            value="${career.period || ''}"
+                                                            data-field="period" />
+                                                    </div>
+                                                    ${careers.length > 1 ? `
+                                                        <button 
+                                                            type="button"
+                                                            onclick="removeCareerEntry(this)"
+                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            <i class="fas fa-trash text-sm"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('');
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- School Info -->
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
                         <h4 class="font-semibold text-orange-800 mb-3">
@@ -1405,6 +1468,34 @@ async function handleEditProfileSubmit(event) {
     const middle_school = document.getElementById('editMiddleSchoolInline')?.value || '';
     const high_school = document.getElementById('editHighSchoolInline')?.value || '';
     
+    // 직업 정보 수집
+    const collectCareerData = () => {
+        const container = document.getElementById('careersContainer');
+        if (!container) return [];
+        
+        const entries = container.querySelectorAll('.career-entry');
+        const data = [];
+        
+        entries.forEach(entry => {
+            const companyInput = entry.querySelector('[data-field="company"]');
+            const positionInput = entry.querySelector('[data-field="position"]');
+            const periodInput = entry.querySelector('[data-field="period"]');
+            
+            const company = companyInput?.value?.trim() || '';
+            const position = positionInput?.value?.trim() || '';
+            const period = periodInput?.value?.trim() || '';
+            
+            // 빈 항목은 제외
+            if (company || position || period) {
+                data.push({ company, position, period });
+            }
+        });
+        
+        return data;
+    };
+    
+    const careers = collectCareerData();
+    
     // 새로운 방식: 대학교, 석사, 박사 목록 수집
     const collectEducationData = (containerId) => {
         const container = document.getElementById(containerId);
@@ -1475,7 +1566,8 @@ async function handleEditProfileSubmit(event) {
             phd_major,
             universities: JSON.stringify(universities),
             masters_degrees: JSON.stringify(masters_degrees),
-            phd_degrees: JSON.stringify(phd_degrees)
+            phd_degrees: JSON.stringify(phd_degrees),
+            careers: JSON.stringify(careers)
         });
 
         // Upload new avatar if selected
@@ -3769,6 +3861,33 @@ async function showUserProfileModal(userId) {
                     ` : ''}
                     
                     ${isOwnProfile ? `
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                        <h4 class="font-semibold text-purple-800 mb-3">
+                            <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                        </h4>
+                        <div class="space-y-3 text-sm text-gray-700">
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">경력:</p>
+                                ${(() => {
+                                    const careers = user.careers ? JSON.parse(user.careers) : [];
+                                    if (careers.length === 0) {
+                                        return '<p class="ml-2">미입력</p>';
+                                    }
+                                    return careers.map(career => {
+                                        const parts = [];
+                                        if (career.company) parts.push(career.company);
+                                        if (career.position) parts.push(career.position);
+                                        const text = parts.join(' - ');
+                                        const period = career.period ? ' (' + career.period + ')' : '';
+                                        return '<p class="ml-2">• ' + text + period + '</p>';
+                                    }).join('');
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${isOwnProfile ? `
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
                         <h4 class="font-semibold text-orange-800 mb-3">
                             <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
@@ -3907,6 +4026,100 @@ function goToHome() {
         // Already on home, just scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+}
+
+// Career entry management functions
+function addCareerEntry() {
+    const container = document.getElementById('careersContainer');
+    if (!container) return;
+    
+    const currentEntries = container.querySelectorAll('.career-entry');
+    const newIndex = currentEntries.length;
+    
+    const newEntry = document.createElement('div');
+    newEntry.className = 'career-entry border border-gray-200 rounded p-2';
+    newEntry.setAttribute('data-index', newIndex);
+    newEntry.innerHTML = `
+        <div class="flex items-start gap-2">
+            <div class="flex-1 space-y-2">
+                <input 
+                    type="text" 
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                    placeholder="회사/기관명 (예: 삼성전자)"
+                    value=""
+                    data-field="company" />
+                <input 
+                    type="text" 
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                    placeholder="직책/직위 (예: 책임연구원)"
+                    value=""
+                    data-field="position" />
+                <input 
+                    type="text" 
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                    placeholder="재직기간 (예: 2020-2023 또는 2020-현재)"
+                    value=""
+                    data-field="period" />
+            </div>
+            <button 
+                type="button"
+                onclick="removeCareerEntry(this)"
+                class="text-red-500 hover:text-red-700 p-2">
+                <i class="fas fa-trash text-sm"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newEntry);
+    
+    // 항목이 2개 이상이면 첫 번째 항목에도 삭제 버튼 추가
+    updateCareerDeleteButtons();
+}
+
+function removeCareerEntry(button) {
+    const entry = button.closest('.career-entry');
+    const container = entry.parentElement;
+    
+    entry.remove();
+    
+    // 인덱스 재조정
+    const entries = container.querySelectorAll('.career-entry');
+    entries.forEach((entry, idx) => {
+        entry.setAttribute('data-index', idx);
+    });
+    
+    // 삭제 버튼 업데이트
+    updateCareerDeleteButtons();
+}
+
+function updateCareerDeleteButtons() {
+    const container = document.getElementById('careersContainer');
+    if (!container) return;
+    
+    const entries = container.querySelectorAll('.career-entry');
+    
+    entries.forEach((entry, idx) => {
+        const existingButton = entry.querySelector('.fa-trash')?.closest('button');
+        const inputContainer = entry.querySelector('.flex-1');
+        const parentDiv = entry.querySelector('.flex.items-start.gap-2');
+        
+        if (entries.length > 1) {
+            // 2개 이상이면 삭제 버튼 보이기/추가
+            if (!existingButton) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 p-2';
+                deleteBtn.onclick = function() { removeCareerEntry(this); };
+                deleteBtn.innerHTML = '<i class="fas fa-trash text-sm"></i>';
+                parentDiv.appendChild(deleteBtn);
+            }
+        } else {
+            // 1개만 남으면 삭제 버튼 제거
+            if (existingButton) {
+                existingButton.remove();
+            }
+        }
+    });
 }
 
 // Education entry management functions

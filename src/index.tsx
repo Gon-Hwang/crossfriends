@@ -86,7 +86,7 @@ app.get('/api/users', async (c) => {
 app.get('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status FROM users WHERE id = ?').bind(id).first()
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.json({ error: 'User not found' }, 404)
@@ -98,7 +98,7 @@ app.get('/api/users/:id', async (c) => {
 // Create new user
 app.post('/api/users', async (c) => {
   const { DB } = c.env
-  const { email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, marital_status } = await c.req.json()
+  const { email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, marital_status, address, phone } = await c.req.json()
   
   // Check if this is the first user (will become admin)
   const userCountResult = await DB.prepare('SELECT COUNT(*) as count FROM users').first()
@@ -106,8 +106,8 @@ app.post('/api/users', async (c) => {
   const role = userCount === 0 ? 'admin' : 'user'
   
   const result = await DB.prepare(
-    'INSERT INTO users (email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, role, marital_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(email, name, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role, marital_status || null).run()
+    'INSERT INTO users (email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, role, marital_status, address, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(email, name, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role, marital_status || null, address || null, phone || null).run()
   
   return c.json({ id: result.meta.last_row_id, email, name, role }, 201)
 })
@@ -116,11 +116,11 @@ app.post('/api/users', async (c) => {
 app.put('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status } = await c.req.json()
+  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone } = await c.req.json()
   
   await DB.prepare(
-    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, id).run()
+    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, address = ?, phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, address || null, phone || null, id).run()
   
   return c.json({ success: true })
 })

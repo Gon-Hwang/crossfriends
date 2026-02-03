@@ -1132,6 +1132,12 @@ async function showEditProfileModal() {
                                     id="editUniversityInline"
                                     value="${user.university || ''}"
                                     placeholder="예: 서울대학교"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm mb-2" />
+                                <input 
+                                    type="text" 
+                                    id="editUniversityMajorInline"
+                                    value="${user.university_major || ''}"
+                                    placeholder="전공 (예: 컴퓨터공학)"
                                     class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
                             </div>
                             <div>
@@ -1141,6 +1147,12 @@ async function showEditProfileModal() {
                                     id="editMastersInline"
                                     value="${user.masters || ''}"
                                     placeholder="예: 서울대학교 대학원"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm mb-2" />
+                                <input 
+                                    type="text" 
+                                    id="editMastersMajorInline"
+                                    value="${user.masters_major || ''}"
+                                    placeholder="전공 (예: 신학)"
                                     class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
                             </div>
                             <div>
@@ -1150,6 +1162,12 @@ async function showEditProfileModal() {
                                     id="editPhDInline"
                                     value="${user.phd || ''}"
                                     placeholder="예: 하버드대학교"
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm mb-2" />
+                                <input 
+                                    type="text" 
+                                    id="editPhDMajorInline"
+                                    value="${user.phd_major || ''}"
+                                    placeholder="전공 (예: 조직신학)"
                                     class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
                             </div>
                         </div>
@@ -1276,8 +1294,11 @@ async function handleEditProfileSubmit(event) {
     const middle_school = document.getElementById('editMiddleSchoolInline')?.value || '';
     const high_school = document.getElementById('editHighSchoolInline')?.value || '';
     const university = document.getElementById('editUniversityInline')?.value || '';
+    const university_major = document.getElementById('editUniversityMajorInline')?.value || '';
     const masters = document.getElementById('editMastersInline')?.value || '';
+    const masters_major = document.getElementById('editMastersMajorInline')?.value || '';
     const phd = document.getElementById('editPhDInline')?.value || '';
+    const phd_major = document.getElementById('editPhDMajorInline')?.value || '';
     
     // 신앙 고백 답변 수집
     const faithAnswers = {};
@@ -1306,8 +1327,11 @@ async function handleEditProfileSubmit(event) {
             middle_school,
             high_school,
             university,
+            university_major,
             masters,
-            phd
+            masters_major,
+            phd,
+            phd_major
         });
 
         // Upload new avatar if selected
@@ -3609,9 +3633,9 @@ async function showUserProfileModal(userId) {
                             <p><strong>초등학교:</strong> ${user.elementary_school || '미입력'}</p>
                             <p><strong>중학교:</strong> ${user.middle_school || '미입력'}</p>
                             <p><strong>고등학교:</strong> ${user.high_school || '미입력'}</p>
-                            <p><strong>대학교:</strong> ${user.university || '미입력'}</p>
-                            <p><strong>석사:</strong> ${user.masters || '미입력'}</p>
-                            <p><strong>박사:</strong> ${user.phd || '미입력'}</p>
+                            <p><strong>대학교:</strong> ${user.university || '미입력'}${user.university_major ? ' (' + user.university_major + ')' : ''}</p>
+                            <p><strong>석사:</strong> ${user.masters || '미입력'}${user.masters_major ? ' (' + user.masters_major + ')' : ''}</p>
+                            <p><strong>박사:</strong> ${user.phd || '미입력'}${user.phd_major ? ' (' + user.phd_major + ')' : ''}</p>
                         </div>
                     </div>
                     ` : ''}

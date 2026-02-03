@@ -1126,49 +1126,160 @@ async function showEditProfileModal() {
                                     class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">대학교</label>
-                                <input 
-                                    type="text" 
-                                    id="editUniversityInline"
-                                    value="${user.university || ''}"
-                                    placeholder="예: 서울대학교"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm mb-2" />
-                                <input 
-                                    type="text" 
-                                    id="editUniversityMajorInline"
-                                    value="${user.university_major || ''}"
-                                    placeholder="전공 (예: 컴퓨터공학)"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">대학교</label>
+                                    <button 
+                                        type="button"
+                                        onclick="addEducationEntry('university')"
+                                        class="text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
+                                        <i class="fas fa-plus mr-1"></i>추가
+                                    </button>
+                                </div>
+                                <div id="universitiesContainer" class="space-y-2">
+                                    ${(() => {
+                                        const universities = user.universities ? JSON.parse(user.universities) : [];
+                                        // 기존 단일 필드 데이터가 있으면 첫 번째 항목으로 추가
+                                        if (universities.length === 0 && (user.university || user.university_major)) {
+                                            universities.push({ school: user.university || '', major: user.university_major || '' });
+                                        }
+                                        // 항목이 없으면 빈 항목 하나 추가
+                                        if (universities.length === 0) {
+                                            universities.push({ school: '', major: '' });
+                                        }
+                                        return universities.map((edu, idx) => `
+                                            <div class="education-entry border border-gray-200 rounded p-2" data-type="university" data-index="${idx}">
+                                                <div class="flex items-start gap-2">
+                                                    <div class="flex-1 space-y-2">
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            placeholder="예: 서울대학교"
+                                                            value="${edu.school || ''}"
+                                                            data-field="school" />
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            placeholder="전공 (예: 컴퓨터공학)"
+                                                            value="${edu.major || ''}"
+                                                            data-field="major" />
+                                                    </div>
+                                                    ${universities.length > 1 ? `
+                                                        <button 
+                                                            type="button"
+                                                            onclick="removeEducationEntry(this)"
+                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            <i class="fas fa-trash text-sm"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('');
+                                    })()}
+                                </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">석사</label>
-                                <input 
-                                    type="text" 
-                                    id="editMastersInline"
-                                    value="${user.masters || ''}"
-                                    placeholder="예: 서울대학교 대학원"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm mb-2" />
-                                <input 
-                                    type="text" 
-                                    id="editMastersMajorInline"
-                                    value="${user.masters_major || ''}"
-                                    placeholder="전공 (예: 신학)"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">석사</label>
+                                    <button 
+                                        type="button"
+                                        onclick="addEducationEntry('masters')"
+                                        class="text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
+                                        <i class="fas fa-plus mr-1"></i>추가
+                                    </button>
+                                </div>
+                                <div id="mastersContainer" class="space-y-2">
+                                    ${(() => {
+                                        const masters = user.masters_degrees ? JSON.parse(user.masters_degrees) : [];
+                                        // 기존 단일 필드 데이터가 있으면 첫 번째 항목으로 추가
+                                        if (masters.length === 0 && (user.masters || user.masters_major)) {
+                                            masters.push({ school: user.masters || '', major: user.masters_major || '' });
+                                        }
+                                        // 항목이 없으면 빈 항목 하나 추가
+                                        if (masters.length === 0) {
+                                            masters.push({ school: '', major: '' });
+                                        }
+                                        return masters.map((edu, idx) => `
+                                            <div class="education-entry border border-gray-200 rounded p-2" data-type="masters" data-index="${idx}">
+                                                <div class="flex items-start gap-2">
+                                                    <div class="flex-1 space-y-2">
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            placeholder="예: 서울대학교 대학원"
+                                                            value="${edu.school || ''}"
+                                                            data-field="school" />
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            placeholder="전공 (예: 신학)"
+                                                            value="${edu.major || ''}"
+                                                            data-field="major" />
+                                                    </div>
+                                                    ${masters.length > 1 ? `
+                                                        <button 
+                                                            type="button"
+                                                            onclick="removeEducationEntry(this)"
+                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            <i class="fas fa-trash text-sm"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('');
+                                    })()}
+                                </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">박사</label>
-                                <input 
-                                    type="text" 
-                                    id="editPhDInline"
-                                    value="${user.phd || ''}"
-                                    placeholder="예: 하버드대학교"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm mb-2" />
-                                <input 
-                                    type="text" 
-                                    id="editPhDMajorInline"
-                                    value="${user.phd_major || ''}"
-                                    placeholder="전공 (예: 조직신학)"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-sm font-medium text-gray-700">박사</label>
+                                    <button 
+                                        type="button"
+                                        onclick="addEducationEntry('phd')"
+                                        class="text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
+                                        <i class="fas fa-plus mr-1"></i>추가
+                                    </button>
+                                </div>
+                                <div id="phdContainer" class="space-y-2">
+                                    ${(() => {
+                                        const phds = user.phd_degrees ? JSON.parse(user.phd_degrees) : [];
+                                        // 기존 단일 필드 데이터가 있으면 첫 번째 항목으로 추가
+                                        if (phds.length === 0 && (user.phd || user.phd_major)) {
+                                            phds.push({ school: user.phd || '', major: user.phd_major || '' });
+                                        }
+                                        // 항목이 없으면 빈 항목 하나 추가
+                                        if (phds.length === 0) {
+                                            phds.push({ school: '', major: '' });
+                                        }
+                                        return phds.map((edu, idx) => `
+                                            <div class="education-entry border border-gray-200 rounded p-2" data-type="phd" data-index="${idx}">
+                                                <div class="flex items-start gap-2">
+                                                    <div class="flex-1 space-y-2">
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            placeholder="예: 하버드대학교"
+                                                            value="${edu.school || ''}"
+                                                            data-field="school" />
+                                                        <input 
+                                                            type="text" 
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            placeholder="전공 (예: 조직신학)"
+                                                            value="${edu.major || ''}"
+                                                            data-field="major" />
+                                                    </div>
+                                                    ${phds.length > 1 ? `
+                                                        <button 
+                                                            type="button"
+                                                            onclick="removeEducationEntry(this)"
+                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            <i class="fas fa-trash text-sm"></i>
+                                                        </button>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        `).join('');
+                                    })()}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1289,16 +1400,46 @@ async function handleEditProfileSubmit(event) {
     const position = document.getElementById('editPositionInline').value;
     const avatarFile = document.getElementById('editAvatarInline')?.files[0];
     
-    // 학교 정보 수집
+    // 학교 정보 수집 (기존 방식)
     const elementary_school = document.getElementById('editElementarySchoolInline')?.value || '';
     const middle_school = document.getElementById('editMiddleSchoolInline')?.value || '';
     const high_school = document.getElementById('editHighSchoolInline')?.value || '';
-    const university = document.getElementById('editUniversityInline')?.value || '';
-    const university_major = document.getElementById('editUniversityMajorInline')?.value || '';
-    const masters = document.getElementById('editMastersInline')?.value || '';
-    const masters_major = document.getElementById('editMastersMajorInline')?.value || '';
-    const phd = document.getElementById('editPhDInline')?.value || '';
-    const phd_major = document.getElementById('editPhDMajorInline')?.value || '';
+    
+    // 새로운 방식: 대학교, 석사, 박사 목록 수집
+    const collectEducationData = (containerId) => {
+        const container = document.getElementById(containerId);
+        if (!container) return [];
+        
+        const entries = container.querySelectorAll('.education-entry');
+        const data = [];
+        
+        entries.forEach(entry => {
+            const schoolInput = entry.querySelector('[data-field="school"]');
+            const majorInput = entry.querySelector('[data-field="major"]');
+            
+            const school = schoolInput?.value?.trim() || '';
+            const major = majorInput?.value?.trim() || '';
+            
+            // 빈 항목은 제외
+            if (school || major) {
+                data.push({ school, major });
+            }
+        });
+        
+        return data;
+    };
+    
+    const universities = collectEducationData('universitiesContainer');
+    const masters_degrees = collectEducationData('mastersContainer');
+    const phd_degrees = collectEducationData('phdContainer');
+    
+    // 하위 호환성을 위해 첫 번째 항목을 단일 필드로도 저장
+    const university = universities.length > 0 ? universities[0].school : '';
+    const university_major = universities.length > 0 ? universities[0].major : '';
+    const masters = masters_degrees.length > 0 ? masters_degrees[0].school : '';
+    const masters_major = masters_degrees.length > 0 ? masters_degrees[0].major : '';
+    const phd = phd_degrees.length > 0 ? phd_degrees[0].school : '';
+    const phd_major = phd_degrees.length > 0 ? phd_degrees[0].major : '';
     
     // 신앙 고백 답변 수집
     const faithAnswers = {};
@@ -1331,7 +1472,10 @@ async function handleEditProfileSubmit(event) {
             masters,
             masters_major,
             phd,
-            phd_major
+            phd_major,
+            universities: JSON.stringify(universities),
+            masters_degrees: JSON.stringify(masters_degrees),
+            phd_degrees: JSON.stringify(phd_degrees)
         });
 
         // Upload new avatar if selected
@@ -3629,13 +3773,70 @@ async function showUserProfileModal(userId) {
                         <h4 class="font-semibold text-orange-800 mb-3">
                             <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
                         </h4>
-                        <div class="space-y-2 text-sm text-gray-700">
-                            <p><strong>초등학교:</strong> ${user.elementary_school || '미입력'}</p>
-                            <p><strong>중학교:</strong> ${user.middle_school || '미입력'}</p>
-                            <p><strong>고등학교:</strong> ${user.high_school || '미입력'}</p>
-                            <p><strong>대학교:</strong> ${user.university || '미입력'}${user.university_major ? ' (' + user.university_major + ')' : ''}</p>
-                            <p><strong>석사:</strong> ${user.masters || '미입력'}${user.masters_major ? ' (' + user.masters_major + ')' : ''}</p>
-                            <p><strong>박사:</strong> ${user.phd || '미입력'}${user.phd_major ? ' (' + user.phd_major + ')' : ''}</p>
+                        <div class="space-y-3 text-sm text-gray-700">
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">초등학교:</p>
+                                <p class="ml-2">${user.elementary_school || '미입력'}</p>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">중학교:</p>
+                                <p class="ml-2">${user.middle_school || '미입력'}</p>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">고등학교:</p>
+                                <p class="ml-2">${user.high_school || '미입력'}</p>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">대학교:</p>
+                                ${(() => {
+                                    const universities = user.universities ? JSON.parse(user.universities) : [];
+                                    // 하위 호환성: 기존 단일 필드 데이터 처리
+                                    if (universities.length === 0 && (user.university || user.university_major)) {
+                                        universities.push({ school: user.university || '', major: user.university_major || '' });
+                                    }
+                                    if (universities.length === 0) {
+                                        return '<p class="ml-2">미입력</p>';
+                                    }
+                                    return universities.map(edu => {
+                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                        return '<p class="ml-2">• ' + text + '</p>';
+                                    }).join('');
+                                })()}
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">석사:</p>
+                                ${(() => {
+                                    const masters = user.masters_degrees ? JSON.parse(user.masters_degrees) : [];
+                                    // 하위 호환성: 기존 단일 필드 데이터 처리
+                                    if (masters.length === 0 && (user.masters || user.masters_major)) {
+                                        masters.push({ school: user.masters || '', major: user.masters_major || '' });
+                                    }
+                                    if (masters.length === 0) {
+                                        return '<p class="ml-2">미입력</p>';
+                                    }
+                                    return masters.map(edu => {
+                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                        return '<p class="ml-2">• ' + text + '</p>';
+                                    }).join('');
+                                })()}
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">박사:</p>
+                                ${(() => {
+                                    const phds = user.phd_degrees ? JSON.parse(user.phd_degrees) : [];
+                                    // 하위 호환성: 기존 단일 필드 데이터 처리
+                                    if (phds.length === 0 && (user.phd || user.phd_major)) {
+                                        phds.push({ school: user.phd || '', major: user.phd_major || '' });
+                                    }
+                                    if (phds.length === 0) {
+                                        return '<p class="ml-2">미입력</p>';
+                                    }
+                                    return phds.map(edu => {
+                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                        return '<p class="ml-2">• ' + text + '</p>';
+                                    }).join('');
+                                })()}
+                            </div>
                         </div>
                     </div>
                     ` : ''}
@@ -3706,6 +3907,108 @@ function goToHome() {
         // Already on home, just scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+}
+
+// Education entry management functions
+function addEducationEntry(type) {
+    const containerMap = {
+        'university': 'universitiesContainer',
+        'masters': 'mastersContainer',
+        'phd': 'phdContainer'
+    };
+    
+    const placeholderMap = {
+        'university': { school: '예: 서울대학교', major: '전공 (예: 컴퓨터공학)' },
+        'masters': { school: '예: 서울대학교 대학원', major: '전공 (예: 신학)' },
+        'phd': { school: '예: 하버드대학교', major: '전공 (예: 조직신학)' }
+    };
+    
+    const container = document.getElementById(containerMap[type]);
+    if (!container) return;
+    
+    const currentEntries = container.querySelectorAll('.education-entry');
+    const newIndex = currentEntries.length;
+    const placeholder = placeholderMap[type];
+    
+    const newEntry = document.createElement('div');
+    newEntry.className = 'education-entry border border-gray-200 rounded p-2';
+    newEntry.setAttribute('data-type', type);
+    newEntry.setAttribute('data-index', newIndex);
+    newEntry.innerHTML = `
+        <div class="flex items-start gap-2">
+            <div class="flex-1 space-y-2">
+                <input 
+                    type="text" 
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                    placeholder="${placeholder.school}"
+                    value=""
+                    data-field="school" />
+                <input 
+                    type="text" 
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                    placeholder="${placeholder.major}"
+                    value=""
+                    data-field="major" />
+            </div>
+            <button 
+                type="button"
+                onclick="removeEducationEntry(this)"
+                class="text-red-500 hover:text-red-700 p-2">
+                <i class="fas fa-trash text-sm"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newEntry);
+    
+    // 항목이 2개 이상이면 첫 번째 항목에도 삭제 버튼 추가
+    updateDeleteButtons(containerMap[type]);
+}
+
+function removeEducationEntry(button) {
+    const entry = button.closest('.education-entry');
+    const container = entry.parentElement;
+    
+    entry.remove();
+    
+    // 인덱스 재조정
+    const entries = container.querySelectorAll('.education-entry');
+    entries.forEach((entry, idx) => {
+        entry.setAttribute('data-index', idx);
+    });
+    
+    // 삭제 버튼 업데이트
+    updateDeleteButtons(container.id);
+}
+
+function updateDeleteButtons(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const entries = container.querySelectorAll('.education-entry');
+    
+    entries.forEach((entry, idx) => {
+        const existingButton = entry.querySelector('.fa-trash')?.closest('button');
+        const inputContainer = entry.querySelector('.flex-1');
+        const parentDiv = entry.querySelector('.flex.items-start.gap-2');
+        
+        if (entries.length > 1) {
+            // 2개 이상이면 삭제 버튼 보이기/추가
+            if (!existingButton) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'text-red-500 hover:text-red-700 p-2';
+                deleteBtn.onclick = function() { removeEducationEntry(this); };
+                deleteBtn.innerHTML = '<i class="fas fa-trash text-sm"></i>';
+                parentDiv.appendChild(deleteBtn);
+            }
+        } else {
+            // 1개만 남으면 삭제 버튼 제거
+            if (existingButton) {
+                existingButton.remove();
+            }
+        }
+    });
 }
 
 // Initialize

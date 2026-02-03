@@ -1881,11 +1881,15 @@ app.get('/admin', (c) => {
 
             async function loadUsers() {
                 try {
+                    const tbody = document.getElementById('usersTableBody');
+                    
+                    // Show loading state
+                    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>사용자 목록을 불러오는 중...</td></tr>';
+                    
                     const response = await axios.get('/api/admin/users', {
                         headers: { 'X-Admin-ID': adminId }
                     });
                     
-                    const tbody = document.getElementById('usersTableBody');
                     tbody.innerHTML = response.data.users.map(user => \`
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 text-sm">\${user.id}</td>
@@ -1934,8 +1938,12 @@ app.get('/admin', (c) => {
                             </td>
                         </tr>
                     \`).join('');
+                    
+                    console.log('사용자 목록 로드 완료:', response.data.users.length, '명');
                 } catch (error) {
                     console.error('Failed to load users:', error);
+                    const tbody = document.getElementById('usersTableBody');
+                    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>사용자 목록을 불러오는데 실패했습니다.</td></tr>';
                 }
             }
 
@@ -1997,9 +2005,19 @@ app.get('/admin', (c) => {
                         { count: parseInt(count) },
                         { headers: { 'X-Admin-ID': adminId } }
                     );
-                    alert(\`\${response.data.count}명의 테스트 사용자가 생성되었습니다.\`);
-                    loadStats();
-                    loadUsers();
+                    
+                    const createdCount = response.data.count;
+                    
+                    // Show success message
+                    alert(\`✅ \${createdCount}명의 테스트 사용자가 생성되었습니다.\\n\\n사용자 목록을 새로고침합니다...\`);
+                    
+                    // Force reload data
+                    await loadStats();
+                    await loadUsers();
+                    
+                    // Visual confirmation with console log
+                    console.log('테스트 사용자 생성 완료:', createdCount, '명');
+                    console.log('현재 사용자 수:', document.getElementById('totalUsers').textContent);
                 } catch (error) {
                     console.error('Failed to create fake users:', error);
                     alert('테스트 사용자 생성에 실패했습니다.');
@@ -2013,9 +2031,19 @@ app.get('/admin', (c) => {
                     const response = await axios.delete('/api/admin/delete-fake-users', {
                         headers: { 'X-Admin-ID': adminId }
                     });
-                    alert(\`\${response.data.deleted_count}명의 테스트 사용자가 삭제되었습니다.\`);
-                    loadStats();
-                    loadUsers();
+                    
+                    const deletedCount = response.data.deleted_count;
+                    
+                    // Show success message
+                    alert(\`✅ \${deletedCount}명의 테스트 사용자가 삭제되었습니다.\\n\\n사용자 목록을 새로고침합니다...\`);
+                    
+                    // Force reload data
+                    await loadStats();
+                    await loadUsers();
+                    
+                    // Visual confirmation with console log
+                    console.log('테스트 사용자 삭제 완료:', deletedCount, '명');
+                    console.log('현재 사용자 수:', document.getElementById('totalUsers').textContent);
                 } catch (error) {
                     console.error('Failed to delete fake users:', error);
                     alert('테스트 사용자 삭제에 실패했습니다.');

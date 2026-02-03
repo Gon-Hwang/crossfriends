@@ -83,16 +83,80 @@ app.get('/api/users', async (c) => {
 })
 
 // Get user by ID
+// Get user by ID
 app.get('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone FROM users WHERE id = ?').bind(id).first()
+  const currentUserId = c.req.query('current_user_id') // To check if viewing own profile
+  
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.json({ error: 'User not found' }, 404)
   }
   
-  return c.json({ user })
+  // If viewing own profile or no privacy settings, return all data
+  const isOwnProfile = currentUserId && parseInt(currentUserId) === user.id
+  
+  if (isOwnProfile || !user.privacy_settings) {
+    return c.json({ user })
+  }
+  
+  // Apply privacy filters for other users
+  const privacySettings = JSON.parse(user.privacy_settings || '{}')
+  const filteredUser = { ...user }
+  
+  // Hide basic info if private
+  if (privacySettings.basic_info === false) {
+    filteredUser.gender = null
+    filteredUser.marital_status = null
+    filteredUser.phone = null
+    filteredUser.address = null
+  }
+  
+  // Hide church info if private
+  if (privacySettings.church_info === false) {
+    filteredUser.church = null
+    filteredUser.pastor = null
+    filteredUser.denomination = null
+    filteredUser.location = null
+    filteredUser.position = null
+  }
+  
+  // Hide faith answers if private
+  if (privacySettings.faith_answers === false) {
+    filteredUser.faith_answers = null
+  }
+  
+  // Hide education info if private
+  if (privacySettings.education_info === false) {
+    filteredUser.elementary_school = null
+    filteredUser.middle_school = null
+    filteredUser.high_school = null
+    filteredUser.university = null
+    filteredUser.university_major = null
+    filteredUser.masters = null
+    filteredUser.masters_major = null
+    filteredUser.phd = null
+    filteredUser.phd_major = null
+    filteredUser.universities = null
+    filteredUser.masters_degrees = null
+    filteredUser.phd_degrees = null
+  }
+  
+  // Hide career info if private
+  if (privacySettings.career_info === false) {
+    filteredUser.careers = null
+  }
+  
+  // Hide scores if private
+  if (privacySettings.scores === false) {
+    filteredUser.scripture_score = null
+    filteredUser.prayer_score = null
+    filteredUser.activity_score = null
+  }
+  
+  return c.json({ user: filteredUser })
 })
 
 // Create new user
@@ -116,11 +180,11 @@ app.post('/api/users', async (c) => {
 app.put('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone } = await c.req.json()
+  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings } = await c.req.json()
   
   await DB.prepare(
-    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, address = ?, phone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, address || null, phone || null, id).run()
+    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, address = ?, phone = ?, privacy_settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, address || null, phone || null, privacy_settings || null, id).run()
   
   return c.json({ success: true })
 })

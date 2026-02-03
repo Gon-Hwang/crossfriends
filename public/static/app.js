@@ -902,7 +902,7 @@ async function showEditProfileModal() {
     if (!currentUser) return;
     
     try {
-        // Fetch latest user data to get faith_answers
+        // Fetch latest user data to get faith_answers and privacy_settings
         const response = await axios.get('/api/users/' + currentUserId);
         const user = response.data.user;
         
@@ -913,6 +913,24 @@ async function showEditProfileModal() {
                 faithAnswers = JSON.parse(user.faith_answers);
             } catch (e) {
                 console.error('Failed to parse faith_answers:', e);
+            }
+        }
+        
+        // Parse privacy settings if exists (default to all public)
+        let privacySettings = {
+            basic_info: true,
+            church_info: true,
+            faith_answers: true,
+            education_info: true,
+            career_info: true,
+            scores: true
+        };
+        if (user.privacy_settings) {
+            try {
+                const parsed = JSON.parse(user.privacy_settings);
+                privacySettings = { ...privacySettings, ...parsed };
+            } catch (e) {
+                console.error('Failed to parse privacy_settings:', e);
             }
         }
         
@@ -974,9 +992,19 @@ async function showEditProfileModal() {
                 <div class="md:col-span-2 space-y-4">
                     <!-- Basic Info -->
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                        <h4 class="font-semibold text-blue-800 mb-3">
-                            <i class="fas fa-info-circle mr-2"></i>기본 정보
-                        </h4>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-blue-800">
+                                <i class="fas fa-info-circle mr-2"></i>기본 정보
+                            </h4>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="privacyBasicInfo"
+                                    ${privacySettings.basic_info !== false ? 'checked' : ''}
+                                    class="mr-2 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500" />
+                                <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
+                            </label>
+                        </div>
                         <div class="space-y-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">이메일 (수정 불가)</label>
@@ -1039,9 +1067,19 @@ async function showEditProfileModal() {
                     
                     <!-- Church Info -->
                     <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
-                        <h4 class="font-semibold text-green-800 mb-3">
-                            <i class="fas fa-church mr-2"></i>교회 정보
-                        </h4>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-green-800">
+                                <i class="fas fa-church mr-2"></i>교회 정보
+                            </h4>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="privacyChurchInfo"
+                                    ${privacySettings.church_info !== false ? 'checked' : ''}
+                                    class="mr-2 w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
+                                <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
+                            </label>
+                        </div>
                         <div class="space-y-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">소속 교회</label>
@@ -1085,9 +1123,19 @@ async function showEditProfileModal() {
                     
                     <!-- Faith Confession -->
                     <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
-                        <h4 class="font-semibold text-yellow-800 mb-3">
-                            <i class="fas fa-cross mr-2"></i>신앙 고백
-                        </h4>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-yellow-800">
+                                <i class="fas fa-cross mr-2"></i>신앙 고백
+                            </h4>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="privacyFaithAnswers"
+                                    ${privacySettings.faith_answers !== false ? 'checked' : ''}
+                                    class="mr-2 w-4 h-4 text-yellow-600 rounded focus:ring-2 focus:ring-yellow-500" />
+                                <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
+                            </label>
+                        </div>
                         <div class="space-y-2 text-sm">
                             ${Array.from({length: 10}, (_, i) => {
                                 const questions = [
@@ -1123,9 +1171,19 @@ async function showEditProfileModal() {
                     
                     <!-- Career Info -->
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
-                        <h4 class="font-semibold text-purple-800 mb-3">
-                            <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
-                        </h4>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-purple-800">
+                                <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                            </h4>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="privacyCareerInfo"
+                                    ${privacySettings.career_info !== false ? 'checked' : ''}
+                                    class="mr-2 w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-500" />
+                                <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
+                            </label>
+                        </div>
                         <div class="space-y-3">
                             <div>
                                 <div class="flex items-center justify-between mb-2">
@@ -1186,9 +1244,19 @@ async function showEditProfileModal() {
                     
                     <!-- School Info -->
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
-                        <h4 class="font-semibold text-orange-800 mb-3">
-                            <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
-                        </h4>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-orange-800">
+                                <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                            </h4>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="privacyEducationInfo"
+                                    ${privacySettings.education_info !== false ? 'checked' : ''}
+                                    class="mr-2 w-4 h-4 text-orange-600 rounded focus:ring-2 focus:ring-orange-500" />
+                                <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
+                            </label>
+                        </div>
                         <div class="space-y-3">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">초등학교</label>
@@ -1572,6 +1640,16 @@ async function handleEditProfileSubmit(event) {
             faithAnswers['q' + i] = element.value;
         }
     }
+    
+    // 공개 설정 수집
+    const privacySettings = {
+        basic_info: document.getElementById('privacyBasicInfo')?.checked ?? true,
+        church_info: document.getElementById('privacyChurchInfo')?.checked ?? true,
+        faith_answers: document.getElementById('privacyFaithAnswers')?.checked ?? true,
+        education_info: document.getElementById('privacyEducationInfo')?.checked ?? true,
+        career_info: document.getElementById('privacyCareerInfo')?.checked ?? true,
+        scores: document.getElementById('privacyScores')?.checked ?? true
+    };
 
     if (!name) {
         showToast('이름은 필수 항목입니다.', 'error');
@@ -1579,7 +1657,7 @@ async function handleEditProfileSubmit(event) {
     }
 
     try {
-        // Update user info including faith_answers and school info
+        // Update user info including faith_answers, school info, and privacy_settings
         await axios.put('/api/users/' + currentUserId, {
             name,
             gender,
@@ -1602,7 +1680,8 @@ async function handleEditProfileSubmit(event) {
             universities: JSON.stringify(universities),
             masters_degrees: JSON.stringify(masters_degrees),
             phd_degrees: JSON.stringify(phd_degrees),
-            careers: JSON.stringify(careers)
+            careers: JSON.stringify(careers),
+            privacy_settings: JSON.stringify(privacySettings)
         });
 
         // Upload new avatar if selected
@@ -3774,8 +3853,11 @@ function resetBackgroundColor() {
 // Show any user's profile (for clicking avatars in posts)
 async function showUserProfileModal(userId) {
     try {
-        // Fetch user data
-        const response = await axios.get('/api/users/' + userId);
+        // Fetch user data with current user context for privacy filtering
+        const url = currentUserId 
+            ? `/api/users/${userId}?current_user_id=${currentUserId}`
+            : `/api/users/${userId}`;
+        const response = await axios.get(url);
         const user = response.data.user;
         
         // Parse faith answers if exists

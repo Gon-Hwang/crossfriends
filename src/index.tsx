@@ -2045,17 +2045,33 @@ app.get('/admin', (c) => {
                     <table class="w-full">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">ID</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="id" onclick="sortUsers('id')">
+                                    ID
+                                </th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">이메일</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">이름</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="name" onclick="sortUsers('name')">
+                                    이름 (가나다순)
+                                </th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">교회</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">역할</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">게시물</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">성경점수</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">기도점수</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">활동점수</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">사역점수</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">가입일</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="post_count" onclick="sortUsers('post_count')">
+                                    게시물
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="scripture_score" onclick="sortUsers('scripture_score')">
+                                    성경점수
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="prayer_score" onclick="sortUsers('prayer_score')">
+                                    기도점수
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="activity_score" onclick="sortUsers('activity_score')">
+                                    활동점수
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="ministry_score" onclick="sortUsers('ministry_score')">
+                                    사역점수
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="created_at" onclick="sortUsers('created_at')">
+                                    가입일
+                                </th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
                             </tr>
                         </thead>
@@ -2146,18 +2162,117 @@ app.get('/admin', (c) => {
                 }
             }
 
+            // User sorting state
+            let usersData = [];
+            let currentSortField = 'id';
+            let currentSortOrder = 'asc';
+
             async function loadUsers() {
                 try {
                     const tbody = document.getElementById('usersTableBody');
                     
                     // Show loading state
-                    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>사용자 목록을 불러오는 중...</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>사용자 목록을 불러오는 중...</td></tr>';
                     
                     const response = await axios.get('/api/admin/users', {
                         headers: { 'X-Admin-ID': adminId }
                     });
                     
-                    tbody.innerHTML = response.data.users.map(user => \`
+                    // Store users data for sorting
+                    usersData = response.data.users;
+                    
+                    // Render with current sort
+                    renderUsers();
+                    
+                    console.log('사용자 목록 로드 완료:', usersData.length, '명');
+                } catch (error) {
+                    console.error('Failed to load users:', error);
+                    const tbody = document.getElementById('usersTableBody');
+                    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>사용자 목록을 불러오는데 실패했습니다.</td></tr>';
+                }
+            }
+
+            function sortUsers(field) {
+                // Toggle sort order if clicking same field
+                if (currentSortField === field) {
+                    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSortField = field;
+                    currentSortOrder = 'asc';
+                }
+                
+                // Sort the data
+                usersData.sort((a, b) => {
+                    let aVal, bVal;
+                    
+                    switch(field) {
+                        case 'id':
+                            aVal = a.id;
+                            bVal = b.id;
+                            break;
+                        case 'name':
+                            // Korean alphabetical sort
+                            aVal = a.name || '';
+                            bVal = b.name || '';
+                            return currentSortOrder === 'asc' 
+                                ? aVal.localeCompare(bVal, 'ko-KR')
+                                : bVal.localeCompare(aVal, 'ko-KR');
+                        case 'email':
+                            aVal = a.email || '';
+                            bVal = b.email || '';
+                            return currentSortOrder === 'asc'
+                                ? aVal.localeCompare(bVal)
+                                : bVal.localeCompare(aVal);
+                        case 'church':
+                            aVal = a.church || '';
+                            bVal = b.church || '';
+                            return currentSortOrder === 'asc'
+                                ? aVal.localeCompare(bVal, 'ko-KR')
+                                : bVal.localeCompare(aVal, 'ko-KR');
+                        case 'post_count':
+                            aVal = a.post_count || 0;
+                            bVal = b.post_count || 0;
+                            break;
+                        case 'scripture_score':
+                            aVal = a.scripture_score || 0;
+                            bVal = b.scripture_score || 0;
+                            break;
+                        case 'prayer_score':
+                            aVal = a.prayer_score || 0;
+                            bVal = b.prayer_score || 0;
+                            break;
+                        case 'activity_score':
+                            aVal = a.activity_score || 0;
+                            bVal = b.activity_score || 0;
+                            break;
+                        case 'ministry_score':
+                            aVal = (a.scripture_score || 0) + (a.prayer_score || 0) + (a.activity_score || 0);
+                            bVal = (b.scripture_score || 0) + (b.prayer_score || 0) + (b.activity_score || 0);
+                            break;
+                        case 'created_at':
+                            aVal = new Date(a.created_at).getTime();
+                            bVal = new Date(b.created_at).getTime();
+                            break;
+                        default:
+                            aVal = a[field];
+                            bVal = b[field];
+                    }
+                    
+                    if (currentSortOrder === 'asc') {
+                        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+                    } else {
+                        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+                    }
+                });
+                
+                renderUsers();
+                updateSortIndicators();
+            }
+
+            function renderUsers() {
+                const tbody = document.getElementById('usersTableBody');
+                    
+                tbody.innerHTML = usersData.map(user => \`
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 text-sm">\${user.id}</td>
                             <td class="px-4 py-3 text-sm">\${user.email}</td>
@@ -2215,12 +2330,31 @@ app.get('/admin', (c) => {
                             </td>
                         </tr>
                     \`).join('');
-                    
-                    console.log('사용자 목록 로드 완료:', response.data.users.length, '명');
-                } catch (error) {
-                    console.error('Failed to load users:', error);
-                    const tbody = document.getElementById('usersTableBody');
-                    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>사용자 목록을 불러오는데 실패했습니다.</td></tr>';
+            }
+
+            function updateSortIndicators() {
+                // Remove all sort indicators
+                document.querySelectorAll('.sort-indicator').forEach(el => el.remove());
+                
+                // Add indicator to current sort column
+                const headers = {
+                    'id': document.querySelector('[data-sort="id"]'),
+                    'name': document.querySelector('[data-sort="name"]'),
+                    'post_count': document.querySelector('[data-sort="post_count"]'),
+                    'scripture_score': document.querySelector('[data-sort="scripture_score"]'),
+                    'prayer_score': document.querySelector('[data-sort="prayer_score"]'),
+                    'activity_score': document.querySelector('[data-sort="activity_score"]'),
+                    'ministry_score': document.querySelector('[data-sort="ministry_score"]'),
+                    'created_at': document.querySelector('[data-sort="created_at"]')
+                };
+                
+                const currentHeader = headers[currentSortField];
+                if (currentHeader) {
+                    const icon = currentSortOrder === 'asc' ? '↑' : '↓';
+                    const indicator = document.createElement('span');
+                    indicator.className = 'sort-indicator ml-1 text-blue-600';
+                    indicator.textContent = icon;
+                    currentHeader.appendChild(indicator);
                 }
             }
 

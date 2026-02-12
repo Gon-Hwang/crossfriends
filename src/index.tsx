@@ -106,15 +106,17 @@ app.get('/api/users/:id', async (c) => {
   const privacySettings = JSON.parse(user.privacy_settings || '{}')
   const filteredUser = { ...user }
   
-  // Hide basic info if private
+  // Hide basic info if private (including email) - hide ALL data regardless of input/empty
   if (privacySettings.basic_info === false) {
+    filteredUser.email = null  // ALWAYS hide email when private
     filteredUser.gender = null
     filteredUser.marital_status = null
     filteredUser.phone = null
     filteredUser.address = null
+    filteredUser.bio = null  // Also hide bio
   }
   
-  // Hide church info if private
+  // Hide church info if private - hide ALL data regardless of input/empty
   if (privacySettings.church_info === false) {
     filteredUser.church = null
     filteredUser.pastor = null
@@ -123,12 +125,12 @@ app.get('/api/users/:id', async (c) => {
     filteredUser.position = null
   }
   
-  // Hide faith answers if private
+  // Hide faith answers if private - hide ALL data regardless of input/empty
   if (privacySettings.faith_answers === false) {
     filteredUser.faith_answers = null
   }
   
-  // Hide education info if private
+  // Hide education info if private - hide ALL data regardless of input/empty
   if (privacySettings.education_info === false) {
     filteredUser.elementary_school = null
     filteredUser.middle_school = null
@@ -144,12 +146,12 @@ app.get('/api/users/:id', async (c) => {
     filteredUser.phd_degrees = null
   }
   
-  // Hide career info if private
+  // Hide career info if private - hide ALL data regardless of input/empty
   if (privacySettings.career_info === false) {
     filteredUser.careers = null
   }
   
-  // Hide scores if private
+  // Hide scores if private - hide ALL data regardless of input/empty
   if (privacySettings.scores === false) {
     filteredUser.scripture_score = null
     filteredUser.prayer_score = null
@@ -157,6 +159,189 @@ app.get('/api/users/:id', async (c) => {
   }
   
   return c.json({ user: filteredUser })
+})
+
+// View user profile (HTML page)
+app.get('/users/:id', async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings FROM users WHERE id = ?').bind(id).first()
+  
+  if (!user) {
+    return c.html('<h1>사용자를 찾을 수 없습니다</h1>')
+  }
+  
+  // Parse JSON fields
+  const privacySettings = JSON.parse(user.privacy_settings || '{}')
+  const faithAnswers = JSON.parse(user.faith_answers || '{}')
+  const careers = JSON.parse(user.careers || '[]')
+  
+  // Apply privacy filters - hide data if private
+  const showBasicInfo = privacySettings.basic_info !== false
+  const showChurchInfo = privacySettings.church_info !== false
+  const showFaithAnswers = privacySettings.faith_answers !== false
+  const showEducationInfo = privacySettings.education_info !== false
+  const showCareerInfo = privacySettings.career_info !== false
+  const showScores = privacySettings.scores !== false
+  
+  const careerHTML = (showCareerInfo && careers.length > 0) ? careers.map((career: any) => `
+    <div class="bg-gray-50 p-3 rounded">
+      <div class="font-semibold">${career.company}</div>
+      <div class="text-sm text-gray-600">${career.position} • ${career.period}</div>
+    </div>
+  `).join('') : ''
+  
+  const mastersHTML = (showEducationInfo && user.masters) ? `<div><span class="font-semibold">석사:</span> ${user.masters} ${user.masters_major ? '(' + user.masters_major + ')' : ''}</div>` : ''
+  const phdHTML = (showEducationInfo && user.phd) ? `<div><span class="font-semibold">박사:</span> ${user.phd} ${user.phd_major ? '(' + user.phd_major + ')' : ''}</div>` : ''
+  const careerSectionHTML = (showCareerInfo && careers.length > 0) ? `
+    <div class="border-b pb-4">
+      <h2 class="text-xl font-semibold mb-3 text-gray-700">
+        <i class="fas fa-briefcase mr-2"></i>직업 정보
+      </h2>
+      <div class="space-y-2">${careerHTML}</div>
+    </div>
+  ` : ''
+  
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${ user.name} - 프로필</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-50">
+        <div class="max-w-4xl mx-auto p-6">
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800">${ user.name}</h1>
+                    <button onclick="window.close()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg">
+                        <i class="fas fa-times mr-2"></i>닫기
+                    </button>
+                </div>
+                
+                <!-- Basic Info -->
+                <div class="space-y-4">
+                ${showBasicInfo ? `
+                    <div class="border-b pb-4">
+                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                            <i class="fas fa-user mr-2"></i>기본 정보
+                        </h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><span class="font-semibold">이메일:</span> ${ user.email}</div>
+                            <div><span class="font-semibold">성별:</span> ${ user.gender || '-'}</div>
+                            <div><span class="font-semibold">결혼 여부:</span> ${ user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : '-'}</div>
+                            <div><span class="font-semibold">역할:</span> <span class="px-2 py-1 rounded-full text-xs ${ user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">${ user.role}</span></div>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="border-b pb-4">
+                        <div class="text-gray-500 italic">
+                            <i class="fas fa-lock mr-2"></i>기본 정보가 비공개로 설정되어 있습니다.
+                        </div>
+                    </div>
+                `}
+                    
+                    <!-- Church Info -->
+                    ${showChurchInfo ? `
+                    <div class="border-b pb-4">
+                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                            <i class="fas fa-church mr-2"></i>교회 정보
+                        </h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><span class="font-semibold">교회:</span> ${ user.church || '-'}</div>
+                            <div><span class="font-semibold">담임목사:</span> ${ user.pastor || '-'}</div>
+                            <div><span class="font-semibold">교단:</span> ${ user.denomination || '-'}</div>
+                            <div><span class="font-semibold">직분:</span> ${ user.position || '-'}</div>
+                            <div><span class="font-semibold">지역:</span> ${ user.location || '-'}</div>
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="border-b pb-4">
+                        <div class="text-gray-500 italic">
+                            <i class="fas fa-lock mr-2"></i>교회 정보가 비공개로 설정되어 있습니다.
+                        </div>
+                    </div>
+                    `}
+                    
+                    <!-- Education Info -->
+                    ${showEducationInfo ? `
+                    <div class="border-b pb-4">
+                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                            <i class="fas fa-graduation-cap mr-2"></i>학교 정보
+                        </h2>
+                        <div class="space-y-2">
+                            <div><span class="font-semibold">초등학교:</span> ${ user.elementary_school || '-'}</div>
+                            <div><span class="font-semibold">중학교:</span> ${ user.middle_school || '-'}</div>
+                            <div><span class="font-semibold">고등학교:</span> ${ user.high_school || '-'}</div>
+                            <div><span class="font-semibold">대학교:</span> ${ user.university || '-'} ${ user.university_major ? '(' + user.university_major + ')' : ''}</div>
+                            ${ mastersHTML}
+                            ${ phdHTML}
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="border-b pb-4">
+                        <div class="text-gray-500 italic">
+                            <i class="fas fa-lock mr-2"></i>학력 정보가 비공개로 설정되어 있습니다.
+                        </div>
+                    </div>
+                    `}
+                    
+                    <!-- Career Info -->
+                    ${showCareerInfo ? careerSectionHTML : `
+                    <div class="border-b pb-4">
+                        <div class="text-gray-500 italic">
+                            <i class="fas fa-lock mr-2"></i>직업 정보가 비공개로 설정되어 있습니다.
+                        </div>
+                    </div>
+                    `}
+                    
+                    <!-- Scores -->
+                    ${showScores ? `
+                    <div class="border-b pb-4">
+                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                            <i class="fas fa-chart-line mr-2"></i>점수
+                        </h2>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="bg-yellow-50 p-4 rounded-lg text-center">
+                                <div class="text-2xl font-bold text-yellow-600">${ user.scripture_score || 0}</div>
+                                <div class="text-sm text-gray-600">성경 점수</div>
+                            </div>
+                            <div class="bg-blue-50 p-4 rounded-lg text-center">
+                                <div class="text-2xl font-bold text-blue-600">${ user.prayer_score || 0}</div>
+                                <div class="text-sm text-gray-600">기도 점수</div>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg text-center">
+                                <div class="text-2xl font-bold text-green-600">${ user.activity_score || 0}</div>
+                                <div class="text-sm text-gray-600">활동 점수</div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="border-b pb-4">
+                        <div class="text-gray-500 italic">
+                            <i class="fas fa-lock mr-2"></i>점수 정보가 비공개로 설정되어 있습니다.
+                        </div>
+                    </div>
+                    `}
+                </div>
+                    
+                    <!-- Dates -->
+                    <div>
+                        <div class="text-sm text-gray-500">
+                            <div>가입일: ${ new Date(user.created_at).toLocaleDateString('ko-KR')}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+  `)
 })
 
 // Create new user
@@ -1401,8 +1586,8 @@ app.delete('/api/admin/delete-fake-users', requireAdmin, async (c) => {
   const { DB } = c.env
   
   try {
-    // Delete all users with fake email addresses
-    const result = await DB.prepare("DELETE FROM users WHERE email LIKE 'fake%@cf.com'").run()
+    // Delete all users with fake or test email addresses
+    const result = await DB.prepare("DELETE FROM users WHERE email LIKE 'fake%@cf.com' OR email LIKE 'test%@cf.com'").run()
     
     return c.json({
       success: true,
@@ -1958,7 +2143,11 @@ app.get('/admin', (c) => {
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 text-sm">\${user.id}</td>
                             <td class="px-4 py-3 text-sm">\${user.email}</td>
-                            <td class="px-4 py-3 text-sm font-semibold">\${user.name}</td>
+                            <td class="px-4 py-3 text-sm font-semibold">
+                                <a href="#" onclick="viewUserProfile(\${user.id}); return false;" class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors">
+                                    \${user.name}
+                                </a>
+                            </td>
                             <td class="px-4 py-3 text-sm">\${user.church || '-'}</td>
                             <td class="px-4 py-3 text-sm">
                                 <span class="px-2 py-1 rounded-full text-xs \${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">
@@ -2112,6 +2301,11 @@ app.get('/admin', (c) => {
                     console.error('Failed to delete fake users:', error);
                     alert('테스트 사용자 삭제에 실패했습니다.');
                 }
+            }
+
+            window.viewUserProfile = function(userId) {
+                // Open user profile HTML page in new tab
+                window.open(\`/users/\${userId}\`, '_blank');
             }
 
             window.deleteUser = async function(userId, userRole) {

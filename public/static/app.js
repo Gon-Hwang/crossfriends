@@ -835,11 +835,11 @@ function previewAvatar(event) {
 }
 
 // Modal functions
-function showSignupModal() {
+window.showSignupModal = function() {
     document.getElementById('signupModal').classList.remove('hidden');
 }
 
-function hideSignupModal() {
+window.hideSignupModal = function() {
     document.getElementById('signupModal').classList.add('hidden');
     // Clear form
     document.getElementById('signupEmail').value = '';
@@ -860,11 +860,11 @@ function hideSignupModal() {
     document.getElementById('avatarPreview').innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
 }
 
-function showLoginModal() {
+window.showLoginModal = function() {
     document.getElementById('loginModal').classList.remove('hidden');
 }
 
-function hideLoginModal() {
+window.hideLoginModal = function() {
     document.getElementById('loginModal').classList.add('hidden');
     document.getElementById('loginEmail').value = '';
 }
@@ -893,12 +893,12 @@ async function showViewProfileModal() {
     showUserProfileModal(currentUserId);
 }
 
-function hideViewProfileModal() {
+window.hideViewProfileModal = function() {
     document.getElementById('viewProfileModal').classList.add('hidden');
 }
 
 // Edit Profile Modal functions
-async function showEditProfileModal() {
+window.showEditProfileModal = async function() {
     if (!currentUser) return;
     
     try {
@@ -990,6 +990,49 @@ async function showEditProfileModal() {
                 
                 <!-- Edit Form Section -->
                 <div class="md:col-span-2 space-y-4">
+                    <!-- Scores Info -->
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-purple-800">
+                                <i class="fas fa-trophy mr-2"></i>나의 점수 <span class="text-xs text-gray-500 font-normal">(읽기 전용)</span>
+                            </h4>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="privacyScores"
+                                    ${privacySettings.scores !== false ? 'checked' : ''}
+                                    class="mr-2 w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-500" />
+                                <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
+                            </label>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center bg-white p-3 rounded-lg">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-praying-hands text-purple-600 text-xl mb-2"></i>
+                                    <span class="text-xs text-gray-600 mb-1">기도 점수</span>
+                                    <span class="text-xl font-bold text-purple-900">${user.prayer_score || 0}</span>
+                                </div>
+                            </div>
+                            <div class="text-center bg-white p-3 rounded-lg">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-bible text-purple-600 text-xl mb-2"></i>
+                                    <span class="text-xs text-gray-600 mb-1">성경 점수</span>
+                                    <span class="text-xl font-bold text-purple-900">${user.scripture_score || 0}</span>
+                                </div>
+                            </div>
+                            <div class="text-center bg-white p-3 rounded-lg">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-chart-line text-purple-600 text-xl mb-2"></i>
+                                    <span class="text-xs text-gray-600 mb-1">활동 점수</span>
+                                    <span class="text-xl font-bold text-purple-900">${user.activity_score || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2 text-center">
+                            <i class="fas fa-info-circle mr-1"></i>점수는 활동으로 자동 적립되며 수정할 수 없습니다.
+                        </p>
+                    </div>
+                    
                     <!-- Basic Info -->
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <div class="flex items-center justify-between mb-3">
@@ -1716,7 +1759,7 @@ async function handleEditProfileSubmit(event) {
     }
 }
 
-function hideEditProfileModal() {
+window.hideEditProfileModal = function() {
     document.getElementById('editProfileModal').classList.add('hidden');
     document.getElementById('editAvatar').value = '';
 }
@@ -1836,129 +1879,6 @@ async function handleEditProfile() {
         alert('회원정보 수정에 실패했습니다. 다시 시도해주세요.');
     }
 }
-
-
-function hideEditProfileModal() {
-    document.getElementById('editProfileModal').classList.add('hidden');
-    document.getElementById('editAvatar').value = '';
-}
-
-function previewEditAvatar(event) {
-    const file = event.target.files[0];
-    if (file) {
-        if (file.size > 5 * 1024 * 1024) {
-            alert('파일 크기는 5MB를 초과할 수 없습니다.');
-            event.target.value = '';
-            return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const preview = document.getElementById('editAvatarPreview');
-            preview.innerHTML = '<img src="' + e.target.result + '" class="w-full h-full object-cover" />';
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-// Delete avatar
-async function deleteAvatar() {
-    if (!currentUserId) {
-        alert('로그인이 필요합니다.');
-        return;
-    }
-    
-    if (!confirm('프로필 사진을 삭제하시겠습니까?')) {
-        return;
-    }
-    
-    try {
-        await axios.delete('/api/users/' + currentUserId + '/avatar');
-        
-        // Update preview to default
-        const preview = document.getElementById('editAvatarPreview');
-        preview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
-        
-        // Refresh user data
-        const userResponse = await axios.get('/api/users/' + currentUserId);
-        currentUser = userResponse.data.user;
-        updateAuthUI();
-        
-        alert('프로필 사진이 삭제되었습니다.');
-    } catch (error) {
-        console.error('Avatar delete error:', error);
-        alert('프로필 사진 삭제에 실패했습니다.');
-    }
-}
-
-async function handleEditProfile() {
-    const name = document.getElementById('editName').value;
-    const gender = document.getElementById('editGender').value;
-    const church = document.getElementById('editChurch').value;
-    const pastor = document.getElementById('editPastor').value;
-    const position = document.getElementById('editPosition').value;
-    const maritalStatus = document.getElementById('editMaritalStatus').value;
-    const avatarFile = document.getElementById('editAvatar').files[0];
-    
-    // 신앙 고백 답변 수집
-    const faithAnswers = {
-        q1: document.getElementById('edit_faith_q1').value,
-        q2: document.getElementById('edit_faith_q2').value,
-        q3: document.getElementById('edit_faith_q3').value,
-        q4: document.getElementById('edit_faith_q4').value,
-        q5: document.getElementById('edit_faith_q5').value,
-        q6: document.getElementById('edit_faith_q6').value,
-        q7: document.getElementById('edit_faith_q7').value,
-        q8: document.getElementById('edit_faith_q8').value,
-        q9: document.getElementById('edit_faith_q9').value,
-        q10: document.getElementById('edit_faith_q10').value
-    };
-
-    if (!name) {
-        alert('이름은 필수 항목입니다.');
-        return;
-    }
-
-    try {
-        // Update user info including faith_answers
-        await axios.put('/api/users/' + currentUserId, {
-            name,
-            gender,
-            church,
-            pastor,
-            position,
-            marital_status: maritalStatus,
-            faith_answers: JSON.stringify(faithAnswers)
-        });
-
-        // Upload new avatar if selected
-        if (avatarFile) {
-            const formData = new FormData();
-            formData.append('avatar', avatarFile);
-            
-            try {
-                await axios.post('/api/users/' + currentUserId + '/avatar', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-            } catch (uploadError) {
-                console.error('Avatar upload error:', uploadError);
-            }
-        }
-
-        // Refresh user data
-        const userResponse = await axios.get('/api/users/' + currentUserId);
-        currentUser = userResponse.data.user;
-        updateAuthUI();
-        
-        alert('회원정보가 수정되었습니다! 👍');
-        hideEditProfileModal();
-        loadPosts();
-    } catch (error) {
-        console.error('Edit profile error:', error);
-        alert('회원정보 수정에 실패했습니다. 다시 시도해주세요.');
-    }
-}
-
 
 // Signup handler
 async function handleSignup() {
@@ -3875,6 +3795,16 @@ async function showUserProfileModal(userId) {
         
         // Check if viewing own profile
         const isOwnProfile = currentUserId && currentUserId === user.id;
+        
+        // Parse privacy settings
+        const privacySettings = user.privacy_settings ? JSON.parse(user.privacy_settings) : {};
+        const showBasicInfo = isOwnProfile || privacySettings.basic_info !== false;
+        const showChurchInfo = isOwnProfile || privacySettings.church_info !== false;
+        const showFaithAnswers = isOwnProfile || privacySettings.faith_answers !== false;
+        const showEducationInfo = isOwnProfile || privacySettings.education_info !== false;
+        const showCareerInfo = isOwnProfile || privacySettings.career_info !== false;
+        const showScores = isOwnProfile || privacySettings.scores !== false;
+        
         console.log('프로필 수정 아이콘 표시 체크:', {
             currentUserId,
             userId: user.id,
@@ -3908,37 +3838,38 @@ async function showUserProfileModal(userId) {
                 
                 <!-- Details Section -->
                 <div class="md:col-span-2 space-y-4">
-                    ${isOwnProfile ? `
+                    ${showScores && (isOwnProfile || user.prayer_score !== null || user.scripture_score !== null || user.activity_score !== null) ? `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
                         <h4 class="font-semibold text-purple-800 mb-3">
-                            <i class="fas fa-trophy mr-2"></i>나의 점수
+                            <i class="fas fa-trophy mr-2"></i>${isOwnProfile ? '나의 점수' : '점수 정보'}
                         </h4>
                         <div class="grid grid-cols-3 gap-4">
                             <div class="text-center">
                                 <div class="flex flex-col items-center">
                                     <i class="fas fa-praying-hands text-purple-600 text-2xl mb-2"></i>
                                     <span class="text-xs text-gray-600 mb-1">기도 점수</span>
-                                    <span class="text-2xl font-bold text-purple-900">${user.prayer_score || 0}</span>
+                                    <span class="text-2xl font-bold text-purple-900">${user.prayer_score ?? 0}</span>
                                 </div>
                             </div>
                             <div class="text-center">
                                 <div class="flex flex-col items-center">
                                     <i class="fas fa-bible text-purple-600 text-2xl mb-2"></i>
                                     <span class="text-xs text-gray-600 mb-1">성경 점수</span>
-                                    <span class="text-2xl font-bold text-purple-900">${user.scripture_score || 0}</span>
+                                    <span class="text-2xl font-bold text-purple-900">${user.scripture_score ?? 0}</span>
                                 </div>
                             </div>
                             <div class="text-center">
                                 <div class="flex flex-col items-center">
                                     <i class="fas fa-chart-line text-purple-600 text-2xl mb-2"></i>
                                     <span class="text-xs text-gray-600 mb-1">활동 점수</span>
-                                    <span class="text-2xl font-bold text-purple-900">${user.activity_score || 0}</span>
+                                    <span class="text-2xl font-bold text-purple-900">${user.activity_score ?? 0}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    ` : ''}
+                    ` : \'\'}
                     
+                    ${showBasicInfo ? `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <h4 class="font-semibold text-blue-800 mb-3">
                             <i class="fas fa-info-circle mr-2"></i>기본 정보
@@ -3951,7 +3882,9 @@ async function showUserProfileModal(userId) {
                             <p><strong>주소:</strong> ${user.address || '미입력'}</p>
                         </div>
                     </div>
+                    ` : \'\'}
                     
+                    ${showChurchInfo ? `
                     <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
                         <h4 class="font-semibold text-green-800 mb-3">
                             <i class="fas fa-church mr-2"></i>교회 정보
@@ -3964,8 +3897,9 @@ async function showUserProfileModal(userId) {
                             <p><strong>직분:</strong> ${user.position || '미입력'}</p>
                         </div>
                     </div>
+                    ` : \'\'}
                     
-                    ${faithAnswers ? `
+                    ${(isOwnProfile || showFaithAnswers) && faithAnswers ? `
                     <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
                         <h4 class="font-semibold text-yellow-800 mb-3">
                             <i class="fas fa-cross mr-2"></i>신앙 고백
@@ -4015,7 +3949,7 @@ async function showUserProfileModal(userId) {
                     </div>
                     ` : ''}
                     
-                    ${isOwnProfile ? `
+                    ${showCareerInfo && user.careers !== null ? `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
                         <h4 class="font-semibold text-purple-800 mb-3">
                             <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
@@ -4042,24 +3976,31 @@ async function showUserProfileModal(userId) {
                     </div>
                     ` : ''}
                     
-                    ${isOwnProfile ? `
+                    ${showEducationInfo && (user.elementary_school !== null || user.middle_school !== null || user.high_school !== null || user.universities !== null || user.masters_degrees !== null || user.phd_degrees !== null) ? `
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
                         <h4 class="font-semibold text-orange-800 mb-3">
                             <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
                         </h4>
                         <div class="space-y-3 text-sm text-gray-700">
+                            ${user.elementary_school !== null ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">초등학교:</p>
                                 <p class="ml-2">${user.elementary_school || '미입력'}</p>
                             </div>
+                            ` : ''}
+                            ${user.middle_school !== null ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">중학교:</p>
                                 <p class="ml-2">${user.middle_school || '미입력'}</p>
                             </div>
+                            ` : ''}
+                            ${user.high_school !== null ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">고등학교:</p>
                                 <p class="ml-2">${user.high_school || '미입력'}</p>
                             </div>
+                            ` : ''}
+                            ${user.universities !== null ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">대학교:</p>
                                 ${(() => {
@@ -4077,6 +4018,8 @@ async function showUserProfileModal(userId) {
                                     }).join('');
                                 })()}
                             </div>
+                            ` : ''}
+                            ${user.masters_degrees !== null ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">석사:</p>
                                 ${(() => {
@@ -4094,6 +4037,8 @@ async function showUserProfileModal(userId) {
                                     }).join('');
                                 })()}
                             </div>
+                            ` : ''}
+                            ${user.phd_degrees !== null ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">박사:</p>
                                 ${(() => {
@@ -4111,6 +4056,7 @@ async function showUserProfileModal(userId) {
                                     }).join('');
                                 })()}
                             </div>
+                            ` : ''}
                         </div>
                     </div>
                     ` : ''}

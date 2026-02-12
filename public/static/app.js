@@ -2397,19 +2397,21 @@ async function createPost() {
 
         const postId = response.data.id;
 
-        // 기도 포스팅(중보 기도)일 경우 기도 점수 즉시 업데이트
+        // 기도 포스팅(중보)일 경우 기도 점수 +10점
         if (selectedBackgroundColor === '#F87171') {
-            prayerScore += 20;
+            prayerScore += 10;
             updateTypingScoreDisplay();
-            showToastWithColor('기도 포스팅 작성! 기도 점수 +20점', selectedBackgroundColor);
+            showToastWithColor('중보 포스팅 작성! 기도 점수 +10점', selectedBackgroundColor);
         }
         
-        // 말씀 포스팅일 경우 성경 점수 업데이트
+        // 말씀 포스팅일 경우 성경 점수 +10점
         if (selectedBackgroundColor === '#F5E398') {
+            typingScore += 10;
+            updateTypingScoreDisplay();
             showToastWithColor('말씀 포스팅 작성! 성경 점수 +10점', selectedBackgroundColor);
         }
         
-        // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 즉시 업데이트
+        // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 +10점
         const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF'];
         if (activityPostColors.includes(selectedBackgroundColor)) {
             activityScore += 10;
@@ -2604,31 +2606,37 @@ async function toggleLike(postId) {
                 // 말씀 포스팅 - 아멘 버튼: 성경 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: 1 });
                 typingScore += 1;
+                updateTypingScoreDisplay();
                 showToast('아멘! 성경 점수 +1점', 'success');
             } else if (backgroundColor === '#F5D4B3') {
                 // 일상 포스팅 - 샬롬: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
+                updateTypingScoreDisplay();
                 showToast('샬롬! 활동 점수 +1점', 'success');
             } else if (backgroundColor === '#B3EDD8') {
                 // 사역 포스팅 - 응원합니다: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
+                updateTypingScoreDisplay();
                 showToast('응원합니다! 활동 점수 +1점', 'success');
             } else if (backgroundColor === '#C4E5F8') {
                 // 찬양 포스팅 - 할렐루야: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
+                updateTypingScoreDisplay();
                 showToast('할렐루야! 활동 점수 +1점', 'success');
             } else if (backgroundColor === '#E2DBFB') {
                 // 교회 포스팅 - 우리는 하나: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
+                updateTypingScoreDisplay();
                 showToast('우리는 하나! 활동 점수 +1점', 'success');
             } else {
                 // 자유 포스팅 - 좋아요: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
+                updateTypingScoreDisplay();
                 showToast('좋아요! 활동 점수 +1점', 'success');
             }
         } else {
@@ -2637,11 +2645,13 @@ async function toggleLike(postId) {
                 // 말씀 포스팅: 성경 점수 -1점
                 await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: -1 });
                 typingScore = Math.max(0, typingScore - 1);
+                updateTypingScoreDisplay();
                 showToast('취소: 성경 점수 -1점', 'warning');
             } else {
                 // 다른 포스팅: 활동 점수 -1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: -1 });
                 activityScore = Math.max(0, activityScore - 1);
+                updateTypingScoreDisplay();
                 showToast('취소: 활동 점수 -1점', 'warning');
             }
         }
@@ -2783,20 +2793,20 @@ async function togglePray(postId) {
         updateTypingScoreDisplay();
         
         if (response.data.prayed) {
-            // Prayer added
+            // Prayer added: +20점
             const successMsg = document.createElement('div');
             successMsg.className = 'fixed top-20 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
-            successMsg.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>기도하셨습니다! +10점';
+            successMsg.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>함께 기도합니다! +20점';
             document.body.appendChild(successMsg);
             
             setTimeout(() => {
                 successMsg.remove();
             }, 2000);
         } else {
-            // Prayer cancelled
+            // Prayer cancelled: -20점
             const cancelMsg = document.createElement('div');
             cancelMsg.className = 'fixed top-20 right-4 bg-gray-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
-            cancelMsg.innerHTML = '<i class="fas fa-undo mr-2"></i>취소 -10점';
+            cancelMsg.innerHTML = '<i class="fas fa-undo mr-2"></i>취소 -20점';
             document.body.appendChild(cancelMsg);
             
             setTimeout(() => {
@@ -2997,18 +3007,19 @@ async function deletePost(postId) {
         // 삭제 실행
         await axios.delete(`/api/posts/${postId}`);
         
-        // 기도 포스팅(중보 기도)이면 점수 즉시 차감
+        // 중보 포스팅이면 기도 점수 -10점
         if (post.background_color === '#F87171' && post.user_id === currentUserId) {
-            prayerScore = Math.max(0, prayerScore - 20);
+            prayerScore = Math.max(0, prayerScore - 10);
             updateTypingScoreDisplay();
-            showToastWithColor('기도 포스팅 삭제! 기도 점수 -20점', post.background_color);
+            showToastWithColor('중보 포스팅 삭제! 기도 점수 -10점', post.background_color);
         } 
-        // 말씀 포스팅이면 성경 점수 즉시 차감
+        // 말씀 포스팅이면 성경 점수 -10점
         else if (post.background_color === '#F5E398' && post.user_id === currentUserId) {
-            // 말씀 포스팅도 성경 점수를 차감해야 하므로 추가
+            typingScore = Math.max(0, typingScore - 10);
+            updateTypingScoreDisplay();
             showToastWithColor('말씀 포스팅 삭제! 성경 점수 -10점', post.background_color);
         }
-        // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 즉시 차감
+        // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 -10점
         else if (['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF'].includes(post.background_color) && post.user_id === currentUserId) {
             activityScore = Math.max(0, activityScore - 10);
             updateTypingScoreDisplay();

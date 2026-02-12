@@ -1978,6 +1978,60 @@ app.post('/api/admin/create-fake-likes', requireAdmin, async (c) => {
   })
 })
 
+// Admin: Simulate time pass (move all created_at timestamps back by X days)
+app.post('/api/admin/simulate-time-pass', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { days } = await c.req.json()
+  
+  if (!days || days < 1 || days > 365) {
+    return c.json({ success: false, error: 'Days must be between 1 and 365' }, 400)
+  }
+  
+  // Calculate time offset in milliseconds (days * 24 * 60 * 60 * 1000)
+  const offsetMs = days * 24 * 60 * 60 * 1000
+  
+  // Update posts created_at
+  await DB.prepare(`
+    UPDATE posts 
+    SET created_at = datetime(created_at, '-' || ? || ' days')
+  `).bind(days).run()
+  
+  const postsResult = await DB.prepare('SELECT changes() as count').first()
+  
+  // Update comments created_at
+  await DB.prepare(`
+    UPDATE comments 
+    SET created_at = datetime(created_at, '-' || ? || ' days')
+  `).bind(days).run()
+  
+  const commentsResult = await DB.prepare('SELECT changes() as count').first()
+  
+  // Update likes created_at
+  await DB.prepare(`
+    UPDATE likes 
+    SET created_at = datetime(created_at, '-' || ? || ' days')
+  `).bind(days).run()
+  
+  const likesResult = await DB.prepare('SELECT changes() as count').first()
+  
+  // Update prayer_clicks created_at
+  await DB.prepare(`
+    UPDATE prayer_clicks 
+    SET created_at = datetime(created_at, '-' || ? || ' days')
+  `).bind(days).run()
+  
+  const prayersResult = await DB.prepare('SELECT changes() as count').first()
+  
+  return c.json({
+    success: true,
+    days: days,
+    posts_updated: postsResult?.count || 0,
+    comments_updated: commentsResult?.count || 0,
+    likes_updated: likesResult?.count || 0,
+    prayers_updated: prayersResult?.count || 0
+  })
+})
+
 // Admin: Delete fake posts (optional - delete all posts created by fake users)
 app.delete('/api/admin/delete-fake-posts', requireAdmin, async (c) => {
   const { DB } = c.env
@@ -2029,6 +2083,7 @@ app.get('/admin', (c) => {
             window.createFakePosts = function() { console.log('Function will be replaced after DOM loads'); };
             window.createFakeComments = function() { console.log('Function will be replaced after DOM loads'); };
             window.createFakeLikes = function() { console.log('Function will be replaced after DOM loads'); };
+            window.simulateTimePass = function() { console.log('Function will be replaced after DOM loads'); };
         </script>
     </head>
     <body class="bg-gray-50">
@@ -2210,6 +2265,9 @@ app.get('/admin', (c) => {
                         </button>
                         <button onclick="createFakeLikes()" class="bg-pink-500 text-white px-3 py-2 rounded-lg hover:bg-pink-600 transition text-sm">
                             <i class="fas fa-heart mr-1"></i>반응 생성
+                        </button>
+                        <button onclick="simulateTimePass()" class="bg-orange-500 text-white px-3 py-2 rounded-lg hover:bg-orange-600 transition text-sm">
+                            <i class="fas fa-clock mr-1"></i>시간경과 시뮬
                         </button>
                         <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
                             <i class="fas fa-sync-alt mr-1"></i>새로고침
@@ -2821,6 +2879,34 @@ app.get('/admin', (c) => {
                     } else {
                         alert('테스트 반응 생성에 실패했습니다.');
                     }
+                }
+            }
+
+            window.simulateTimePass = async function() {
+                const days = prompt('시간을 몇 일 앞으로 보내시겠습니까? (1-365일):', '7');
+                if (!days) return;
+                
+                const daysNum = parseInt(days);
+                if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
+                    alert('1-365 사이의 숫자를 입력해주세요.');
+                    return;
+                }
+                
+                if (!confirm(\`모든 포스팅, 댓글, 반응의 생성일을 \${daysNum}일 앞으로 이동합니다.\\n\\n이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?\`)) {
+                    return;
+                }
+                
+                try {
+                    const response = await axios.post('/api/admin/simulate-time-pass', 
+                        { days: daysNum },
+                        { headers: { 'X-Admin-ID': adminId } }
+                    );
+                    alert(\`시간 경과 시뮬레이션 완료!\\n\\n- 포스팅: \${response.data.posts_updated}개 업데이트\\n- 댓글: \${response.data.comments_updated}개 업데이트\\n- 반응: \${response.data.likes_updated}개 업데이트\\n- 기도 반응: \${response.data.prayers_updated}개 업데이트\\n\\n모든 데이터가 \${daysNum}일 전으로 이동되었습니다.\`);
+                    loadStats();
+                    loadAdminPosts();
+                } catch (error) {
+                    console.error('Failed to simulate time pass:', error);
+                    alert('시간 경과 시뮬레이션에 실패했습니다.');
                 }
             }
 

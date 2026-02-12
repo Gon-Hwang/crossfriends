@@ -3544,7 +3544,7 @@ app.get('/', (c) => {
                                 </h3>
                                 <div class="border-l-4 border-red-600 pl-3 py-2 mb-3">
                                     <p class="font-bold text-red-600 text-sm mb-1">
-                                        <i class="fas fa-church mr-1"></i>낙망하고 불안해하지 말라
+                                        낙망하고 불안해하지 말라
                                     </p>
                                     <p class="text-gray-700 text-xs mb-1">
                                         시편 42:5

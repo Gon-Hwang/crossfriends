@@ -3531,25 +3531,25 @@ app.get('/', (c) => {
                             
                             <!-- Unlocked State (≥ 500 points) -->
                             <div id="sermonUnlocked" class="hidden">
-                                <div class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 mb-4 border-2 border-yellow-400">
+                                <div id="unlockBanner" class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-3 mb-3 border-2 border-yellow-400">
                                     <div class="flex items-center justify-center space-x-2">
-                                        <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
-                                        <h3 class="text-xl font-bold text-yellow-800">🎉 리워드1 언락 완료!</h3>
-                                        <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
+                                        <i class="fas fa-trophy text-yellow-600 text-xl"></i>
+                                        <h3 class="text-lg font-bold text-yellow-800">🎉 리워드1 언락 완료!</h3>
+                                        <i class="fas fa-trophy text-yellow-600 text-xl"></i>
                                     </div>
                                 </div>
                                 
-                                <h3 class="text-lg font-bold mb-4 text-gray-800">
+                                <h3 class="text-base font-bold mb-3 text-gray-800">
                                     <i class="fas fa-video text-red-600 mr-2"></i>오늘의 설교 말씀
                                 </h3>
-                                <div class="border-l-4 border-red-600 pl-4 py-2 mb-4">
-                                    <p class="font-bold text-red-600 mb-2">
+                                <div class="border-l-4 border-red-600 pl-3 py-2 mb-3">
+                                    <p class="font-bold text-red-600 text-sm mb-1">
                                         <i class="fas fa-church mr-1"></i>낙망하고 불안해하지 말라
                                     </p>
-                                    <p class="text-gray-700 text-sm mb-2">
+                                    <p class="text-gray-700 text-xs mb-1">
                                         시편 42:5
                                     </p>
-                                    <p class="text-xs text-gray-500 mb-3">
+                                    <p class="text-xs text-gray-500">
                                         <i class="fas fa-user-tie mr-1"></i>조용기 목사 (여의도순복음교회)
                                     </p>
                                 </div>

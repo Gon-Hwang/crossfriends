@@ -290,6 +290,12 @@ function onPlayerReady(event) {
 // Player state changed (playing, paused, ended, etc.)
 function onPlayerStateChange(event) {
     if (event.data == YT.PlayerState.PLAYING) {
+        // Hide unlock banner when video starts playing
+        const unlockBanner = document.getElementById('unlockBanner');
+        if (unlockBanner) {
+            unlockBanner.classList.add('hidden');
+        }
+        
         // Show progress container when playing
         document.getElementById('videoProgressContainer').classList.remove('hidden');
         

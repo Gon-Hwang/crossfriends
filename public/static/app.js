@@ -2397,24 +2397,21 @@ async function createPost() {
 
         const postId = response.data.id;
 
-        // 기도 포스팅(중보)일 경우 기도 점수 +10점
-        if (selectedBackgroundColor === '#F87171') {
-            prayerScore += 10;
+        // 백엔드에서 업데이트된 점수를 받아 동기화
+        if (response.data.prayer_score !== undefined) {
+            prayerScore = response.data.prayer_score;
             updateTypingScoreDisplay();
             showToastWithColor('중보 포스팅 작성! 기도 점수 +10점', selectedBackgroundColor);
         }
         
-        // 말씀 포스팅일 경우 성경 점수 +10점
-        if (selectedBackgroundColor === '#F5E398') {
-            typingScore += 10;
+        if (response.data.scripture_score !== undefined) {
+            typingScore = response.data.scripture_score;
             updateTypingScoreDisplay();
             showToastWithColor('말씀 포스팅 작성! 성경 점수 +10점', selectedBackgroundColor);
         }
         
-        // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 +10점
-        const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF'];
-        if (activityPostColors.includes(selectedBackgroundColor)) {
-            activityScore += 10;
+        if (response.data.activity_score !== undefined) {
+            activityScore = response.data.activity_score;
             updateTypingScoreDisplay();
             showToastWithColor('포스팅 작성! 활동 점수 +10점', selectedBackgroundColor);
         }
@@ -2599,59 +2596,29 @@ async function toggleLike(postId) {
         
         const liked = response.data.liked;
         
-        // Update scores based on post type
-        if (liked) {
-            // Liked: add points
-            if (backgroundColor === '#F5E398') {
-                // 말씀 포스팅 - 아멘 버튼: 성경 점수 +1점
-                await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: 1 });
-                typingScore += 1;
-                updateTypingScoreDisplay();
+        // API 응답에서 업데이트된 점수를 받아 동기화
+        if (response.data.scripture_score !== undefined) {
+            typingScore = response.data.scripture_score;
+            updateTypingScoreDisplay();
+            if (liked) {
                 showToast('아멘! 성경 점수 +1점', 'success');
-            } else if (backgroundColor === '#F5D4B3') {
-                // 일상 포스팅 - 샬롬: 활동 점수 +1점
-                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
-                activityScore += 1;
-                updateTypingScoreDisplay();
-                showToast('샬롬! 활동 점수 +1점', 'success');
-            } else if (backgroundColor === '#B3EDD8') {
-                // 사역 포스팅 - 응원합니다: 활동 점수 +1점
-                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
-                activityScore += 1;
-                updateTypingScoreDisplay();
-                showToast('응원합니다! 활동 점수 +1점', 'success');
-            } else if (backgroundColor === '#C4E5F8') {
-                // 찬양 포스팅 - 할렐루야: 활동 점수 +1점
-                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
-                activityScore += 1;
-                updateTypingScoreDisplay();
-                showToast('할렐루야! 활동 점수 +1점', 'success');
-            } else if (backgroundColor === '#E2DBFB') {
-                // 교회 포스팅 - 우리는 하나: 활동 점수 +1점
-                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
-                activityScore += 1;
-                updateTypingScoreDisplay();
-                showToast('우리는 하나! 활동 점수 +1점', 'success');
             } else {
-                // 자유 포스팅 - 좋아요: 활동 점수 +1점
-                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
-                activityScore += 1;
-                updateTypingScoreDisplay();
-                showToast('좋아요! 활동 점수 +1점', 'success');
-            }
-        } else {
-            // Unliked: subtract points
-            if (backgroundColor === '#F5E398') {
-                // 말씀 포스팅: 성경 점수 -1점
-                await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: -1 });
-                typingScore = Math.max(0, typingScore - 1);
-                updateTypingScoreDisplay();
                 showToast('취소: 성경 점수 -1점', 'warning');
+            }
+        } else if (response.data.activity_score !== undefined) {
+            activityScore = response.data.activity_score;
+            updateTypingScoreDisplay();
+            if (liked) {
+                // 배경색에 따라 다른 메시지 표시
+                const messages = {
+                    '#F5D4B3': '샬롬! 활동 점수 +1점',
+                    '#B3EDD8': '응원합니다! 활동 점수 +1점',
+                    '#C4E5F8': '할렐루야! 활동 점수 +1점',
+                    '#E2DBFB': '우리는 하나! 활동 점수 +1점',
+                    '#FFFFFF': '좋아요! 활동 점수 +1점'
+                };
+                showToast(messages[backgroundColor] || '좋아요! 활동 점수 +1점', 'success');
             } else {
-                // 다른 포스팅: 활동 점수 -1점
-                await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: -1 });
-                activityScore = Math.max(0, activityScore - 1);
-                updateTypingScoreDisplay();
                 showToast('취소: 활동 점수 -1점', 'warning');
             }
         }
@@ -3319,10 +3286,19 @@ async function createComment(postId) {
     }
 
     try {
-        await axios.post(`/api/posts/${postId}/comments`, {
+        const response = await axios.post(`/api/posts/${postId}/comments`, {
             user_id: currentUserId,
             content
         });
+        
+        // 댓글 작성 시 활동 점수 5점 추가
+        if (response.data.new_activity_score !== undefined) {
+            activityScore = response.data.new_activity_score;
+            updateTypingScoreDisplay();
+            showFloatingScore('+5', document.getElementById(`comment-input-${postId}`));
+            showToast('댓글 작성! 활동 점수 +5점');
+        }
+        
         input.value = '';
         refreshComments(postId); // Use refreshComments instead of loadComments to keep comments open
         // Don't call loadPosts() to keep comments section open

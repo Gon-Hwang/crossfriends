@@ -571,12 +571,15 @@ app.post('/api/posts', async (c) => {
     'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0, background_color || null).run()
   
+  let updatedScores = {}
+  
   // 기도 포스팅(중보 기도 - 빨간색 배경)일 경우 기도 점수 10점 추가
   if (background_color === '#F87171') {
     const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.prayer_score || 0
     const newScore = currentScore + 10
     await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
+    updatedScores.prayer_score = newScore
   }
   
   // 말씀 포스팅(노란색 배경)일 경우 성경 점수 10점 추가
@@ -585,6 +588,7 @@ app.post('/api/posts', async (c) => {
     const currentScore = user?.scripture_score || 0
     const newScore = currentScore + 10
     await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user_id).run()
+    updatedScores.scripture_score = newScore
   }
   
   // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 10점 추가
@@ -594,9 +598,10 @@ app.post('/api/posts', async (c) => {
     const currentScore = user?.activity_score || 0
     const newScore = currentScore + 10
     await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
+    updatedScores.activity_score = newScore
   }
   
-  return c.json({ id: result.meta.last_row_id, user_id, content }, 201)
+  return c.json({ id: result.meta.last_row_id, user_id, content, ...updatedScores }, 201)
 })
 
 // Upload post image
@@ -803,8 +808,14 @@ app.post('/api/posts/:id/comments', async (c) => {
     'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)'
   ).bind(postId, user_id, content).run()
   
-  return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content }, 201)
-})
+  // 댓글 작성 시 활동 점수 5점 추가
+  const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+  const currentScore = user?.activity_score || 0
+  const newScore = currentScore + 5
+  await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
+  
+  return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, new_activity_score: newScore }, 201)
+}
 
 // Update comment
 app.put('/api/comments/:id', async (c) => {
@@ -824,14 +835,25 @@ app.delete('/api/comments/:id', async (c) => {
   const { DB } = c.env
   const commentId = c.req.param('id')
   
+  // 댓글 정보 조회 (사용자 ID 확인)
+  const comment = await DB.prepare('SELECT user_id FROM comments WHERE id = ?').bind(commentId).first()
+  
   // Delete comment likes first
   await DB.prepare('DELETE FROM comment_likes WHERE comment_id = ?').bind(commentId).run()
   
   // Delete comment
   await DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run()
   
+  // 댓글 삭제 시 활동 점수 5점 차감 (0점 이하로 내려가지 않도록)
+  if (comment) {
+    const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(comment.user_id).first()
+    const currentScore = user?.activity_score || 0
+    const newScore = Math.max(0, currentScore - 5)
+    await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, comment.user_id).run()
+  }
+  
   return c.json({ success: true })
-})
+}
 
 // =====================
 // API Routes - Likes
@@ -843,19 +865,66 @@ app.post('/api/posts/:id/like', async (c) => {
   const postId = c.req.param('id')
   const { user_id } = await c.req.json()
   
+  // Get post's background color to determine which score to update
+  const post = await DB.prepare('SELECT background_color FROM posts WHERE id = ?').bind(postId).first()
+  
   // Check if already liked
   const existing = await DB.prepare(
     'SELECT id FROM likes WHERE post_id = ? AND user_id = ?'
   ).bind(postId, user_id).first()
   
+  let updatedScores = {}
+  
   if (existing) {
-    // Unlike
+    // Unlike - deduct 1 point
     await DB.prepare('DELETE FROM likes WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
-    return c.json({ liked: false })
+    
+    // 말씀 포스팅이면 성경 점수 -1점
+    if (post.background_color === '#F5E398') {
+      const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
+      const currentScore = user?.scripture_score || 0
+      const newScore = Math.max(0, currentScore - 1)
+      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user_id).run()
+      updatedScores.scripture_score = newScore
+    }
+    // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 -1점
+    else {
+      const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF']
+      if (activityPostColors.includes(post.background_color)) {
+        const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+        const currentScore = user?.activity_score || 0
+        const newScore = Math.max(0, currentScore - 1)
+        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
+        updatedScores.activity_score = newScore
+      }
+    }
+    
+    return c.json({ liked: false, ...updatedScores })
   } else {
-    // Like
+    // Like - add 1 point
     await DB.prepare('INSERT INTO likes (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
-    return c.json({ liked: true })
+    
+    // 말씀 포스팅이면 성경 점수 +1점
+    if (post.background_color === '#F5E398') {
+      const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
+      const currentScore = user?.scripture_score || 0
+      const newScore = currentScore + 1
+      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user_id).run()
+      updatedScores.scripture_score = newScore
+    }
+    // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 +1점
+    else {
+      const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF']
+      if (activityPostColors.includes(post.background_color)) {
+        const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+        const currentScore = user?.activity_score || 0
+        const newScore = currentScore + 1
+        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
+        updatedScores.activity_score = newScore
+      }
+    }
+    
+    return c.json({ liked: true, ...updatedScores })
   }
 })
 

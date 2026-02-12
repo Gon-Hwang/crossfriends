@@ -229,10 +229,7 @@ function showSermonLocked(currentScore) {
     const progress = Math.min((currentScore / 500) * 100, 100);
     document.getElementById('rewardProgressBar').style.width = progress + '%';
     
-    // Update remaining score
-    const remaining = Math.max(0, 500 - currentScore);
-    document.getElementById('rewardRemainingScore').textContent = 
-        remaining > 0 ? `목표까지 ${remaining}점` : '목표 달성!';
+    // Note: rewardRemainingScore element was removed in previous update
     
     // Update unlock button
     const unlockBtn = document.getElementById('unlockSermonBtn');

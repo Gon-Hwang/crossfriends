@@ -1768,6 +1768,24 @@ app.post('/api/admin/create-fake-posts', requireAdmin, async (c) => {
         'INSERT INTO posts (user_id, content, verse_reference, background_color) VALUES (?, ?, ?, ?)'
       ).bind(user.id, content, verseReference, category.color).run()
       
+      // 포스팅 생성 시 점수 업데이트 (10점)
+      if (category.color === '#F87171') {
+        // 중보 포스팅: 기도 점수 +10점
+        const userScore = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user.id).first()
+        const newScore = (userScore?.prayer_score || 0) + 10
+        await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user.id).run()
+      } else if (category.color === '#F5E398') {
+        // 말씀 포스팅: 성경 점수 +10점
+        const userScore = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user.id).first()
+        const newScore = (userScore?.scripture_score || 0) + 10
+        await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user.id).run()
+      } else {
+        // 일상/사역/찬양/교회/자유 포스팅: 활동 점수 +10점
+        const userScore = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user.id).first()
+        const newScore = (userScore?.activity_score || 0) + 10
+        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user.id).run()
+      }
+      
       createdPosts.push({
         id: result.meta.last_row_id,
         content: content.substring(0, 50) + '...',
@@ -1840,6 +1858,11 @@ app.post('/api/admin/create-fake-comments', requireAdmin, async (c) => {
         'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)'
       ).bind(post.id, user.id, content).run()
       
+      // 댓글 작성 시 활동 점수 +5점
+      const userScore = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user.id).first()
+      const newScore = (userScore?.activity_score || 0) + 5
+      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user.id).run()
+      
       createdComments.push({
         id: result.meta.last_row_id,
         post_id: post.id,
@@ -1892,6 +1915,22 @@ app.post('/api/admin/create-fake-likes', requireAdmin, async (c) => {
           'INSERT INTO likes (post_id, user_id) VALUES (?, ?)'
         ).bind(post.id, user.id).run()
         
+        // 좋아요 클릭 시 점수 +1점
+        if (post.background_color === '#F5E398') {
+          // 말씀 포스팅: 성경 점수 +1점
+          const userScore = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user.id).first()
+          const newScore = (userScore?.scripture_score || 0) + 1
+          await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user.id).run()
+        } else {
+          // 기타 포스팅: 활동 점수 +1점
+          const activityColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF']
+          if (activityColors.includes(post.background_color)) {
+            const userScore = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user.id).first()
+            const newScore = (userScore?.activity_score || 0) + 1
+            await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user.id).run()
+          }
+        }
+        
         createdLikes.push({
           post_id: post.id,
           user_id: user.id
@@ -1921,6 +1960,11 @@ app.post('/api/admin/create-fake-likes', requireAdmin, async (c) => {
           await DB.prepare(
             'INSERT INTO prayer_clicks (post_id, user_id) VALUES (?, ?)'
           ).bind(post.id, user.id).run()
+          
+          // 기도 반응 클릭 시 기도 점수 +20점
+          const userScore = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user.id).first()
+          const newScore = (userScore?.prayer_score || 0) + 20
+          await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user.id).run()
         }
       } catch (error) {
         console.error('Error creating prayer click:', error)

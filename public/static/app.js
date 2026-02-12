@@ -2843,7 +2843,7 @@ async function refreshComments(postId) {
                         </div>
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
+                                <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition inline-block" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
                                 <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
                             </div>
                             <div class="flex items-center space-x-4 mt-1">
@@ -3329,7 +3329,7 @@ async function loadComments(postId) {
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
                                 <div class="flex justify-between items-start">
-                                    <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
+                                    <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
                                     ${canEdit ? `
                                         <div class="relative">
                                             <button 
@@ -3647,7 +3647,7 @@ async function loadPosts() {
                             </div>
                             <div class="flex-1 min-w-0 overflow-hidden">
                                 <div class="flex items-center space-x-2 flex-wrap">
-                                    <h4 class="font-bold text-sm text-gray-800 truncate">${post.shared_user_name}</h4>
+                                    <h4 class="font-bold text-sm text-gray-800 truncate cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.shared_user_id}, \`${post.shared_user_name}\`)" title="클릭하여 ${post.shared_user_name} 님의 포스팅만 보기">${post.shared_user_name}</h4>
                                     <span class="text-xs text-gray-500 flex-shrink-0">•</span>
                                     <p class="text-xs text-gray-500 flex-shrink-0">${formatDate(post.shared_created_at)}</p>
                                 </div>
@@ -3675,7 +3675,7 @@ async function loadPosts() {
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <h4 class="font-bold text-gray-800">${post.user_name}</h4>
+                                    <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, \`${post.user_name}\`)" title="클릭하여 ${post.user_name} 님의 포스팅만 보기">${post.user_name}</h4>
                                     <p class="text-sm text-gray-500">${post.user_church || ''}</p>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -4581,14 +4581,11 @@ autoLogin(); // Auto-login if session exists
 // User Filter Functions
 // =====================
 
-// Filter to show only current user's posts
-window.filterMyPosts = function() {
-    if (!currentUserId || !currentUser) {
-        showToast('로그인이 필요합니다.', 'error');
-        return;
-    }
+// Filter posts by user (works for any user including self)
+window.filterByUser = function(userId, userName) {
+    if (!userId) return;
     
-    filterUserId = currentUserId;
+    filterUserId = userId;
     
     // Reload posts with filter (no banner needed)
     loadPosts();
@@ -4597,13 +4594,19 @@ window.filterMyPosts = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Show toast notification
-    showToast('내 포스팅만 표시 중입니다. 로고를 클릭하여 전체 보기로 돌아갈 수 있습니다.', 'info');
+    const displayName = userName || '해당 회원';
+    showToast(`${displayName} 님의 포스팅만 표시 중입니다. 로고를 클릭하여 전체 보기로 돌아갈 수 있습니다.`, 'info');
 }
 
-// Filter posts by user (removed - no longer used)
-window.filterByUser = function(userId, userName) {
-    // This function is no longer used
-    return;
+// Filter to show only current user's posts (convenience function)
+window.filterMyPosts = function() {
+    if (!currentUserId || !currentUser) {
+        showToast('로그인이 필요합니다.', 'error');
+        return;
+    }
+    
+    // Use the main filter function
+    filterByUser(currentUserId, currentUser.name);
 }
 
 // Clear user filter

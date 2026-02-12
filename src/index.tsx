@@ -3532,14 +3532,11 @@ app.get('/', (c) => {
                             <!-- Unlocked State (≥ 500 points) -->
                             <div id="sermonUnlocked" class="hidden">
                                 <div class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 mb-4 border-2 border-yellow-400">
-                                    <div class="flex items-center justify-center space-x-2 mb-2">
+                                    <div class="flex items-center justify-center space-x-2">
                                         <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
                                         <h3 class="text-xl font-bold text-yellow-800">🎉 리워드1 언락 완료!</h3>
                                         <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
                                     </div>
-                                    <p class="text-sm text-center text-yellow-900 font-semibold">
-                                        축하합니다! 500점을 달성하셨습니다. 오늘의 설교 말씀을 감상하세요!
-                                    </p>
                                 </div>
                                 
                                 <h3 class="text-lg font-bold mb-4 text-gray-800">

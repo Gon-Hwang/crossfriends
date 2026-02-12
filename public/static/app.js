@@ -176,20 +176,104 @@ firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 // Called automatically when YouTube API is ready
 function onYouTubeIframeAPIReady() {
-    player = new YT.Player('sermonPlayer', {
-        height: '100%',
-        width: '100%',
-        videoId: CURRENT_VIDEO_ID,
-        playerVars: {
-            'playsinline': 1,
-            'rel': 0,
-            'modestbranding': 1
-        },
-        events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
-        }
-    });
+    // Check if sermon is unlocked before initializing player
+    checkSermonReward();
+}
+
+// Check sermon reward status (500+ points)
+function checkSermonReward() {
+    if (!currentUserId) {
+        // Not logged in - show locked state
+        showSermonLocked(0);
+        return;
+    }
+    
+    // Get user's total score
+    const totalScore = typingScore + videoScore + prayerScore + activityScore;
+    
+    if (totalScore >= 500) {
+        // Unlocked! Show sermon
+        showSermonUnlocked(totalScore);
+        
+        // Initialize YouTube player
+        player = new YT.Player('sermonPlayer', {
+            height: '100%',
+            width: '100%',
+            videoId: CURRENT_VIDEO_ID,
+            playerVars: {
+                'playsinline': 1,
+                'rel': 0,
+                'modestbranding': 1
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange
+            }
+        });
+    } else {
+        // Locked - show reward screen
+        showSermonLocked(totalScore);
+    }
+}
+
+// Show locked sermon reward
+function showSermonLocked(currentScore) {
+    document.getElementById('sermonLocked').classList.remove('hidden');
+    document.getElementById('sermonUnlocked').classList.add('hidden');
+    
+    // Update score display
+    document.getElementById('rewardTotalScore').textContent = currentScore;
+    
+    // Update progress bar
+    const progress = Math.min((currentScore / 500) * 100, 100);
+    document.getElementById('rewardProgressBar').style.width = progress + '%';
+    
+    // Update remaining score
+    const remaining = Math.max(0, 500 - currentScore);
+    document.getElementById('rewardRemainingScore').textContent = 
+        remaining > 0 ? `목표까지 ${remaining}점` : '목표 달성!';
+    
+    // Update unlock button
+    const unlockBtn = document.getElementById('unlockSermonBtn');
+    if (currentScore >= 500) {
+        unlockBtn.disabled = false;
+        unlockBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        unlockBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white', 'hover:from-purple-600', 'hover:to-pink-600', 'cursor-pointer', 'animate-pulse');
+        unlockBtn.innerHTML = '<i class="fas fa-unlock text-2xl"></i><span>클릭하여 언락!</span>';
+        unlockBtn.onclick = function() {
+            showSermonUnlocked(currentScore);
+            
+            // Initialize YouTube player
+            player = new YT.Player('sermonPlayer', {
+                height: '100%',
+                width: '100%',
+                videoId: CURRENT_VIDEO_ID,
+                playerVars: {
+                    'playsinline': 1,
+                    'rel': 0,
+                    'modestbranding': 1
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+            
+            // Show success message
+            showToast('🎉 리워드 언락! 오늘의 설교를 감상하세요!', 'success');
+        };
+    }
+}
+
+// Show unlocked sermon
+function showSermonUnlocked(currentScore) {
+    document.getElementById('sermonLocked').classList.add('hidden');
+    document.getElementById('sermonUnlocked').classList.remove('hidden');
+    
+    // Save unlocked state
+    if (currentUserId) {
+        localStorage.setItem(`sermon_unlocked_${currentUserId}`, 'true');
+    }
 }
 
 // Player is ready
@@ -412,6 +496,9 @@ async function loadUserScores() {
         
         updateTypingScoreDisplay();
         
+        // Check sermon reward after loading scores
+        checkSermonReward();
+        
         // Check if current video is already completed
         if (completedVideos.has(CURRENT_VIDEO_ID)) {
             showVideoAlreadyCompleted();
@@ -540,6 +627,71 @@ function updateTypingScoreDisplay() {
     }
     if (activityScoreUserElement) {
         activityScoreUserElement.textContent = activityScore;
+    }
+    
+    // Check sermon reward status whenever score changes
+    if (currentUserId) {
+        const combinedScore = totalScore + prayerScore + activityScore;
+        
+        // Update reward display
+        const rewardTotalScoreEl = document.getElementById('rewardTotalScore');
+        const rewardProgressBarEl = document.getElementById('rewardProgressBar');
+        const rewardRemainingScoreEl = document.getElementById('rewardRemainingScore');
+        
+        if (rewardTotalScoreEl) {
+            rewardTotalScoreEl.textContent = combinedScore;
+        }
+        
+        if (rewardProgressBarEl) {
+            const progress = Math.min((combinedScore / 500) * 100, 100);
+            rewardProgressBarEl.style.width = progress + '%';
+        }
+        
+        if (rewardRemainingScoreEl) {
+            const remaining = Math.max(0, 500 - combinedScore);
+            rewardRemainingScoreEl.textContent = remaining > 0 ? `목표까지 ${remaining}점` : '목표 달성!';
+        }
+        
+        // Check if just unlocked (crossed 500 threshold)
+        const wasLocked = document.getElementById('sermonLocked') && !document.getElementById('sermonLocked').classList.contains('hidden');
+        
+        if (combinedScore >= 500 && wasLocked) {
+            // Just unlocked! Enable unlock button
+            const unlockBtn = document.getElementById('unlockSermonBtn');
+            if (unlockBtn) {
+                unlockBtn.disabled = false;
+                unlockBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                unlockBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white', 'hover:from-purple-600', 'hover:to-pink-600', 'cursor-pointer', 'animate-pulse');
+                unlockBtn.innerHTML = '<i class="fas fa-unlock text-2xl"></i><span>클릭하여 언락!</span>';
+                unlockBtn.onclick = function() {
+                    showSermonUnlocked(combinedScore);
+                    
+                    // Initialize YouTube player
+                    if (!player) {
+                        player = new YT.Player('sermonPlayer', {
+                            height: '100%',
+                            width: '100%',
+                            videoId: CURRENT_VIDEO_ID,
+                            playerVars: {
+                                'playsinline': 1,
+                                'rel': 0,
+                                'modestbranding': 1
+                            },
+                            events: {
+                                'onReady': onPlayerReady,
+                                'onStateChange': onPlayerStateChange
+                            }
+                        });
+                    }
+                    
+                    // Show success message
+                    showToast('🎉 축하합니다! 리워드 1 언락! 오늘의 설교를 감상하세요!', 'success');
+                };
+            }
+            
+            // Show toast notification
+            showToast('🎊 500점 달성! 리워드 1 언락 버튼을 눌러주세요!', 'success');
+        }
     }
 }
 

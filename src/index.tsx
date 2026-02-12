@@ -1978,7 +1978,7 @@ app.post('/api/admin/create-fake-likes', requireAdmin, async (c) => {
   })
 })
 
-// Admin: Simulate time pass (move all created_at timestamps back by X days)
+// Admin: Realistic time pass simulation with organic data growth
 app.post('/api/admin/simulate-time-pass', requireAdmin, async (c) => {
   const { DB } = c.env
   const { days } = await c.req.json()
@@ -1987,48 +1987,240 @@ app.post('/api/admin/simulate-time-pass', requireAdmin, async (c) => {
     return c.json({ success: false, error: 'Days must be between 1 and 365' }, 400)
   }
   
-  // Calculate time offset in milliseconds (days * 24 * 60 * 60 * 1000)
-  const offsetMs = days * 24 * 60 * 60 * 1000
+  const stats = {
+    users_created: 0,
+    posts_created: 0,
+    comments_created: 0,
+    likes_created: 0,
+    prayers_created: 0
+  }
   
-  // Update posts created_at
-  await DB.prepare(`
-    UPDATE posts 
-    SET created_at = datetime(created_at, '-' || ? || ' days')
-  `).bind(days).run()
+  // Get existing users for content generation
+  const existingUsers = await DB.prepare('SELECT id FROM users ORDER BY RANDOM() LIMIT 50').all()
   
-  const postsResult = await DB.prepare('SELECT changes() as count').first()
+  if (!existingUsers.results || existingUsers.results.length === 0) {
+    return c.json({ success: false, error: 'No users found. Create users first.' }, 400)
+  }
   
-  // Update comments created_at
-  await DB.prepare(`
-    UPDATE comments 
-    SET created_at = datetime(created_at, '-' || ? || ' days')
-  `).bind(days).run()
+  // Helper: Random Korean names
+  const lastNames = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임']
+  const firstNames = ['민준', '서연', '지훈', '지우', '하은', '도윤', '서준', '수아', '예준', '시우']
+  const churches = ['은혜교회', '사랑교회', '평강교회', '소망교회', '빛과소금교회', '새생명교회']
+  const positions = ['평신도', '집사', '권사', '장로', '청년부']
+  const genders = ['남성', '여성']
   
-  const commentsResult = await DB.prepare('SELECT changes() as count').first()
+  // Post content templates by category
+  const postTemplates = {
+    prayer: ['힘든 시기를 보내고 있는 친구를 위해 기도해주세요.', '가족의 건강을 위해 함께 기도 부탁드립니다.', '취업을 준비하는 청년들을 위해 기도합니다.'],
+    verse: ['요한복음 3:16 - 하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니', '시편 23:1 - 여호와는 나의 목자시니 내게 부족함이 없으리로다', '빌립보서 4:13 - 내게 능력 주시는 자 안에서 내가 모든 것을 할 수 있느니라'],
+    daily: ['오늘 날씨가 정말 좋네요!', '아침에 일어나서 맛있는 커피 한 잔 마셨어요', '주말에 가족들과 맛있는 식사 했습니다!'],
+    ministry: ['다음 주 토요일에 지역 봉사활동이 있습니다.', '청년부 여름 수련회를 준비하고 있습니다.', '어린이 성경학교 교사를 모집합니다.'],
+    praise: ['오늘 예배 찬양이 너무 은혜로웠습니다!', '이 찬양을 들으면 힘이 납니다', '새벽 기도회 찬양팀을 모집합니다.'],
+    church: ['다음 주일 특별 찬양예배가 있습니다.', '교회 창립 기념 감사예배 안내', '새가족 환영회를 준비하고 있습니다.'],
+    free: ['오늘 하루도 감사합니다!', '여러분의 기도 제목을 나누어주세요.', '좋은 하루 되세요!']
+  }
   
-  // Update likes created_at
-  await DB.prepare(`
-    UPDATE likes 
-    SET created_at = datetime(created_at, '-' || ? || ' days')
-  `).bind(days).run()
+  const commentTemplates = [
+    '아멘! 함께 기도합니다.', '은혜로운 말씀 감사합니다.', '좋은 글 잘 읽었습니다!',
+    '저도 동감합니다.', '축복합니다!', '할렐루야!', '기도하겠습니다.', '감사한 나눔이네요.'
+  ]
   
-  const likesResult = await DB.prepare('SELECT changes() as count').first()
+  const categories = [
+    { name: 'prayer', color: '#F87171', weight: 2 },
+    { name: 'verse', color: '#F5E398', weight: 3 },
+    { name: 'daily', color: '#F5D4B3', weight: 2 },
+    { name: 'ministry', color: '#B3EDD8', weight: 1 },
+    { name: 'praise', color: '#C4E5F8', weight: 1 },
+    { name: 'church', color: '#E2DBFB', weight: 1 },
+    { name: 'free', color: '#FFFFFF', weight: 2 }
+  ]
   
-  // Update prayer_clicks created_at
-  await DB.prepare(`
-    UPDATE prayer_clicks 
-    SET created_at = datetime(created_at, '-' || ? || ' days')
-  `).bind(days).run()
-  
-  const prayersResult = await DB.prepare('SELECT changes() as count').first()
+  // Simulate each day from past to present
+  for (let dayOffset = days; dayOffset >= 0; dayOffset--) {
+    // Organic user growth: 1-3 new users every 3-7 days
+    if (dayOffset % (3 + Math.floor(Math.random() * 5)) === 0 && Math.random() > 0.3) {
+      const numUsers = 1 + Math.floor(Math.random() * 3)
+      
+      for (let u = 0; u < numUsers; u++) {
+        const name = lastNames[Math.floor(Math.random() * lastNames.length)] + 
+                     firstNames[Math.floor(Math.random() * firstNames.length)]
+        const email = `fake${Date.now()}${Math.floor(Math.random() * 9999)}@cf.com`
+        const church = churches[Math.floor(Math.random() * churches.length)]
+        const position = positions[Math.floor(Math.random() * positions.length)]
+        const gender = genders[Math.floor(Math.random() * genders.length)]
+        
+        try {
+          const result = await DB.prepare(`
+            INSERT INTO users (email, name, church, position, gender, role, created_at) 
+            VALUES (?, ?, ?, ?, ?, 'user', datetime('now', '-' || ? || ' days'))
+          `).bind(email, name, church, position, gender, dayOffset).run()
+          
+          existingUsers.results.push({ id: result.meta.last_row_id })
+          stats.users_created++
+        } catch (error) {
+          console.error('Failed to create user:', error)
+        }
+      }
+    }
+    
+    // Organic post creation: 2-8 posts per day
+    const dailyPosts = 2 + Math.floor(Math.random() * 7)
+    
+    for (let p = 0; p < dailyPosts; p++) {
+      // Weighted random category selection
+      const totalWeight = categories.reduce((sum, cat) => sum + cat.weight, 0)
+      let random = Math.random() * totalWeight
+      let selectedCategory = categories[0]
+      
+      for (const cat of categories) {
+        random -= cat.weight
+        if (random <= 0) {
+          selectedCategory = cat
+          break
+        }
+      }
+      
+      const user = existingUsers.results[Math.floor(Math.random() * existingUsers.results.length)]
+      const templates = postTemplates[selectedCategory.name]
+      const content = templates[Math.floor(Math.random() * templates.length)]
+      const verseRef = selectedCategory.name === 'verse' ? content.split(' - ')[0] : null
+      
+      try {
+        const result = await DB.prepare(`
+          INSERT INTO posts (user_id, content, verse_reference, background_color, created_at)
+          VALUES (?, ?, ?, ?, datetime('now', '-' || ? || ' days', '-' || ? || ' hours', '-' || ? || ' minutes'))
+        `).bind(
+          user.id, 
+          content, 
+          verseRef, 
+          selectedCategory.color,
+          dayOffset,
+          Math.floor(Math.random() * 24), // Random hour
+          Math.floor(Math.random() * 60)  // Random minute
+        ).run()
+        
+        const postId = result.meta.last_row_id
+        stats.posts_created++
+        
+        // Update user scores for post
+        if (selectedCategory.color === '#F87171') {
+          await DB.prepare('UPDATE users SET prayer_score = prayer_score + 10 WHERE id = ?').bind(user.id).run()
+        } else if (selectedCategory.color === '#F5E398') {
+          await DB.prepare('UPDATE users SET scripture_score = scripture_score + 10 WHERE id = ?').bind(user.id).run()
+        } else {
+          await DB.prepare('UPDATE users SET activity_score = activity_score + 10 WHERE id = ?').bind(user.id).run()
+        }
+        
+        // Organic comments: 30% chance of 1-5 comments
+        if (Math.random() > 0.7) {
+          const numComments = 1 + Math.floor(Math.random() * 5)
+          
+          for (let cm = 0; cm < numComments; cm++) {
+            const commenter = existingUsers.results[Math.floor(Math.random() * existingUsers.results.length)]
+            const comment = commentTemplates[Math.floor(Math.random() * commentTemplates.length)]
+            
+            try {
+              await DB.prepare(`
+                INSERT INTO comments (post_id, user_id, content, created_at)
+                VALUES (?, ?, ?, datetime('now', '-' || ? || ' days', '+' || ? || ' hours'))
+              `).bind(
+                postId,
+                commenter.id,
+                comment,
+                dayOffset,
+                Math.floor(Math.random() * 12) // Comment within 12 hours of post
+              ).run()
+              
+              stats.comments_created++
+              
+              // Update commenter activity score
+              await DB.prepare('UPDATE users SET activity_score = activity_score + 5 WHERE id = ?').bind(commenter.id).run()
+            } catch (error) {
+              console.error('Failed to create comment:', error)
+            }
+          }
+        }
+        
+        // Organic likes: 40% chance of 1-10 likes
+        if (Math.random() > 0.6) {
+          const numLikes = 1 + Math.floor(Math.random() * 10)
+          
+          for (let lk = 0; lk < numLikes; lk++) {
+            const liker = existingUsers.results[Math.floor(Math.random() * existingUsers.results.length)]
+            
+            try {
+              // Check if already liked
+              const existing = await DB.prepare('SELECT id FROM likes WHERE post_id = ? AND user_id = ?').bind(postId, liker.id).first()
+              
+              if (!existing) {
+                await DB.prepare(`
+                  INSERT INTO likes (post_id, user_id, created_at)
+                  VALUES (?, ?, datetime('now', '-' || ? || ' days', '+' || ? || ' hours'))
+                `).bind(
+                  postId,
+                  liker.id,
+                  dayOffset,
+                  Math.floor(Math.random() * 24)
+                ).run()
+                
+                stats.likes_created++
+                
+                // Update liker score
+                if (selectedCategory.color === '#F5E398') {
+                  await DB.prepare('UPDATE users SET scripture_score = scripture_score + 1 WHERE id = ?').bind(liker.id).run()
+                } else {
+                  await DB.prepare('UPDATE users SET activity_score = activity_score + 1 WHERE id = ?').bind(liker.id).run()
+                }
+              }
+            } catch (error) {
+              console.error('Failed to create like:', error)
+            }
+          }
+        }
+        
+        // Prayer clicks for prayer posts: 50% chance of 1-8 prayers
+        if (selectedCategory.name === 'prayer' && Math.random() > 0.5) {
+          const numPrayers = 1 + Math.floor(Math.random() * 8)
+          
+          for (let pr = 0; pr < numPrayers; pr++) {
+            const prayer = existingUsers.results[Math.floor(Math.random() * existingUsers.results.length)]
+            
+            try {
+              const existing = await DB.prepare('SELECT id FROM prayer_clicks WHERE post_id = ? AND user_id = ?').bind(postId, prayer.id).first()
+              
+              if (!existing) {
+                await DB.prepare(`
+                  INSERT INTO prayer_clicks (post_id, user_id, created_at)
+                  VALUES (?, ?, datetime('now', '-' || ? || ' days', '+' || ? || ' hours'))
+                `).bind(
+                  postId,
+                  prayer.id,
+                  dayOffset,
+                  Math.floor(Math.random() * 24)
+                ).run()
+                
+                stats.prayers_created++
+                
+                // Update prayer score
+                await DB.prepare('UPDATE users SET prayer_score = prayer_score + 20 WHERE id = ?').bind(prayer.id).run()
+              }
+            } catch (error) {
+              console.error('Failed to create prayer click:', error)
+            }
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to create post:', error)
+      }
+    }
+  }
   
   return c.json({
     success: true,
     days: days,
-    posts_updated: postsResult?.count || 0,
-    comments_updated: commentsResult?.count || 0,
-    likes_updated: likesResult?.count || 0,
-    prayers_updated: prayersResult?.count || 0
+    stats: stats,
+    message: `${days}일간의 자연스러운 활동이 시뮬레이션되었습니다.`
   })
 })
 
@@ -2266,8 +2458,8 @@ app.get('/admin', (c) => {
                         <button onclick="createFakeLikes()" class="bg-pink-500 text-white px-3 py-2 rounded-lg hover:bg-pink-600 transition text-sm">
                             <i class="fas fa-heart mr-1"></i>반응 생성
                         </button>
-                        <button onclick="simulateTimePass()" class="bg-orange-500 text-white px-3 py-2 rounded-lg hover:bg-orange-600 transition text-sm">
-                            <i class="fas fa-clock mr-1"></i>시간경과 시뮬
+                        <button onclick="simulateTimePass()" class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition text-sm font-semibold shadow-lg">
+                            <i class="fas fa-magic mr-2"></i>🌱 개연성 시뮬레이션
                         </button>
                         <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
                             <i class="fas fa-sync-alt mr-1"></i>새로고침
@@ -2883,30 +3075,59 @@ app.get('/admin', (c) => {
             }
 
             window.simulateTimePass = async function() {
-                const days = prompt('시간을 몇 일 앞으로 보내시겠습니까? (1-365일):', '7');
+                const days = prompt('🕐 몇 일간의 활동을 시뮬레이션할까요? (1-365일)\\n\\n✨ 자동으로 다음이 생성됩니다:\\n• 신규 회원 가입 (3-7일마다 1-3명)\\n• 일일 포스팅 (하루 2-8개)\\n• 댓글 (포스팅의 30%)\\n• 좋아요/반응 (포스팅의 40%)\\n• 기도 클릭 (기도 포스팅의 50%)\\n\\n추천: 7-30일', '14');
                 if (!days) return;
                 
                 const daysNum = parseInt(days);
                 if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
-                    alert('1-365 사이의 숫자를 입력해주세요.');
+                    alert('❌ 1-365 사이의 숫자를 입력해주세요.');
                     return;
                 }
                 
-                if (!confirm(\`모든 포스팅, 댓글, 반응의 생성일을 \${daysNum}일 앞으로 이동합니다.\\n\\n이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?\`)) {
+                // Estimate data to be created
+                const estimatedUsers = Math.floor(daysNum / 5) * 2;
+                const estimatedPosts = daysNum * 5;
+                const estimatedComments = Math.floor(estimatedPosts * 0.3) * 3;
+                const estimatedLikes = Math.floor(estimatedPosts * 0.4) * 5;
+                
+                if (!confirm(\`🌱 \${daysNum}일간의 자연스러운 활동을 시뮬레이션합니다\\n\\n📊 예상 생성량:\\n• 신규 회원: 약 \${estimatedUsers}명\\n• 포스팅: 약 \${estimatedPosts}개\\n• 댓글: 약 \${estimatedComments}개\\n• 좋아요/반응: 약 \${estimatedLikes}개\\n\\n⏱️ 소요 시간: 약 \${Math.ceil(daysNum / 10)}분\\n\\n⚠️ 이 작업은 되돌릴 수 없습니다!\\n\\n계속하시겠습니까?\`)) {
                     return;
                 }
+                
+                // Show loading indicator
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = 'simulationLoading';
+                loadingDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                loadingDiv.innerHTML = \`
+                    <div class="bg-white rounded-lg p-8 max-w-md">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                            <h3 class="text-xl font-bold mb-2">시뮬레이션 진행 중...</h3>
+                            <p class="text-gray-600 text-sm">잠시만 기다려주세요.</p>
+                            <p class="text-gray-500 text-xs mt-4">⏱️ \${daysNum}일치 데이터를 생성하고 있습니다</p>
+                        </div>
+                    </div>
+                \`;
+                document.body.appendChild(loadingDiv);
                 
                 try {
                     const response = await axios.post('/api/admin/simulate-time-pass', 
                         { days: daysNum },
                         { headers: { 'X-Admin-ID': adminId } }
                     );
-                    alert(\`시간 경과 시뮬레이션 완료!\\n\\n- 포스팅: \${response.data.posts_updated}개 업데이트\\n- 댓글: \${response.data.comments_updated}개 업데이트\\n- 반응: \${response.data.likes_updated}개 업데이트\\n- 기도 반응: \${response.data.prayers_updated}개 업데이트\\n\\n모든 데이터가 \${daysNum}일 전으로 이동되었습니다.\`);
+                    
+                    // Remove loading
+                    document.getElementById('simulationLoading')?.remove();
+                    
+                    const stats = response.data.stats;
+                    alert(\`✅ \${daysNum}일간의 활동 시뮬레이션 완료!\\n\\n📊 생성된 데이터:\\n• 신규 회원: \${stats.users_created}명\\n• 포스팅: \${stats.posts_created}개\\n• 댓글: \${stats.comments_created}개\\n• 좋아요: \${stats.likes_created}개\\n• 기도 반응: \${stats.prayers_created}개\\n\\n🎉 \${daysNum}일간의 자연스러운 커뮤니티 활동이 재현되었습니다!\\n\\n💡 메인 페이지를 새로고침하여 결과를 확인하세요!\`);
+                    
                     loadStats();
                     loadAdminPosts();
                 } catch (error) {
                     console.error('Failed to simulate time pass:', error);
-                    alert('시간 경과 시뮬레이션에 실패했습니다.');
+                    document.getElementById('simulationLoading')?.remove();
+                    alert(\`❌ 시뮬레이션 실패\\n\\n오류: \${error.response?.data?.error || error.message}\\n\\n최소 1명 이상의 회원이 필요합니다.\`);
                 }
             }
 
@@ -3277,53 +3498,123 @@ app.get('/', (c) => {
                             </div>
                         </div>
                     
-                        <!-- Today's Sermon Section -->
-                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
-                            <h3 class="text-lg font-bold mb-4 text-gray-800">
-                                <i class="fas fa-video text-red-600 mr-2"></i>오늘의 설교 말씀
-                            </h3>
-                            <div class="border-l-4 border-red-600 pl-4 py-2 mb-4">
-                                <p class="font-bold text-red-600 mb-2">
-                                    <i class="fas fa-church mr-1"></i>낙망하고 불안해하지 말라
-                                </p>
-                                <p class="text-gray-700 text-sm mb-2">
-                                    시편 42:5
-                                </p>
-                                <p class="text-xs text-gray-500 mb-3">
-                                    <i class="fas fa-user-tie mr-1"></i>조용기 목사 (여의도순복음교회)
-                                </p>
-                            </div>
-                            
-                            <!-- YouTube Embedded Video -->
-                            <div class="relative w-full" style="padding-bottom: 56.25%;">
-                                <div id="sermonPlayer" class="absolute top-0 left-0 w-full h-full rounded-lg"></div>
-                                <!-- Login Required Overlay -->
-                                <div id="videoLoginOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-black bg-opacity-70 rounded-lg flex items-center justify-center cursor-not-allowed z-10" title="로그인 필요">
-                                    <div class="text-center text-white">
-                                        <i class="fas fa-lock text-4xl mb-2"></i>
-                                        <p class="text-base font-semibold">로그인 필요</p>
+                        <!-- Reward 1: Today's Sermon Section -->
+                        <div id="sermonRewardSection" class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border-2 border-purple-300 p-6 transition-all duration-300">
+                            <!-- Locked State (< 500 points) -->
+                            <div id="sermonLocked" class="text-center">
+                                <div class="mb-4">
+                                    <i class="fas fa-crown text-yellow-500 text-5xl mb-3 animate-pulse"></i>
+                                    <h3 class="text-2xl font-bold text-purple-800 mb-2">
+                                        🎁 리워드 1: 오늘의 설교 말씀
+                                    </h3>
+                                    <div class="inline-block bg-yellow-100 border-2 border-yellow-400 rounded-lg px-4 py-2 mb-4">
+                                        <p class="text-sm font-bold text-yellow-800">
+                                            <i class="fas fa-lock mr-2"></i>종합점수 500점 달성 시 언락
+                                        </p>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <!-- Video Progress Indicator -->
-                            <div id="videoProgressContainer" class="mt-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-3 hidden">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-semibold text-blue-800">
-                                        <i class="fas fa-play-circle mr-1"></i>시청 진행도
-                                    </span>
-                                    <span id="videoProgressPercent" class="text-sm font-bold text-blue-600">0%</span>
+                                
+                                <!-- Scripture about Reward -->
+                                <div class="bg-white bg-opacity-70 rounded-lg p-4 mb-4 border-2 border-purple-200">
+                                    <p class="text-sm font-semibold text-purple-900 mb-2">
+                                        <i class="fas fa-bible text-purple-600 mr-2"></i>상급에 대한 말씀
+                                    </p>
+                                    <div class="border-l-4 border-purple-500 pl-3">
+                                        <p class="text-xs text-purple-800 mb-1 font-bold">마태복음 5:12</p>
+                                        <p class="text-sm text-gray-700 italic leading-relaxed">
+                                            "기뻐하고 즐거워하라 하늘에서 너희의 상이 큼이라"
+                                        </p>
+                                    </div>
+                                    <div class="border-l-4 border-purple-500 pl-3 mt-3">
+                                        <p class="text-xs text-purple-800 mb-1 font-bold">고린도전서 9:24</p>
+                                        <p class="text-sm text-gray-700 italic leading-relaxed">
+                                            "운동장에서 달음질하는 자들이 다 달아날지라도 오직 상을 받는 사람은 한 사람인 줄을 너희가 알지 못하느냐 너희도 상을 받도록 이와 같이 달음질하라"
+                                        </p>
+                                    </div>
                                 </div>
-                                <div class="w-full bg-blue-200 rounded-full h-2.5">
-                                    <div id="videoProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                
+                                <!-- Current Score Display -->
+                                <div class="bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-4 mb-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-semibold text-gray-700">현재 종합점수</span>
+                                        <span id="rewardTotalScore" class="text-2xl font-bold text-purple-600">0</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+                                        <div id="rewardProgressBar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-gray-600">
+                                        <span>0점</span>
+                                        <span id="rewardRemainingScore" class="font-bold text-purple-600">목표: 500점</span>
+                                    </div>
                                 </div>
-                                <p class="text-xs text-blue-700 mt-2">
-                                    <i class="fas fa-info-circle mr-1"></i>영상을 90% 이상 시청하면 100점을 받습니다!
+                                
+                                <!-- Unlock Button (Disabled) -->
+                                <button 
+                                    id="unlockSermonBtn"
+                                    disabled
+                                    class="w-full py-4 px-6 bg-gray-300 text-gray-500 rounded-lg font-bold text-lg cursor-not-allowed flex items-center justify-center space-x-3 transition-all">
+                                    <i class="fas fa-lock text-2xl"></i>
+                                    <span>500점 달성 후 언락 가능</span>
+                                </button>
+                                
+                                <p class="text-xs text-gray-500 mt-3">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    포스팅, 댓글, 좋아요, 기도, 말씀 타이핑으로 점수를 모으세요!
                                 </p>
                             </div>
                             
-                            <!-- Video Completion Result -->
-                            <div id="videoCompletionResult" class="mt-3 hidden"></div>
+                            <!-- Unlocked State (≥ 500 points) -->
+                            <div id="sermonUnlocked" class="hidden">
+                                <div class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 mb-4 border-2 border-yellow-400">
+                                    <div class="flex items-center justify-center space-x-2 mb-2">
+                                        <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
+                                        <h3 class="text-xl font-bold text-yellow-800">🎉 리워드 언락 완료!</h3>
+                                        <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
+                                    </div>
+                                    <p class="text-sm text-center text-yellow-900 font-semibold">
+                                        축하합니다! 500점을 달성하셨습니다. 오늘의 설교 말씀을 감상하세요!
+                                    </p>
+                                </div>
+                                
+                                <h3 class="text-lg font-bold mb-4 text-gray-800">
+                                    <i class="fas fa-video text-red-600 mr-2"></i>오늘의 설교 말씀
+                                </h3>
+                                <div class="border-l-4 border-red-600 pl-4 py-2 mb-4">
+                                    <p class="font-bold text-red-600 mb-2">
+                                        <i class="fas fa-church mr-1"></i>낙망하고 불안해하지 말라
+                                    </p>
+                                    <p class="text-gray-700 text-sm mb-2">
+                                        시편 42:5
+                                    </p>
+                                    <p class="text-xs text-gray-500 mb-3">
+                                        <i class="fas fa-user-tie mr-1"></i>조용기 목사 (여의도순복음교회)
+                                    </p>
+                                </div>
+                                
+                                <!-- YouTube Embedded Video -->
+                                <div class="relative w-full" style="padding-bottom: 56.25%;">
+                                    <div id="sermonPlayer" class="absolute top-0 left-0 w-full h-full rounded-lg"></div>
+                                </div>
+                                
+                                <!-- Video Progress Indicator -->
+                                <div id="videoProgressContainer" class="mt-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-3 hidden">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-semibold text-blue-800">
+                                            <i class="fas fa-play-circle mr-1"></i>시청 진행도
+                                        </span>
+                                        <span id="videoProgressPercent" class="text-sm font-bold text-blue-600">0%</span>
+                                    </div>
+                                    <div class="w-full bg-blue-200 rounded-full h-2.5">
+                                        <div id="videoProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                    </div>
+                                    <p class="text-xs text-blue-700 mt-2">
+                                        <i class="fas fa-info-circle mr-1"></i>영상을 90% 이상 시청하면 100점을 받습니다!
+                                    </p>
+                                </div>
+                                
+                                <!-- Video Completion Result -->
+                                <div id="videoCompletionResult" class="mt-3 hidden"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

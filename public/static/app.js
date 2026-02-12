@@ -3550,6 +3550,12 @@ async function deleteComment(commentId, postId) {
 // Load posts
 async function loadPosts() {
     try {
+        // Restore filter from localStorage if not set
+        if (!filterUserId && localStorage.getItem('filterUserId')) {
+            filterUserId = localStorage.getItem('filterUserId');
+            console.log('🔄 Restored filterUserId from localStorage:', filterUserId);
+        }
+        
         // Build query parameters
         let queryParams = `user_id=${currentUserId}`;
         if (filterUserId) {
@@ -4591,7 +4597,8 @@ window.filterByUser = function(userId, userName) {
     }
     
     filterUserId = userId;
-    console.log('✅ filterUserId set to:', filterUserId);
+    localStorage.setItem('filterUserId', userId); // Save to localStorage
+    console.log('✅ filterUserId set to:', filterUserId, 'and saved to localStorage');
     
     // Reload posts with filter (no banner needed)
     loadPosts();
@@ -4617,9 +4624,13 @@ window.filterMyPosts = function() {
 
 // Clear user filter
 window.clearUserFilter = function() {
+    console.log('🔴 clearUserFilter called!');
+    console.trace('Stack trace:'); // Show where this was called from
+    
     // Clear filter
     const wasFiltered = filterUserId !== null;
     filterUserId = null;
+    localStorage.removeItem('filterUserId'); // Clear from localStorage
     
     // Reload all posts
     loadPosts();

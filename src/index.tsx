@@ -3447,7 +3447,7 @@ app.get('/', (c) => {
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
                         <!-- Today's Bible Verse -->
                         <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
-                            <h3 class="text-lg font-bold mb-4 text-gray-800">
+                            <h3 class="text-base font-bold mb-4 text-gray-800">
                                 <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
                             </h3>
                             <div class="border-l-4 border-blue-600 pl-4 py-2 mb-4">

@@ -2054,6 +2054,7 @@ app.get('/admin', (c) => {
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">성경점수</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">기도점수</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">활동점수</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">사역점수</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">가입일</th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
                             </tr>
@@ -2199,6 +2200,12 @@ app.get('/admin', (c) => {
                                     <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
                                 </button>
                             </td>
+                            <td class="px-4 py-3 text-sm">
+                                <span class="inline-flex items-center px-2 py-1 rounded bg-purple-100 text-purple-800 font-semibold">
+                                    <i class="fas fa-hands-praying text-xs mr-1"></i>
+                                    \${(user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)}
+                                </span>
+                            </td>
                             <td class="px-4 py-3 text-sm">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</td>
                             <td class="px-4 py-3 text-sm">
                                 \${user.role === 'admin' 
@@ -2213,7 +2220,7 @@ app.get('/admin', (c) => {
                 } catch (error) {
                     console.error('Failed to load users:', error);
                     const tbody = document.getElementById('usersTableBody');
-                    tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>사용자 목록을 불러오는데 실패했습니다.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>사용자 목록을 불러오는데 실패했습니다.</td></tr>';
                 }
             }
 

@@ -3967,7 +3967,7 @@ async function showUserProfileModal(userId) {
                             <div class="text-center bg-purple-50 p-3 rounded-lg border-2 border-purple-200">
                                 <div class="flex flex-col items-center">
                                     <i class="fas fa-trophy text-purple-600 text-2xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">사역 점수</span>
+                                    <span class="text-xs text-gray-600 mb-1">종합점수</span>
                                     <span class="text-2xl font-bold text-purple-600">${(user.scripture_score ?? 0) + (user.prayer_score ?? 0) + (user.activity_score ?? 0)}</span>
                                 </div>
                             </div>

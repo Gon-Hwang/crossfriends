@@ -98,7 +98,7 @@ app.get('/api/users/:id', async (c) => {
   // If viewing own profile or no privacy settings, return all data
   const isOwnProfile = currentUserId && parseInt(currentUserId) === user.id
   
-  // Calculate ministry score (사역점수 = 성경점수 + 기도점수 + 활동점수)
+  // Calculate ministry score (종합점수 = 성경점수 + 기도점수 + 활동점수)
   const ministryScore = (user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)
   
   if (isOwnProfile || !user.privacy_settings) {
@@ -161,7 +161,7 @@ app.get('/api/users/:id', async (c) => {
     filteredUser.activity_score = null
   }
   
-  // Calculate filtered ministry score (사역점수) - only if scores are visible
+  // Calculate filtered ministry score (종합점수) - only if scores are visible
   const filteredMinistryScore = privacySettings.scores === false ? null : 
     (filteredUser.scripture_score || 0) + (filteredUser.prayer_score || 0) + (filteredUser.activity_score || 0)
   
@@ -334,7 +334,7 @@ app.get('/users/:id', async (c) => {
                             <div class="bg-purple-50 p-4 rounded-lg text-center border-2 border-purple-200">
                                 <i class="fas fa-trophy text-purple-600 text-2xl mb-2"></i>
                                 <div class="text-2xl font-bold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
-                                <div class="text-sm text-gray-600">사역 점수</div>
+                                <div class="text-sm text-gray-600">종합점수</div>
                             </div>
                         </div>
                     </div>
@@ -2067,7 +2067,7 @@ app.get('/admin', (c) => {
                                     활동점수
                                 </th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="ministry_score" onclick="sortUsers('ministry_score')">
-                                    사역점수
+                                    종합점수
                                 </th>
                                 <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="created_at" onclick="sortUsers('created_at')">
                                     가입일

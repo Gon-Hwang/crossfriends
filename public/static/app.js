@@ -2,6 +2,7 @@
 let currentUserId = null;
 let currentUser = null;
 let selectedBackgroundColor = null; // 선택된 배경색
+let filterUserId = null; // 필터링할 사용자 ID
 
 // =====================
 // Modal Functions
@@ -3552,7 +3553,13 @@ async function deleteComment(commentId, postId) {
 // Load posts
 async function loadPosts() {
     try {
-        const response = await axios.get(`/api/posts?user_id=${currentUserId}`);
+        // Build query parameters
+        let queryParams = `user_id=${currentUserId}`;
+        if (filterUserId) {
+            queryParams += `&filter_user_id=${filterUserId}`;
+        }
+        
+        const response = await axios.get(`/api/posts?${queryParams}`);
         const posts = response.data.posts;
         const feed = document.getElementById('postsFeed');
         
@@ -3668,7 +3675,7 @@ async function loadPosts() {
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <h4 class="font-bold text-gray-800">${post.user_name}</h4>
+                                    <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, '${post.user_name}')">${post.user_name}</h4>
                                     <p class="text-sm text-gray-500">${post.user_church || ''}</p>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -4569,3 +4576,53 @@ function updateDeleteButtons(containerId) {
 updateAuthUI();
 updateEmailDatalist(); // Load email history
 autoLogin(); // Auto-login if session exists
+
+// =====================
+// User Filter Functions
+// =====================
+
+// Filter posts by user
+window.filterByUser = function(userId, userName) {
+    filterUserId = userId;
+    
+    // Show filter banner
+    const mainContent = document.querySelector('.max-w-7xl.mx-auto.px-4');
+    let filterBanner = document.getElementById('filterBanner');
+    
+    if (!filterBanner) {
+        filterBanner = document.createElement('div');
+        filterBanner.id = 'filterBanner';
+        mainContent.insertBefore(filterBanner, mainContent.firstChild);
+    }
+    
+    filterBanner.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 rounded-lg flex items-center justify-between';
+    filterBanner.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-filter"></i>
+            <span class="font-semibold">${userName} 님의 포스팅만 보기</span>
+        </div>
+        <button onclick="clearUserFilter()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm transition">
+            <i class="fas fa-times mr-1"></i>전체 보기
+        </button>
+    `;
+    
+    // Reload posts with filter
+    loadPosts();
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Clear user filter
+window.clearUserFilter = function() {
+    filterUserId = null;
+    
+    // Remove filter banner
+    const filterBanner = document.getElementById('filterBanner');
+    if (filterBanner) {
+        filterBanner.remove();
+    }
+    
+    // Reload all posts
+    loadPosts();
+}

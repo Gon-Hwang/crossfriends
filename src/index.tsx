@@ -501,6 +501,19 @@ app.get('/api/images/posts/:filename', async (c) => {
 app.get('/api/posts', async (c) => {
   const { DB } = c.env
   const currentUserId = c.req.query('user_id') // For checking if current user liked the post
+  const filterUserId = c.req.query('filter_user_id') // For filtering by specific user
+  
+  // Build WHERE clause
+  let whereClause = ''
+  let bindParams: any[] = []
+  
+  if (filterUserId) {
+    whereClause = 'WHERE p.user_id = ?'
+    bindParams.push(filterUserId)
+  }
+  
+  // Add currentUserId for like checks (twice)
+  bindParams.push(currentUserId || 0, currentUserId || 0)
   
   const { results } = await DB.prepare(`
     SELECT 
@@ -529,8 +542,9 @@ app.get('/api/posts', async (c) => {
     LEFT JOIN users u ON p.user_id = u.id
     LEFT JOIN posts sp ON p.shared_post_id = sp.id
     LEFT JOIN users su ON sp.user_id = su.id
+    ${whereClause}
     ORDER BY p.created_at DESC
-  `).bind(currentUserId || 0, currentUserId || 0).all()
+  `).bind(...bindParams).all()
   
   return c.json({ posts: results })
 })

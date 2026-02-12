@@ -94,6 +94,14 @@ SET activity_score = activity_score + (
     AND posts.background_color IN ('#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF')
 );
 
+-- Add scores for comments (댓글 작성: 활동점수 +5점)
+UPDATE users
+SET activity_score = activity_score + (
+    SELECT COUNT(*) * 5
+    FROM comments
+    WHERE comments.user_id = users.id
+);
+
 -- Show results
 SELECT id, name, scripture_score, prayer_score, activity_score, 
        (scripture_score + prayer_score + activity_score) as total_score

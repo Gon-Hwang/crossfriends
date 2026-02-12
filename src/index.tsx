@@ -3503,14 +3503,9 @@ app.get('/', (c) => {
                             <!-- Locked State (< 500 points) -->
                             <div id="sermonLocked" class="text-center">
                                 <div class="mb-4">
-                                    <h3 class="text-2xl font-bold text-purple-800 mb-2">
-                                        🎁 리워드1: 오늘의 설교 말씀
+                                    <h3 class="text-lg font-bold text-purple-800 leading-tight">
+                                        🎁 리워드1:<br/>오늘의 설교 말씀
                                     </h3>
-                                    <div class="inline-block bg-yellow-100 border-2 border-yellow-400 rounded-lg px-4 py-2 mb-4">
-                                        <p class="text-sm font-bold text-yellow-800">
-                                            <i class="fas fa-lock mr-2"></i>종합점수 500점 달성 시 언락
-                                        </p>
-                                    </div>
                                 </div>
                                 
                                 <!-- Current Score Display -->
@@ -3536,11 +3531,6 @@ app.get('/', (c) => {
                                     <i class="fas fa-lock text-2xl"></i>
                                     <span>500점 달성 후 언락 가능</span>
                                 </button>
-                                
-                                <p class="text-xs text-gray-500 mt-3">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    포스팅, 댓글, 좋아요, 기도, 말씀 타이핑으로 점수를 모으세요!
-                                </p>
                             </div>
                             
                             <!-- Unlocked State (≥ 500 points) -->

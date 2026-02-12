@@ -98,8 +98,11 @@ app.get('/api/users/:id', async (c) => {
   // If viewing own profile or no privacy settings, return all data
   const isOwnProfile = currentUserId && parseInt(currentUserId) === user.id
   
+  // Calculate ministry score (사역점수 = 성경점수 + 기도점수 + 활동점수)
+  const ministryScore = (user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)
+  
   if (isOwnProfile || !user.privacy_settings) {
-    return c.json({ user })
+    return c.json({ user: { ...user, ministry_score: ministryScore } })
   }
   
   // Apply privacy filters for other users
@@ -158,7 +161,11 @@ app.get('/api/users/:id', async (c) => {
     filteredUser.activity_score = null
   }
   
-  return c.json({ user: filteredUser })
+  // Calculate filtered ministry score (사역점수) - only if scores are visible
+  const filteredMinistryScore = privacySettings.scores === false ? null : 
+    (filteredUser.scripture_score || 0) + (filteredUser.prayer_score || 0) + (filteredUser.activity_score || 0)
+  
+  return c.json({ user: { ...filteredUser, ministry_score: filteredMinistryScore } })
 })
 
 // View user profile (HTML page)
@@ -306,16 +313,33 @@ app.get('/users/:id', async (c) => {
                         <h2 class="text-xl font-semibold mb-3 text-gray-700">
                             <i class="fas fa-chart-line mr-2"></i>점수
                         </h2>
+                        
+                        <!-- Ministry Score (Total) - Prominent Display -->
+                        <div class="mb-4 bg-gradient-to-r from-purple-500 to-indigo-600 p-6 rounded-xl shadow-lg text-white">
+                            <div class="flex items-center justify-center space-x-4">
+                                <i class="fas fa-hands-praying text-4xl"></i>
+                                <div class="text-center">
+                                    <div class="text-5xl font-bold">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
+                                    <div class="text-lg font-semibold mt-1">사역 점수</div>
+                                    <div class="text-sm opacity-90 mt-1">Ministry Score</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Individual Scores -->
                         <div class="grid grid-cols-3 gap-4">
-                            <div class="bg-yellow-50 p-4 rounded-lg text-center">
+                            <div class="bg-yellow-50 p-4 rounded-lg text-center border-2 border-yellow-200">
+                                <i class="fas fa-book-bible text-yellow-600 text-2xl mb-2"></i>
                                 <div class="text-2xl font-bold text-yellow-600">${ user.scripture_score || 0}</div>
                                 <div class="text-sm text-gray-600">성경 점수</div>
                             </div>
-                            <div class="bg-blue-50 p-4 rounded-lg text-center">
+                            <div class="bg-blue-50 p-4 rounded-lg text-center border-2 border-blue-200">
+                                <i class="fas fa-praying-hands text-blue-600 text-2xl mb-2"></i>
                                 <div class="text-2xl font-bold text-blue-600">${ user.prayer_score || 0}</div>
                                 <div class="text-sm text-gray-600">기도 점수</div>
                             </div>
-                            <div class="bg-green-50 p-4 rounded-lg text-center">
+                            <div class="bg-green-50 p-4 rounded-lg text-center border-2 border-green-200">
+                                <i class="fas fa-heart text-green-600 text-2xl mb-2"></i>
                                 <div class="text-2xl font-bold text-green-600">${ user.activity_score || 0}</div>
                                 <div class="text-sm text-gray-600">활동 점수</div>
                             </div>

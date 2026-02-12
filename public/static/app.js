@@ -685,12 +685,12 @@ function updateTypingScoreDisplay() {
                     }
                     
                     // Show success message
-                    showToast('🎉 축하합니다! 리워드 1 언락! 오늘의 설교를 감상하세요!', 'success');
+                    showToast('🎉 축하합니다! 리워드1 언락! 오늘의 설교를 감상하세요!', 'success');
                 };
             }
             
             // Show toast notification
-            showToast('🎊 500점 달성! 리워드 1 언락 버튼을 눌러주세요!', 'success');
+            showToast('🎊 500점 달성! 리워드1 언락 버튼을 눌러주세요!', 'success');
         }
     }
 }

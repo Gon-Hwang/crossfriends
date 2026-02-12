@@ -3498,37 +3498,17 @@ app.get('/', (c) => {
                             </div>
                         </div>
                     
-                        <!-- Reward 1: Today's Sermon Section -->
+                        <!-- Reward1: Today's Sermon Section -->
                         <div id="sermonRewardSection" class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border-2 border-purple-300 p-6 transition-all duration-300">
                             <!-- Locked State (< 500 points) -->
                             <div id="sermonLocked" class="text-center">
                                 <div class="mb-4">
-                                    <i class="fas fa-crown text-yellow-500 text-5xl mb-3 animate-pulse"></i>
                                     <h3 class="text-2xl font-bold text-purple-800 mb-2">
-                                        🎁 리워드 1: 오늘의 설교 말씀
+                                        🎁 리워드1: 오늘의 설교 말씀
                                     </h3>
                                     <div class="inline-block bg-yellow-100 border-2 border-yellow-400 rounded-lg px-4 py-2 mb-4">
                                         <p class="text-sm font-bold text-yellow-800">
                                             <i class="fas fa-lock mr-2"></i>종합점수 500점 달성 시 언락
-                                        </p>
-                                    </div>
-                                </div>
-                                
-                                <!-- Scripture about Reward -->
-                                <div class="bg-white bg-opacity-70 rounded-lg p-4 mb-4 border-2 border-purple-200">
-                                    <p class="text-sm font-semibold text-purple-900 mb-2">
-                                        <i class="fas fa-bible text-purple-600 mr-2"></i>상급에 대한 말씀
-                                    </p>
-                                    <div class="border-l-4 border-purple-500 pl-3">
-                                        <p class="text-xs text-purple-800 mb-1 font-bold">마태복음 5:12</p>
-                                        <p class="text-sm text-gray-700 italic leading-relaxed">
-                                            "기뻐하고 즐거워하라 하늘에서 너희의 상이 큼이라"
-                                        </p>
-                                    </div>
-                                    <div class="border-l-4 border-purple-500 pl-3 mt-3">
-                                        <p class="text-xs text-purple-800 mb-1 font-bold">고린도전서 9:24</p>
-                                        <p class="text-sm text-gray-700 italic leading-relaxed">
-                                            "운동장에서 달음질하는 자들이 다 달아날지라도 오직 상을 받는 사람은 한 사람인 줄을 너희가 알지 못하느냐 너희도 상을 받도록 이와 같이 달음질하라"
                                         </p>
                                     </div>
                                 </div>
@@ -3568,7 +3548,7 @@ app.get('/', (c) => {
                                 <div class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-4 mb-4 border-2 border-yellow-400">
                                     <div class="flex items-center justify-center space-x-2 mb-2">
                                         <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
-                                        <h3 class="text-xl font-bold text-yellow-800">🎉 리워드 언락 완료!</h3>
+                                        <h3 class="text-xl font-bold text-yellow-800">🎉 리워드1 언락 완료!</h3>
                                         <i class="fas fa-trophy text-yellow-600 text-2xl"></i>
                                     </div>
                                     <p class="text-sm text-center text-yellow-900 font-semibold">

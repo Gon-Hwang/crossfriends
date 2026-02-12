@@ -2398,19 +2398,19 @@ async function createPost() {
         const postId = response.data.id;
 
         // 기도 포스팅(중보 기도)일 경우 기도 점수 즉시 업데이트
-        if (selectedBackgroundColor === '#FCA5A5') {
+        if (selectedBackgroundColor === '#F87171') {
             prayerScore += 20;
             updateTypingScoreDisplay();
             showToastWithColor('기도 포스팅 작성! 기도 점수 +20점', selectedBackgroundColor);
         }
         
         // 말씀 포스팅일 경우 성경 점수 업데이트
-        if (selectedBackgroundColor === '#FDE68A') {
+        if (selectedBackgroundColor === '#F5E398') {
             showToastWithColor('말씀 포스팅 작성! 성경 점수 +10점', selectedBackgroundColor);
         }
         
         // 일상, 사역, 찬양, 교회, 자유 포스팅일 경우 활동 점수 즉시 업데이트
-        const activityPostColors = ['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF'];
+        const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF'];
         if (activityPostColors.includes(selectedBackgroundColor)) {
             activityScore += 10;
             updateTypingScoreDisplay();
@@ -2600,31 +2600,31 @@ async function toggleLike(postId) {
         // Update scores based on post type
         if (liked) {
             // Liked: add points
-            if (backgroundColor === '#FDE68A') {
+            if (backgroundColor === '#F5E398') {
                 // 말씀 포스팅 - 아멘 버튼: 성경 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: 1 });
                 typingScore += 1;
                 showToast('아멘! 성경 점수 +1점', 'success');
-            } else if (backgroundColor === '#FED7AA') {
-                // 일상 포스팅 - 샬롬 버튼: 활동 점수 +1점
+            } else if (backgroundColor === '#F5D4B3') {
+                // 일상 포스팅 - 공감해요: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
-                showToast('샬롬! 활동 점수 +1점', 'success');
-            } else if (backgroundColor === '#A7F3D0') {
-                // 사역 포스팅 - 하나님 함께하시길: 활동 점수 +1점
+                showToast('공감해요! 활동 점수 +1점', 'success');
+            } else if (backgroundColor === '#B3EDD8') {
+                // 사역 포스팅 - 응원합니다: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
-                showToast('하나님 함께하시길! 활동 점수 +1점', 'success');
-            } else if (backgroundColor === '#BAE6FD') {
+                showToast('응원합니다! 활동 점수 +1점', 'success');
+            } else if (backgroundColor === '#C4E5F8') {
                 // 찬양 포스팅 - 할렐루야: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
                 showToast('할렐루야! 활동 점수 +1점', 'success');
-            } else if (backgroundColor === '#DDD6FE') {
-                // 교회 포스팅 - Body of Christ: 활동 점수 +1점
+            } else if (backgroundColor === '#E2DBFB') {
+                // 교회 포스팅 - 함께해요: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
                 activityScore += 1;
-                showToast('Body of Christ! 활동 점수 +1점', 'success');
+                showToast('함께해요! 활동 점수 +1점', 'success');
             } else {
                 // 자유 포스팅 - 좋아요: 활동 점수 +1점
                 await axios.post(`/api/users/${currentUserId}/scores/activity`, { points: 1 });
@@ -2633,7 +2633,7 @@ async function toggleLike(postId) {
             }
         } else {
             // Unliked: subtract points
-            if (backgroundColor === '#FDE68A') {
+            if (backgroundColor === '#F5E398') {
                 // 말씀 포스팅: 성경 점수 -1점
                 await axios.post(`/api/users/${currentUserId}/scores/scripture`, { points: -1 });
                 typingScore = Math.max(0, typingScore - 1);
@@ -2998,18 +2998,18 @@ async function deletePost(postId) {
         await axios.delete(`/api/posts/${postId}`);
         
         // 기도 포스팅(중보 기도)이면 점수 즉시 차감
-        if (post.background_color === '#FCA5A5' && post.user_id === currentUserId) {
+        if (post.background_color === '#F87171' && post.user_id === currentUserId) {
             prayerScore = Math.max(0, prayerScore - 20);
             updateTypingScoreDisplay();
             showToastWithColor('기도 포스팅 삭제! 기도 점수 -20점', post.background_color);
         } 
         // 말씀 포스팅이면 성경 점수 즉시 차감
-        else if (post.background_color === '#FDE68A' && post.user_id === currentUserId) {
+        else if (post.background_color === '#F5E398' && post.user_id === currentUserId) {
             // 말씀 포스팅도 성경 점수를 차감해야 하므로 추가
             showToastWithColor('말씀 포스팅 삭제! 성경 점수 -10점', post.background_color);
         }
         // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 즉시 차감
-        else if (['#FED7AA', '#A7F3D0', '#BAE6FD', '#DDD6FE', '#FFFFFF'].includes(post.background_color) && post.user_id === currentUserId) {
+        else if (['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF'].includes(post.background_color) && post.user_id === currentUserId) {
             activityScore = Math.max(0, activityScore - 10);
             updateTypingScoreDisplay();
             showToastWithColor('포스팅 삭제! 활동 점수 -10점', post.background_color);
@@ -3597,44 +3597,65 @@ async function loadPosts() {
                             ${verseHtml}
                             ${sharedPostHtml}
                             <div class="mt-4 flex items-center space-x-6 text-gray-600">
-                                ${post.background_color === '#FCA5A5' ? `
-                                    <button onclick="togglePray(${post.id})" class="flex items-center space-x-2 ${post.is_prayed > 0 ? 'text-red-600' : 'hover:text-red-600'} transition" title="기도했으면 누르세요">
+                                ${post.background_color === '#F87171' ? `
+                                    <!-- 중보 기도: 함께 기도합니다 -->
+                                    <button onclick="togglePray(${post.id})" class="flex items-center space-x-2 ${post.is_prayed > 0 ? 'text-red-600' : 'hover:text-red-600'} transition group relative" title="함께 기도합니다">
                                         <i class="fas fa-praying-hands text-lg"></i>
                                         <span class="text-sm">${post.prayer_clicks_count || 0}</span>
+                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">함께 기도합니다</span>
                                     </button>
-                                ` : post.background_color === '#FDE68A' ? `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-yellow-600' : 'hover:text-yellow-600'} transition" title="아멘">
+                                ` : post.background_color === '#F5E398' ? `
+                                    <!-- 말씀: 아멘! -->
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-yellow-600' : 'hover:text-yellow-600'} transition group relative" title="아멘!">
                                         <i class="fas fa-cross text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
+                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">아멘!</span>
                                     </button>
-                                ` : post.background_color === '#A7F3D0' ? `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-green-600' : 'hover:text-green-600'} transition" title="하나님 함께하시길!">
-                                        <i class="fas fa-dove text-lg"></i>
+                                ` : post.background_color === '#F5D4B3' ? `
+                                    <!-- 일상: 공감해요 -->
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-orange-600' : 'hover:text-orange-600'} transition group relative" title="공감해요">
+                                        <i class="fas fa-thumbs-up text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
+                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">공감해요</span>
                                     </button>
-                                ` : post.background_color === '#BAE6FD' ? `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-sky-600' : 'hover:text-sky-600'} transition" title="할렐루야!">
-                                        <i class="fas fa-hands-clapping text-lg"></i>
+                                ` : post.background_color === '#B3EDD8' ? `
+                                    <!-- 사역: 응원합니다 -->
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-green-600' : 'hover:text-green-600'} transition group relative" title="응원합니다">
+                                        <i class="fas fa-hands-helping text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
+                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">응원합니다</span>
                                     </button>
-                                ` : post.background_color === '#DDD6FE' ? `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-violet-600' : 'hover:text-violet-600'} transition" title="Body of Christ!">
+                                ` : post.background_color === '#C4E5F8' ? `
+                                    <!-- 찬양: 할렐루야! -->
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-sky-600' : 'hover:text-sky-600'} transition group relative" title="할렐루야!">
+                                        <i class="fas fa-music text-lg"></i>
+                                        <span class="text-sm">${post.likes_count || 0}</span>
+                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">할렐루야!</span>
+                                    </button>
+                                ` : post.background_color === '#E2DBFB' ? `
+                                    <!-- 교회: 함께해요 -->
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-violet-600' : 'hover:text-violet-600'} transition group relative" title="함께해요">
                                         <i class="fas fa-church text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
+                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">함께해요</span>
                                     </button>
                                 ` : `
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition" title="샬롬">
-                                        <i class="fas fa-dove ${isLiked ? 'text-blue-600' : ''} text-lg"></i>
+                                    <!-- 자유: 좋아요 -->
+                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-pink-600' : 'hover:text-pink-600'} transition group relative" title="좋아요">
+                                        <i class="fas fa-heart text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
+                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">좋아요</span>
                                     </button>
                                 `}
-                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition" title="댓글">
+                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition group relative" title="댓글">
                                     <i class="fas fa-comment text-lg"></i>
                                     <span class="text-sm">${post.comments_count || 0}</span>
+                                    <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">댓글</span>
                                 </button>
-                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition" title="공유하기">
+                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition group relative" title="공유하기">
                                     <i class="fas fa-share text-lg"></i>
                                     <span class="text-sm">공유</span>
+                                    <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">공유하기</span>
                                 </button>
                             </div>
                             <div id="comments-${post.id}" class="hidden"></div>
@@ -3727,12 +3748,12 @@ function showToastWithColor(message, backgroundColor) {
     
     // Set border color slightly darker than background
     const borderColors = {
-        '#FCA5A5': '#DC2626',  // 중보 기도 - 빨간색
-        '#FDE68A': '#CA8A04',  // 말씀 - 노란색
-        '#FED7AA': '#EA580C',  // 일상 - 주황색
-        '#A7F3D0': '#059669',  // 사역 - 초록색
-        '#BAE6FD': '#0284C7',  // 찬양 - 하늘색
-        '#DDD6FE': '#7C3AED',  // 교회 - 보라색
+        '#F87171': '#DC2626',  // 중보 기도 - 빨간색
+        '#F5E398': '#CA8A04',  // 말씀 - 노란색
+        '#F5D4B3': '#EA580C',  // 일상 - 주황색
+        '#B3EDD8': '#059669',  // 사역 - 초록색
+        '#C4E5F8': '#0284C7',  // 찬양 - 하늘색
+        '#E2DBFB': '#7C3AED',  // 교회 - 보라색
         '#FFFFFF': '#D1D5DB'   // 자유 - 회색
     };
     toast.style.borderColor = borderColors[backgroundColor] || '#D1D5DB';

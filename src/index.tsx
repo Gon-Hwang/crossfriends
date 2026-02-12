@@ -332,7 +332,7 @@ app.get('/users/:id', async (c) => {
                                 <div class="text-sm text-gray-600">활동 점수</div>
                             </div>
                             <div class="bg-purple-50 p-4 rounded-lg text-center border-2 border-purple-200">
-                                <i class="fas fa-hands-praying text-purple-600 text-2xl mb-2"></i>
+                                <i class="fas fa-trophy text-purple-600 text-2xl mb-2"></i>
                                 <div class="text-2xl font-bold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
                                 <div class="text-sm text-gray-600">사역 점수</div>
                             </div>
@@ -2317,7 +2317,7 @@ app.get('/admin', (c) => {
                             </td>
                             <td class="px-4 py-3 text-sm">
                                 <span class="inline-flex items-center px-2 py-1 rounded bg-purple-100 text-purple-800 font-semibold">
-                                    <i class="fas fa-award text-xs mr-1"></i>
+                                    <i class="fas fa-trophy text-xs mr-1"></i>
                                     \${(user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)}
                                 </span>
                             </td>

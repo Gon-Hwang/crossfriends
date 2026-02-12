@@ -2843,7 +2843,7 @@ async function refreshComments(postId) {
                         </div>
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
+                                <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition inline-block" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
                                 <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
                             </div>
                             <div class="flex items-center space-x-4 mt-1">
@@ -3329,7 +3329,7 @@ async function loadComments(postId) {
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
                                 <div class="flex justify-between items-start">
-                                    <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
+                                    <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
                                     ${canEdit ? `
                                         <div class="relative">
                                             <button 
@@ -3647,7 +3647,7 @@ async function loadPosts() {
                             </div>
                             <div class="flex-1 min-w-0 overflow-hidden">
                                 <div class="flex items-center space-x-2 flex-wrap">
-                                    <h4 class="font-bold text-sm text-gray-800 truncate">${post.shared_user_name}</h4>
+                                    <h4 class="font-bold text-sm text-gray-800 truncate cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.shared_user_id}, \`${post.shared_user_name}\`)" title="클릭하여 ${post.shared_user_name} 님의 포스팅만 보기">${post.shared_user_name}</h4>
                                     <span class="text-xs text-gray-500 flex-shrink-0">•</span>
                                     <p class="text-xs text-gray-500 flex-shrink-0">${formatDate(post.shared_created_at)}</p>
                                 </div>
@@ -3675,7 +3675,7 @@ async function loadPosts() {
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, '${post.user_name}')">${post.user_name}</h4>
+                                    <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, \`${post.user_name}\`)" title="클릭하여 ${post.user_name} 님의 포스팅만 보기">${post.user_name}</h4>
                                     <p class="text-sm text-gray-500">${post.user_church || ''}</p>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -4585,24 +4585,28 @@ autoLogin(); // Auto-login if session exists
 window.filterByUser = function(userId, userName) {
     filterUserId = userId;
     
-    // Show filter banner
-    const mainContent = document.querySelector('.max-w-7xl.mx-auto.px-4');
+    // Show filter banner at the top of feed
+    const postsFeed = document.getElementById('postsFeed');
     let filterBanner = document.getElementById('filterBanner');
     
     if (!filterBanner) {
         filterBanner = document.createElement('div');
         filterBanner.id = 'filterBanner';
-        mainContent.insertBefore(filterBanner, mainContent.firstChild);
+        postsFeed.parentElement.insertBefore(filterBanner, postsFeed);
     }
     
-    filterBanner.className = 'bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-4 rounded-lg flex items-center justify-between';
+    filterBanner.className = 'bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 mb-6 rounded-xl shadow-lg flex items-center justify-between animate-fade-in';
     filterBanner.innerHTML = `
-        <div class="flex items-center space-x-2">
-            <i class="fas fa-filter"></i>
-            <span class="font-semibold">${userName} 님의 포스팅만 보기</span>
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-filter text-xl"></i>
+            <div>
+                <p class="font-bold text-lg">${userName.replace(/'/g, "&#39;")} 님의 포스팅</p>
+                <p class="text-sm text-blue-100">작성한 포스팅만 표시 중입니다</p>
+            </div>
         </div>
-        <button onclick="clearUserFilter()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-sm transition">
-            <i class="fas fa-times mr-1"></i>전체 보기
+        <button onclick="clearUserFilter()" class="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg flex items-center space-x-2">
+            <i class="fas fa-times"></i>
+            <span>전체 보기</span>
         </button>
     `;
     

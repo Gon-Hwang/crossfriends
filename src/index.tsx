@@ -815,7 +815,7 @@ app.post('/api/posts/:id/comments', async (c) => {
   await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
   
   return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, new_activity_score: newScore }, 201)
-}
+})
 
 // Update comment
 app.put('/api/comments/:id', async (c) => {
@@ -853,7 +853,7 @@ app.delete('/api/comments/:id', async (c) => {
   }
   
   return c.json({ success: true })
-}
+})
 
 // =====================
 // API Routes - Likes

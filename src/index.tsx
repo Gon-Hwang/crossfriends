@@ -3499,27 +3499,23 @@ app.get('/', (c) => {
                         </div>
                     
                         <!-- Reward1: Today's Sermon Section -->
-                        <div id="sermonRewardSection" class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border-2 border-purple-300 p-6 transition-all duration-300">
+                        <div id="sermonRewardSection" class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border-2 border-purple-300 p-4 transition-all duration-300">
                             <!-- Locked State (< 500 points) -->
                             <div id="sermonLocked" class="text-center">
-                                <div class="mb-4">
-                                    <h3 class="text-lg font-bold text-purple-800 leading-tight">
+                                <div class="mb-3">
+                                    <h3 class="text-base font-bold text-purple-800 leading-tight">
                                         🎁 리워드1:<br/>오늘의 설교 말씀
                                     </h3>
                                 </div>
                                 
                                 <!-- Current Score Display -->
-                                <div class="bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-4 mb-4">
+                                <div class="bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-3 mb-3">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-sm font-semibold text-gray-700">현재 종합점수</span>
-                                        <span id="rewardTotalScore" class="text-2xl font-bold text-purple-600">0</span>
+                                        <span id="rewardTotalScore" class="text-xl font-bold text-purple-600">0</span>
                                     </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
-                                        <div id="rewardProgressBar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
-                                    </div>
-                                    <div class="flex justify-between text-xs text-gray-600">
-                                        <span>0점</span>
-                                        <span id="rewardRemainingScore" class="font-bold text-purple-600">목표: 500점</span>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div id="rewardProgressBar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
                                     </div>
                                 </div>
                                 
@@ -3527,8 +3523,8 @@ app.get('/', (c) => {
                                 <button 
                                     id="unlockSermonBtn"
                                     disabled
-                                    class="w-full py-4 px-6 bg-gray-300 text-gray-500 rounded-lg font-bold text-lg cursor-not-allowed flex items-center justify-center space-x-3 transition-all">
-                                    <i class="fas fa-lock text-2xl"></i>
+                                    class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold text-base cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
+                                    <i class="fas fa-lock text-lg"></i>
                                     <span>500점 달성 후 언락 가능</span>
                                 </button>
                             </div>

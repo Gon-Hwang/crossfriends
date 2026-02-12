@@ -571,11 +571,11 @@ app.post('/api/posts', async (c) => {
     'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0, background_color || null).run()
   
-  // 기도 포스팅(중보 기도 - 빨간색 배경)일 경우 기도 점수 20점 추가
+  // 기도 포스팅(중보 기도 - 빨간색 배경)일 경우 기도 점수 10점 추가
   if (background_color === '#F87171') {
     const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
     const currentScore = user?.prayer_score || 0
-    const newScore = currentScore + 20
+    const newScore = currentScore + 10
     await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
   }
   
@@ -740,7 +740,7 @@ app.delete('/api/posts/:id', async (c) => {
     if (post.background_color === '#F87171') {
       const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(post.user_id).first()
       const currentScore = user?.prayer_score || 0
-      const newScore = Math.max(0, currentScore - 20) // 0점 이하로 내려가지 않도록
+      const newScore = Math.max(0, currentScore - 10) // 0점 이하로 내려가지 않도록
       await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
     }
     

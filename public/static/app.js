@@ -2843,7 +2843,7 @@ async function refreshComments(postId) {
                         </div>
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition inline-block" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
+                                <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
                                 <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
                             </div>
                             <div class="flex items-center space-x-4 mt-1">
@@ -3329,7 +3329,7 @@ async function loadComments(postId) {
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
                                 <div class="flex justify-between items-start">
-                                    <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
+                                    <p class="font-semibold text-sm text-gray-800">${comment.user_name}</p>
                                     ${canEdit ? `
                                         <div class="relative">
                                             <button 
@@ -3647,7 +3647,7 @@ async function loadPosts() {
                             </div>
                             <div class="flex-1 min-w-0 overflow-hidden">
                                 <div class="flex items-center space-x-2 flex-wrap">
-                                    <h4 class="font-bold text-sm text-gray-800 truncate cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.shared_user_id}, \`${post.shared_user_name}\`)" title="클릭하여 ${post.shared_user_name} 님의 포스팅만 보기">${post.shared_user_name}</h4>
+                                    <h4 class="font-bold text-sm text-gray-800 truncate">${post.shared_user_name}</h4>
                                     <span class="text-xs text-gray-500 flex-shrink-0">•</span>
                                     <p class="text-xs text-gray-500 flex-shrink-0">${formatDate(post.shared_created_at)}</p>
                                 </div>
@@ -3675,7 +3675,7 @@ async function loadPosts() {
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, \`${post.user_name}\`)" title="클릭하여 ${post.user_name} 님의 포스팅만 보기">${post.user_name}</h4>
+                                    <h4 class="font-bold text-gray-800">${post.user_name}</h4>
                                     <p class="text-sm text-gray-500">${post.user_church || ''}</p>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -4581,9 +4581,14 @@ autoLogin(); // Auto-login if session exists
 // User Filter Functions
 // =====================
 
-// Filter posts by user
-window.filterByUser = function(userId, userName) {
-    filterUserId = userId;
+// Filter to show only current user's posts
+window.filterMyPosts = function() {
+    if (!currentUserId || !currentUser) {
+        showToast('로그인이 필요합니다.', 'error');
+        return;
+    }
+    
+    filterUserId = currentUserId;
     
     // Show filter banner at the top of feed
     const postsFeed = document.getElementById('postsFeed');
@@ -4600,7 +4605,7 @@ window.filterByUser = function(userId, userName) {
         <div class="flex items-center space-x-3">
             <i class="fas fa-filter text-xl"></i>
             <div>
-                <p class="font-bold text-lg">${userName.replace(/'/g, "&#39;")} 님의 포스팅</p>
+                <p class="font-bold text-lg">내 포스팅</p>
                 <p class="text-sm text-blue-100">작성한 포스팅만 표시 중입니다</p>
             </div>
         </div>
@@ -4615,6 +4620,12 @@ window.filterByUser = function(userId, userName) {
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Filter posts by user (removed - no longer used)
+window.filterByUser = function(userId, userName) {
+    // This function is no longer used
+    return;
 }
 
 // Clear user filter

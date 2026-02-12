@@ -3442,7 +3442,7 @@ app.get('/', (c) => {
                                     </div>
                                     <!-- Admin/Moderator badge will be added here dynamically -->
                                 </div>
-                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap"></span>
+                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
                                 <button onclick="logout()" class="text-red-600 hover:text-red-700 transition cursor-pointer ml-2" title="로그아웃">
                                     <i class="fas fa-sign-out-alt text-lg"></i>
                                 </button>

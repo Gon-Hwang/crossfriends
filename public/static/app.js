@@ -4,6 +4,73 @@ let currentUser = null;
 let selectedBackgroundColor = null; // 선택된 배경색
 
 // =====================
+// Modal Functions
+// =====================
+
+// Show login modal
+function showLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        console.error('Login modal not found');
+    }
+}
+
+// Hide login modal
+function hideLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Show signup modal
+function showSignupModal() {
+    // Hide login modal if open
+    hideLoginModal();
+    
+    const modal = document.getElementById('signupModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        console.error('Signup modal not found');
+    }
+}
+
+// Hide signup modal
+function hideSignupModal() {
+    const modal = document.getElementById('signupModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Show edit profile modal
+function showEditProfileModal() {
+    const modal = document.getElementById('editProfileModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // Load current user data
+        loadEditProfileData();
+    }
+}
+
+// Hide edit profile modal
+function hideEditProfileModal() {
+    const modal = document.getElementById('editProfileModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// =====================
 // Bible Verses Rotation
 // =====================
 const bibleVerses = [
@@ -3867,7 +3934,7 @@ async function showUserProfileModal(userId) {
                             </div>
                         </div>
                     </div>
-                    ` : \'\'}
+                    ` : ''}
                     
                     ${showBasicInfo ? `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
@@ -3882,7 +3949,7 @@ async function showUserProfileModal(userId) {
                             <p><strong>주소:</strong> ${user.address || '미입력'}</p>
                         </div>
                     </div>
-                    ` : \'\'}
+                    ` : ''}
                     
                     ${showChurchInfo ? `
                     <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
@@ -3897,7 +3964,7 @@ async function showUserProfileModal(userId) {
                             <p><strong>직분:</strong> ${user.position || '미입력'}</p>
                         </div>
                     </div>
-                    ` : \'\'}
+                    ` : ''}
                     
                     ${(isOwnProfile || showFaithAnswers) && faithAnswers ? `
                     <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">

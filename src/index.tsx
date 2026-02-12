@@ -503,6 +503,8 @@ app.get('/api/posts', async (c) => {
   const currentUserId = c.req.query('user_id') // For checking if current user liked the post
   const filterUserId = c.req.query('filter_user_id') // For filtering by specific user
   
+  console.log('🔍 API /api/posts called with:', { currentUserId, filterUserId });
+  
   // Build WHERE clause
   let whereClause = ''
   let bindParams: any[] = []
@@ -510,10 +512,16 @@ app.get('/api/posts', async (c) => {
   if (filterUserId) {
     whereClause = 'WHERE p.user_id = ?'
     bindParams.push(filterUserId)
+    console.log('✅ Applying filter for user_id:', filterUserId);
+  } else {
+    console.log('📋 No filter applied, returning all posts');
   }
   
   // Add currentUserId for like checks (twice)
   bindParams.push(currentUserId || 0, currentUserId || 0)
+  
+  console.log('🔍 WHERE clause:', whereClause);
+  console.log('🔍 Bind params:', bindParams);
   
   const { results } = await DB.prepare(`
     SELECT 
@@ -545,6 +553,8 @@ app.get('/api/posts', async (c) => {
     ${whereClause}
     ORDER BY p.created_at DESC
   `).bind(...bindParams).all()
+  
+  console.log(`✅ Returned ${results.length} posts`);
   
   return c.json({ posts: results })
 })

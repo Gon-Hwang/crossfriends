@@ -3554,8 +3554,12 @@ async function loadPosts() {
         let queryParams = `user_id=${currentUserId}`;
         if (filterUserId) {
             queryParams += `&filter_user_id=${filterUserId}`;
+            console.log('🔍 Filtering posts by user ID:', filterUserId);
+        } else {
+            console.log('🔍 Loading all posts (no filter)');
         }
         
+        console.log('🔍 Full query:', queryParams);
         const response = await axios.get(`/api/posts?${queryParams}`);
         const posts = response.data.posts;
         const feed = document.getElementById('postsFeed');
@@ -4580,9 +4584,14 @@ autoLogin(); // Auto-login if session exists
 
 // Filter posts by user (works for any user including self)
 window.filterByUser = function(userId, userName) {
-    if (!userId) return;
+    console.log('🔍 filterByUser called with userId:', userId, 'userName:', userName);
+    if (!userId) {
+        console.log('❌ No userId provided, returning');
+        return;
+    }
     
     filterUserId = userId;
+    console.log('✅ filterUserId set to:', filterUserId);
     
     // Reload posts with filter (no banner needed)
     loadPosts();

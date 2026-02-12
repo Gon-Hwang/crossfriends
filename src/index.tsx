@@ -314,20 +314,8 @@ app.get('/users/:id', async (c) => {
                             <i class="fas fa-chart-line mr-2"></i>점수
                         </h2>
                         
-                        <!-- Ministry Score (Total) - Prominent Display -->
-                        <div class="mb-4 bg-gradient-to-r from-purple-500 to-indigo-600 p-6 rounded-xl shadow-lg text-white">
-                            <div class="flex items-center justify-center space-x-4">
-                                <i class="fas fa-hands-praying text-4xl"></i>
-                                <div class="text-center">
-                                    <div class="text-5xl font-bold">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
-                                    <div class="text-lg font-semibold mt-1">사역 점수</div>
-                                    <div class="text-sm opacity-90 mt-1">Ministry Score</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Individual Scores -->
-                        <div class="grid grid-cols-3 gap-4">
+                        <!-- All Scores in Grid -->
+                        <div class="grid grid-cols-4 gap-4">
                             <div class="bg-yellow-50 p-4 rounded-lg text-center border-2 border-yellow-200">
                                 <i class="fas fa-book-bible text-yellow-600 text-2xl mb-2"></i>
                                 <div class="text-2xl font-bold text-yellow-600">${ user.scripture_score || 0}</div>
@@ -342,6 +330,11 @@ app.get('/users/:id', async (c) => {
                                 <i class="fas fa-heart text-green-600 text-2xl mb-2"></i>
                                 <div class="text-2xl font-bold text-green-600">${ user.activity_score || 0}</div>
                                 <div class="text-sm text-gray-600">활동 점수</div>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-lg text-center border-2 border-purple-200">
+                                <i class="fas fa-hands-praying text-purple-600 text-2xl mb-2"></i>
+                                <div class="text-2xl font-bold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
+                                <div class="text-sm text-gray-600">사역 점수</div>
                             </div>
                         </div>
                     </div>

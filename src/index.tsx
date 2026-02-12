@@ -3407,7 +3407,7 @@ app.get('/', (c) => {
             <div class="max-w-7xl mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
                     <div class="flex flex-col cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
-                        <h1 class="text-2xl font-bold text-gray-800 flex items-center" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
+                        <h1 class="text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
                             <span>CROSS</span>
                             <div class="cross-icon mx-3">
                                 <div class="cross-dot top"></div>

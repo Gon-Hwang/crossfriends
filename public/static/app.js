@@ -4590,36 +4590,14 @@ window.filterMyPosts = function() {
     
     filterUserId = currentUserId;
     
-    // Show filter banner at the top of feed
-    const postsFeed = document.getElementById('postsFeed');
-    let filterBanner = document.getElementById('filterBanner');
-    
-    if (!filterBanner) {
-        filterBanner = document.createElement('div');
-        filterBanner.id = 'filterBanner';
-        postsFeed.parentElement.insertBefore(filterBanner, postsFeed);
-    }
-    
-    filterBanner.className = 'bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 mb-6 rounded-xl shadow-lg flex items-center justify-between animate-fade-in';
-    filterBanner.innerHTML = `
-        <div class="flex items-center space-x-3">
-            <i class="fas fa-filter text-xl"></i>
-            <div>
-                <p class="font-bold text-lg">내 포스팅</p>
-                <p class="text-sm text-blue-100">작성한 포스팅만 표시 중입니다</p>
-            </div>
-        </div>
-        <button onclick="clearUserFilter()" class="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md hover:shadow-lg flex items-center space-x-2">
-            <i class="fas fa-times"></i>
-            <span>전체 보기</span>
-        </button>
-    `;
-    
-    // Reload posts with filter
+    // Reload posts with filter (no banner needed)
     loadPosts();
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Show toast notification
+    showToast('내 포스팅만 표시 중입니다. 로고를 클릭하여 전체 보기로 돌아갈 수 있습니다.', 'info');
 }
 
 // Filter posts by user (removed - no longer used)
@@ -4630,14 +4608,15 @@ window.filterByUser = function(userId, userName) {
 
 // Clear user filter
 window.clearUserFilter = function() {
+    // Clear filter
+    const wasFiltered = filterUserId !== null;
     filterUserId = null;
-    
-    // Remove filter banner
-    const filterBanner = document.getElementById('filterBanner');
-    if (filterBanner) {
-        filterBanner.remove();
-    }
     
     // Reload all posts
     loadPosts();
+    
+    // Show toast if filter was active
+    if (wasFiltered) {
+        showToast('전체 포스팅을 표시합니다.', 'success');
+    }
 }

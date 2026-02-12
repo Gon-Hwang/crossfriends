@@ -2317,7 +2317,7 @@ app.get('/admin', (c) => {
                             </td>
                             <td class="px-4 py-3 text-sm">
                                 <span class="inline-flex items-center px-2 py-1 rounded bg-purple-100 text-purple-800 font-semibold">
-                                    <i class="fas fa-hands-praying text-xs mr-1"></i>
+                                    <i class="fas fa-award text-xs mr-1"></i>
                                     \${(user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)}
                                 </span>
                             </td>

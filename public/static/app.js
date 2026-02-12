@@ -3614,7 +3614,7 @@ async function loadPosts() {
                                 ` : post.background_color === '#F5D4B3' ? `
                                     <!-- 일상: 샬롬 -->
                                     <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-orange-600' : 'hover:text-orange-600'} transition group relative" title="샬롬">
-                                        <i class="fas fa-thumbs-up text-lg"></i>
+                                        <i class="fas fa-dove text-lg"></i>
                                         <span class="text-sm">${post.likes_count || 0}</span>
                                         <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">샬롬</span>
                                     </button>

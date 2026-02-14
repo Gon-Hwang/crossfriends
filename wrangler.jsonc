@@ -1,7 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "crossfriends",
-  "main": "src/index.tsx",
   "compatibility_date": "2026-01-19",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
@@ -11,13 +10,7 @@
     {
       "binding": "DB",
       "database_name": "crossfriends-production",
-      "database_id": "placeholder-for-production"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "R2",
-      "bucket_name": "crossfriends-avatars"
+      "database_id": "b1bd107b-7731-4abc-8f09-10ce94bcec7a"
     }
   ]
 }

@@ -8,6 +8,26 @@ let filterUserId = null; // 필터링할 사용자 ID
 // Modal Functions
 // =====================
 
+// Show how-to-use modal
+function showHowToUse() {
+    const modal = document.getElementById('howToUseModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        console.error('How-to-use modal not found');
+    }
+}
+
+// Hide how-to-use modal
+function hideHowToUse() {
+    const modal = document.getElementById('howToUseModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
 // Show login modal
 function showLoginModal() {
     const modal = document.getElementById('loginModal');
@@ -3451,8 +3471,11 @@ async function createComment(postId) {
         if (response.data.new_activity_score !== undefined) {
             activityScore = response.data.new_activity_score;
             updateTypingScoreDisplay();
-            showFloatingScore('+5', document.getElementById(`comment-input-${postId}`));
-            showToast('댓글 작성! 활동 점수 +5점');
+            const inputElement = document.getElementById(`comment-input-${postId}`);
+            if (inputElement) {
+                showFloatingScore(inputElement, '+5');
+            }
+            showToast('댓글 작성! 활동 점수 +5점', 'success');
         }
         
         input.value = '';
@@ -3550,14 +3573,8 @@ async function deleteComment(commentId, postId) {
 // Load posts
 async function loadPosts() {
     try {
-        // Restore filter from localStorage if not set
-        if (!filterUserId && localStorage.getItem('filterUserId')) {
-            filterUserId = localStorage.getItem('filterUserId');
-            console.log('🔄 Restored filterUserId from localStorage:', filterUserId);
-        }
-        
-        // Build query parameters
-        let queryParams = `user_id=${currentUserId}`;
+        // Build query parameters - ALWAYS use current filterUserId value
+        let queryParams = `user_id=${currentUserId || 0}`;
         if (filterUserId) {
             queryParams += `&filter_user_id=${filterUserId}`;
             console.log('🔍 Filtering posts by user ID:', filterUserId);
@@ -4020,6 +4037,10 @@ function resetBackgroundColor() {
 // Show any user's profile (for clicking avatars in posts)
 async function showUserProfileModal(userId) {
     try {
+        // CRITICAL: Clear any existing filter when opening profile
+        filterUserId = null;
+        console.log('🔴 showUserProfileModal: filterUserId cleared');
+        
         // Fetch user data with current user context for privacy filtering
         const url = currentUserId 
             ? `/api/users/${userId}?current_user_id=${currentUserId}`
@@ -4079,6 +4100,15 @@ async function showUserProfileModal(userId) {
                         <div class="mt-4 text-xs text-gray-500">
                             <p>회원 ID: #${user.id}</p>
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                        
+                        <!-- View Posts Button -->
+                        <div class="mt-6">
+                            <button 
+                                onclick="filterByUser(${user.id}, '${user.name}'); hideProfile();"
+                                class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition shadow-md font-semibold">
+                                <i class="fas fa-list mr-2"></i>포스팅 보기
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -4596,9 +4626,9 @@ window.filterByUser = function(userId, userName) {
         return;
     }
     
+    // CRITICAL: Set the global variable
     filterUserId = userId;
-    localStorage.setItem('filterUserId', userId); // Save to localStorage
-    console.log('✅ filterUserId set to:', filterUserId, 'and saved to localStorage');
+    console.log('✅ Global filterUserId set to:', filterUserId);
     
     // Reload posts with filter (no banner needed)
     loadPosts();
@@ -4625,12 +4655,11 @@ window.filterMyPosts = function() {
 // Clear user filter
 window.clearUserFilter = function() {
     console.log('🔴 clearUserFilter called!');
-    console.trace('Stack trace:'); // Show where this was called from
     
     // Clear filter
     const wasFiltered = filterUserId !== null;
     filterUserId = null;
-    localStorage.removeItem('filterUserId'); // Clear from localStorage
+    console.log('✅ Global filterUserId cleared (set to null)');
     
     // Reload all posts
     loadPosts();

@@ -505,20 +505,22 @@ app.get('/api/posts', async (c) => {
   
   console.log('🔍 API /api/posts called with:', { currentUserId, filterUserId });
   
-  // Build WHERE clause
+  // Build WHERE clause and bind params
+  // CRITICAL: Bind params must match the order of ? in SQL query
+  // SQL order: is_liked (?), is_prayed (?), WHERE clause (?)
   let whereClause = ''
   let bindParams: any[] = []
   
+  // First two params are always for is_liked and is_prayed subqueries
+  bindParams.push(currentUserId || 0, currentUserId || 0)
+  
   if (filterUserId) {
     whereClause = 'WHERE p.user_id = ?'
-    bindParams.push(filterUserId)
+    bindParams.push(filterUserId)  // Third param for WHERE clause
     console.log('✅ Applying filter for user_id:', filterUserId);
   } else {
     console.log('📋 No filter applied, returning all posts');
   }
-  
-  // Add currentUserId for like checks (twice)
-  bindParams.push(currentUserId || 0, currentUserId || 0)
   
   console.log('🔍 WHERE clause:', whereClause);
   console.log('🔍 Bind params:', bindParams);
@@ -828,17 +830,28 @@ app.post('/api/posts/:id/comments', async (c) => {
   const postId = c.req.param('id')
   const { user_id, content } = await c.req.json()
   
+  // Get post author
+  const post = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(postId).first()
+  
   const result = await DB.prepare(
     'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)'
   ).bind(postId, user_id, content).run()
   
-  // 댓글 작성 시 활동 점수 5점 추가
-  const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
-  const currentScore = user?.activity_score || 0
-  const newScore = currentScore + 5
-  await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
+  // 댓글 작성자에게 활동 점수 5점 추가
+  const commenter = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+  const commenterScore = commenter?.activity_score || 0
+  const newCommenterScore = commenterScore + 5
+  await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newCommenterScore, user_id).run()
   
-  return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, new_activity_score: newScore }, 201)
+  // 포스트 작성자에게도 활동 점수 5점 추가 (자기 포스트에 댓글 단 경우 제외)
+  if (post && post.user_id !== user_id) {
+    const author = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
+    const authorScore = author?.activity_score || 0
+    const newAuthorScore = authorScore + 5
+    await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+  }
+  
+  return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, new_activity_score: newCommenterScore }, 201)
 })
 
 // Update comment
@@ -859,8 +872,17 @@ app.delete('/api/comments/:id', async (c) => {
   const { DB } = c.env
   const commentId = c.req.param('id')
   
-  // 댓글 정보 조회 (사용자 ID 확인)
-  const comment = await DB.prepare('SELECT user_id FROM comments WHERE id = ?').bind(commentId).first()
+  // 댓글 정보 조회 (사용자 ID와 포스트 ID 확인)
+  const comment = await DB.prepare('SELECT user_id, post_id FROM comments WHERE id = ?').bind(commentId).first()
+  
+  // Get post author
+  let postAuthorId = null
+  if (comment) {
+    const post = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(comment.post_id).first()
+    if (post) {
+      postAuthorId = post.user_id
+    }
+  }
   
   // Delete comment likes first
   await DB.prepare('DELETE FROM comment_likes WHERE comment_id = ?').bind(commentId).run()
@@ -868,12 +890,20 @@ app.delete('/api/comments/:id', async (c) => {
   // Delete comment
   await DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run()
   
-  // 댓글 삭제 시 활동 점수 5점 차감 (0점 이하로 내려가지 않도록)
+  // 댓글 작성자의 활동 점수 5점 차감
   if (comment) {
-    const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(comment.user_id).first()
-    const currentScore = user?.activity_score || 0
-    const newScore = Math.max(0, currentScore - 5)
-    await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, comment.user_id).run()
+    const commenter = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(comment.user_id).first()
+    const commenterScore = commenter?.activity_score || 0
+    const newCommenterScore = Math.max(0, commenterScore - 5)
+    await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newCommenterScore, comment.user_id).run()
+    
+    // 포스트 작성자의 활동 점수 5점 차감 (자기 포스트에 댓글 단 경우 제외)
+    if (postAuthorId && postAuthorId !== comment.user_id) {
+      const author = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(postAuthorId).first()
+      const authorScore = author?.activity_score || 0
+      const newAuthorScore = Math.max(0, authorScore - 5)
+      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newAuthorScore, postAuthorId).run()
+    }
   }
   
   return c.json({ success: true })
@@ -889,8 +919,8 @@ app.post('/api/posts/:id/like', async (c) => {
   const postId = c.req.param('id')
   const { user_id } = await c.req.json()
   
-  // Get post's background color to determine which score to update
-  const post = await DB.prepare('SELECT background_color FROM posts WHERE id = ?').bind(postId).first()
+  // Get post's background color and author to determine which score to update
+  const post = await DB.prepare('SELECT background_color, user_id FROM posts WHERE id = ?').bind(postId).first()
   
   // Check if already liked
   const existing = await DB.prepare(
@@ -900,51 +930,87 @@ app.post('/api/posts/:id/like', async (c) => {
   let updatedScores = {}
   
   if (existing) {
-    // Unlike - deduct 1 point
+    // Unlike - deduct points from both liker and post author
     await DB.prepare('DELETE FROM likes WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
     
-    // 말씀 포스팅이면 성경 점수 -1점
+    // 말씀 포스팅이면 성경 점수 처리
     if (post.background_color === '#F5E398') {
-      const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
-      const currentScore = user?.scripture_score || 0
-      const newScore = Math.max(0, currentScore - 1)
-      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user_id).run()
-      updatedScores.scripture_score = newScore
+      // Liker loses 1 point
+      const liker = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
+      const likerScore = liker?.scripture_score || 0
+      const newLikerScore = Math.max(0, likerScore - 1)
+      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newLikerScore, user_id).run()
+      updatedScores.scripture_score = newLikerScore
+      
+      // Post author loses 2 points (only if not liking own post)
+      if (post.user_id !== user_id) {
+        const author = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(post.user_id).first()
+        const authorScore = author?.scripture_score || 0
+        const newAuthorScore = Math.max(0, authorScore - 2)
+        await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+      }
     }
-    // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 -1점
+    // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 처리
     else {
       const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF']
       if (activityPostColors.includes(post.background_color)) {
-        const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
-        const currentScore = user?.activity_score || 0
-        const newScore = Math.max(0, currentScore - 1)
-        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
-        updatedScores.activity_score = newScore
+        // Liker loses 1 point
+        const liker = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+        const likerScore = liker?.activity_score || 0
+        const newLikerScore = Math.max(0, likerScore - 1)
+        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newLikerScore, user_id).run()
+        updatedScores.activity_score = newLikerScore
+        
+        // Post author loses 2 points (only if not liking own post)
+        if (post.user_id !== user_id) {
+          const author = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
+          const authorScore = author?.activity_score || 0
+          const newAuthorScore = Math.max(0, authorScore - 2)
+          await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+        }
       }
     }
     
     return c.json({ liked: false, ...updatedScores })
   } else {
-    // Like - add 1 point
+    // Like - add points to both liker and post author
     await DB.prepare('INSERT INTO likes (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
     
-    // 말씀 포스팅이면 성경 점수 +1점
+    // 말씀 포스팅이면 성경 점수 처리
     if (post.background_color === '#F5E398') {
-      const user = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
-      const currentScore = user?.scripture_score || 0
-      const newScore = currentScore + 1
-      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newScore, user_id).run()
-      updatedScores.scripture_score = newScore
+      // Liker gains 1 point
+      const liker = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
+      const likerScore = liker?.scripture_score || 0
+      const newLikerScore = likerScore + 1
+      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newLikerScore, user_id).run()
+      updatedScores.scripture_score = newLikerScore
+      
+      // Post author gains 2 points (only if not liking own post)
+      if (post.user_id !== user_id) {
+        const author = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(post.user_id).first()
+        const authorScore = author?.scripture_score || 0
+        const newAuthorScore = authorScore + 2
+        await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+      }
     }
-    // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 +1점
+    // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 처리
     else {
       const activityPostColors = ['#F5D4B3', '#B3EDD8', '#C4E5F8', '#E2DBFB', '#FFFFFF']
       if (activityPostColors.includes(post.background_color)) {
-        const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
-        const currentScore = user?.activity_score || 0
-        const newScore = currentScore + 1
-        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
-        updatedScores.activity_score = newScore
+        // Liker gains 1 point
+        const liker = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+        const likerScore = liker?.activity_score || 0
+        const newLikerScore = likerScore + 1
+        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newLikerScore, user_id).run()
+        updatedScores.activity_score = newLikerScore
+        
+        // Post author gains 2 points (only if not liking own post)
+        if (post.user_id !== user_id) {
+          const author = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
+          const authorScore = author?.activity_score || 0
+          const newAuthorScore = authorScore + 2
+          await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+        }
       }
     }
     
@@ -980,6 +1046,9 @@ app.post('/api/posts/:id/pray', async (c) => {
   const postId = c.req.param('id')
   const { user_id } = await c.req.json()
   
+  // Get post author
+  const post = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(postId).first()
+  
   // Check if already prayed
   const existing = await DB.prepare(
     'SELECT id FROM prayer_clicks WHERE post_id = ? AND user_id = ?'
@@ -989,24 +1058,40 @@ app.post('/api/posts/:id/pray', async (c) => {
     // Cancel prayer - remove from database and deduct points
     await DB.prepare('DELETE FROM prayer_clicks WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
     
-    // Deduct 20 points from user's prayer score
-    const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
-    const currentScore = user?.prayer_score || 0
-    const newScore = Math.max(0, currentScore - 20) // Don't go below 0
-    await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
+    // Deduct 20 points from prayer clicker's prayer score
+    const clicker = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
+    const clickerScore = clicker?.prayer_score || 0
+    const newClickerScore = Math.max(0, clickerScore - 20) // Don't go below 0
+    await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newClickerScore, user_id).run()
     
-    return c.json({ prayed: false, prayer_score: newScore })
+    // Deduct 2 points from post author (only if not praying for own post)
+    if (post.user_id !== user_id) {
+      const author = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(post.user_id).first()
+      const authorScore = author?.prayer_score || 0
+      const newAuthorScore = Math.max(0, authorScore - 2)
+      await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+    }
+    
+    return c.json({ prayed: false, prayer_score: newClickerScore })
   } else {
     // Pray (기도하기) - add to database and add points
     await DB.prepare('INSERT INTO prayer_clicks (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
     
-    // Add 20 points to user's prayer score
-    const user = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
-    const currentScore = user?.prayer_score || 0
-    const newScore = currentScore + 20
-    await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newScore, user_id).run()
+    // Add 20 points to prayer clicker's prayer score
+    const clicker = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
+    const clickerScore = clicker?.prayer_score || 0
+    const newClickerScore = clickerScore + 20
+    await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newClickerScore, user_id).run()
     
-    return c.json({ prayed: true, prayer_score: newScore })
+    // Add 2 points to post author (only if not praying for own post)
+    if (post.user_id !== user_id) {
+      const author = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(post.user_id).first()
+      const authorScore = author?.prayer_score || 0
+      const newAuthorScore = authorScore + 2
+      await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+    }
+    
+    return c.json({ prayed: true, prayer_score: newClickerScore })
   }
 })
 
@@ -3430,7 +3515,10 @@ app.get('/', (c) => {
                             기독교인들을 위한 행복하고 재미있는 소셜 미디어
                         </p>
                     </div>
-                    <div class="flex items-center space-x-4" id="authButtons">
+                    <div class="flex items-center gap-3" id="authButtons">
+                        <button onclick="showHowToUse()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                            <i class="fas fa-question-circle mr-1"></i>사용법
+                        </button>
                         <button onclick="showLoginModal()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                             로그인
                         </button>
@@ -4329,6 +4417,190 @@ app.get('/', (c) => {
                     이미 계정이 있으신가요? 
                     <button onclick="hideSignupModal(); showLoginModal();" class="text-blue-600 hover:underline">로그인</button>
                 </p>
+            </div>
+        </div>
+
+        <!-- How To Use Modal -->
+        <div id="howToUseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center">
+                        <div class="cross-icon mr-3" style="width: 28px; height: 28px;">
+                            <div class="cross-dot top"></div>
+                            <div class="cross-dot bottom"></div>
+                            <div class="cross-dot left"></div>
+                            <div class="cross-dot right"></div>
+                        </div>
+                        크로스프렌즈 사용법
+                    </h2>
+                    <button onclick="hideHowToUse()" class="text-gray-500 hover:text-gray-700 transition">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-6">
+                    <!-- Welcome Section -->
+                    <div class="bg-white rounded-xl p-6 shadow-md">
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">
+                            환영합니다!
+                        </h3>
+                        <p class="text-gray-700 leading-relaxed">
+                            크로스프렌즈는 기독교인들을 위한 행복하고 재미있는 소셜 미디어입니다. 
+                            말씀, 기도, 활동을 통해 신앙 생활을 풍성하게 하고, 형제 자매들과 소통하세요!
+                        </p>
+                    </div>
+
+                    <!-- Score System -->
+                    <div class="bg-white rounded-xl p-6 shadow-md">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                            점수 시스템
+                        </h3>
+                        
+                        <!-- Score Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse">
+                                <thead>
+                                    <tr class="bg-gradient-to-r from-blue-50 to-purple-50">
+                                        <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-800">행동</th>
+                                        <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-800">점수</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">포스팅 작성</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">10점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">7종 포스팅 반응하기 (기도 제외)</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">1점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">기도 포스팅 반응하기 (중보)</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold">20점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">7종 포스팅 반응받기</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">2점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">댓글 작성</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">댓글 받기</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">오늘의 말씀 타이핑</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">100점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">오늘의 말씀 시청</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">100점</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border-2 border-yellow-300">
+                            <p class="text-center text-gray-800 font-semibold">
+                                <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                                총 점수 500점 이상 달성 시 리워드1 언락
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Main Features -->
+                    <div class="bg-white rounded-xl p-6 shadow-md">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                            주요 기능
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-blue-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">포스팅 작성</h4>
+                                    <p class="text-sm text-gray-600">말씀(파란색), 기도(보라색), 활동(초록색) 카테고리로 포스팅을 작성하세요.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">말씀 타이핑</h4>
+                                    <p class="text-sm text-gray-600">성경 말씀을 따라 쓰며 타이핑 연습을 하고 점수를 획득하세요.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">소통하기</h4>
+                                    <p class="text-sm text-gray-600">댓글, 좋아요, 기도하기 기능으로 형제 자매들과 교제하세요.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-red-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">사용자 필터</h4>
+                                    <p class="text-sm text-gray-600">사용자 이름을 클릭하면 해당 사용자의 포스팅만 모아볼 수 있습니다.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-yellow-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">놀라운 보상</h4>
+                                    <p class="text-sm text-gray-600">특정 점수 이상 획득 시 놀라운 리워드가 계속 주어집니다.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tips -->
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 shadow-md text-white">
+                        <h3 class="text-xl font-bold mb-3">
+                            <i class="fas fa-lightbulb mr-2"></i>Tips
+                        </h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <span>매일 조금씩 활동하여 꾸준히 점수를 쌓아보세요!</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <span>다른 형제 자매의 기도 제목에 기도해주고 격려해주세요.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <span>말씀 타이핑으로 성경 구절을 암송하세요.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <span>프로필을 자세히 작성하면 더 깊은 교제가 가능해요!</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <button onclick="hideHowToUse(); showSignupModal();" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-semibold shadow-lg">
+                        <i class="fas fa-user-plus mr-2"></i>지금 가입하고 시작하기
+                    </button>
+                </div>
             </div>
         </div>
 

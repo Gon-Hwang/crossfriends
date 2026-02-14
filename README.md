@@ -13,8 +13,9 @@
   - **💰 수익 계산기** - 회원 가입자 별 예상 수익 계산 및 시각화
 
 ## 🌐 URLs
-- **메인 페이지**: https://3000-iqlzv7b987x0tbhluw43c-5c13a017.sandbox.novita.ai
-- **수익 계산기**: https://3000-iqlzv7b987x0tbhluw43c-5c13a017.sandbox.novita.ai/revenue
+- **프로덕션**: https://ce4e4a9c.crossfriends.pages.dev
+- **커스텀 도메인**: https://www.crossfriends.org (설정 진행 중)
+- **GitHub**: https://github.com/Gon-Hwang/crossfriends
 - **로컬**: http://localhost:3000
 
 ## ⚙️ 기술 스택
@@ -559,11 +560,14 @@ webapp/
 
 ## 📅 배포 상태
 - **플랫폼**: Cloudflare Pages
-- **상태**: ✅ 개발 서버 활성
-- **마지막 업데이트**: 2026-02-12
+- **상태**: ✅ 프로덕션 배포 완료
+- **배포 URL**: https://ce4e4a9c.crossfriends.pages.dev
+- **커스텀 도메인**: crossfriends.org (DNS 설정 필요)
+- **마지막 업데이트**: 2026-02-14
 - **최신 기능**: 
   - 🔒 **프라이버시 시스템**: 카테고리별 비공개 설정 (이메일 포함 모든 필드)
   - 비공개 설정 시 입력 여부와 무관하게 다른 사용자에게 완전히 숨김 처리
+  - 🚀 **Cloudflare Pages 배포**: 전 세계 엣지 네트워크를 통한 빠른 접속
 
 ## 🙏 기독교 특화 기능
 

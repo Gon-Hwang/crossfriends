@@ -2073,6 +2073,7 @@ async function handleEditProfile() {
     const position = document.getElementById('editPosition').value;
     const maritalStatus = document.getElementById('editMaritalStatus').value;
     const avatarFile = document.getElementById('editAvatar').files[0];
+    const coverFile = document.getElementById('editCover').files[0];
     
     // 신앙 고백 답변 수집
     const faithAnswers = {
@@ -2116,6 +2117,20 @@ async function handleEditProfile() {
                 });
             } catch (uploadError) {
                 console.error('Avatar upload error:', uploadError);
+            }
+        }
+
+        // Upload new cover photo if selected
+        if (coverFile) {
+            const formData = new FormData();
+            formData.append('cover', coverFile);
+            
+            try {
+                await axios.post('/api/users/' + currentUserId + '/cover', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } catch (uploadError) {
+                console.error('Cover upload error:', uploadError);
             }
         }
 
@@ -4709,6 +4724,19 @@ async function showUserProfileCover(userId) {
         
         if (!coverCard || !newPostCard) return;
         
+        // Update cover photo
+        const coverPhoto = document.getElementById('profileCoverPhoto');
+        if (coverPhoto) {
+            if (user.cover_url) {
+                coverPhoto.style.backgroundImage = `url(${user.cover_url})`;
+                coverPhoto.style.backgroundSize = 'cover';
+                coverPhoto.style.backgroundPosition = 'center';
+            } else {
+                coverPhoto.style.backgroundImage = '';
+                coverPhoto.style.backgroundColor = '#3B82F6'; // Default blue background
+            }
+        }
+        
         // Update avatar
         const avatar = document.getElementById('profileCoverAvatar');
         if (user.avatar_url) {
@@ -4815,3 +4843,85 @@ function hideUserProfileCover() {
         newPostCard.classList.remove('hidden');
     }
 }
+
+// Preview edit cover photo
+function previewEditCover(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+            alert('파일 크기는 10MB를 초과할 수 없습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('editCoverPreview');
+            preview.style.backgroundImage = 'url(' + e.target.result + ')';
+            preview.style.backgroundSize = 'cover';
+            preview.style.backgroundPosition = 'center';
+            preview.innerHTML = '';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Delete cover photo
+async function deleteCover() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (!confirm('커버 사진을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        await axios.delete('/api/users/' + currentUserId + '/cover');
+        
+        // Reset preview to default
+        const preview = document.getElementById('editCoverPreview');
+        preview.style.backgroundImage = '';
+        preview.className = 'w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative';
+        preview.innerHTML = '<span class="text-white text-sm font-medium">커버 사진을 선택하세요</span>';
+        
+        // Clear file input
+        document.getElementById('editCover').value = '';
+        
+        // Update current user data
+        currentUser.cover_url = null;
+        
+        showToast('커버 사진이 삭제되었습니다.', 'success');
+    } catch (error) {
+        console.error('Cover delete failed:', error);
+        showToast('커버 사진 삭제에 실패했습니다.', 'error');
+    }
+}
+
+// Upload cover photo
+async function uploadCover() {
+    const fileInput = document.getElementById('editCover');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        return null; // No file to upload
+    }
+    
+    const formData = new FormData();
+    formData.append('cover', file);
+    
+    try {
+        const response = await axios.post('/api/users/' + currentUserId + '/cover', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        
+        return response.data.cover_url;
+    } catch (error) {
+        console.error('Cover upload failed:', error);
+        throw error;
+    }
+}
+

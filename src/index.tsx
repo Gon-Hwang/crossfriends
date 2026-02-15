@@ -89,7 +89,7 @@ app.get('/api/users/:id', async (c) => {
   const id = c.req.param('id')
   const currentUserId = c.req.query('current_user_id') // To check if viewing own profile
   
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings FROM users WHERE id = ?').bind(id).first()
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, cover_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.json({ error: 'User not found' }, 404)
@@ -173,7 +173,7 @@ app.get('/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
   
-  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings FROM users WHERE id = ?').bind(id).first()
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, cover_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings FROM users WHERE id = ?').bind(id).first()
   
   if (!user) {
     return c.html('<h1>사용자를 찾을 수 없습니다</h1>')
@@ -456,6 +456,90 @@ app.delete('/api/users/:id/avatar', async (c) => {
     console.error('Avatar delete error:', error)
     return c.json({ error: 'Delete failed' }, 500)
   }
+})
+
+// Upload cover photo
+app.post('/api/users/:id/cover', async (c) => {
+  const { DB, R2 } = c.env
+  const userId = c.req.param('id')
+  
+  try {
+    const formData = await c.req.formData()
+    const file = formData.get('cover')
+    
+    if (!file || !(file instanceof File)) {
+      return c.json({ error: 'No file uploaded' }, 400)
+    }
+    
+    // Check file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      return c.json({ error: 'File too large (max 10MB)' }, 400)
+    }
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      return c.json({ error: 'Invalid file type' }, 400)
+    }
+    
+    // Generate unique filename
+    const ext = file.name.split('.').pop()
+    const filename = `${userId}-${Date.now()}.${ext}`
+    const fullPath = `covers/${filename}`
+    
+    // Upload to R2
+    const arrayBuffer = await file.arrayBuffer()
+    await R2.put(fullPath, arrayBuffer, {
+      httpMetadata: {
+        contentType: file.type
+      }
+    })
+    
+    // Update user cover_url in database
+    const coverUrl = `/api/covers/covers/${filename}`
+    await DB.prepare(
+      'UPDATE users SET cover_url = ? WHERE id = ?'
+    ).bind(coverUrl, userId).run()
+    
+    return c.json({ cover_url: coverUrl }, 200)
+  } catch (error) {
+    console.error('Cover upload error:', error)
+    return c.json({ error: 'Upload failed' }, 500)
+  }
+})
+
+// Delete cover photo
+app.delete('/api/users/:id/cover', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('id')
+  
+  try {
+    // Set cover_url to null in database
+    await DB.prepare(
+      'UPDATE users SET cover_url = NULL WHERE id = ?'
+    ).bind(userId).run()
+    
+    return c.json({ message: 'Cover deleted successfully' }, 200)
+  } catch (error) {
+    console.error('Cover delete error:', error)
+    return c.json({ error: 'Delete failed' }, 500)
+  }
+})
+
+// Get cover from R2
+app.get('/api/covers/covers/:filename', async (c) => {
+  const { R2 } = c.env
+  const filename = c.req.param('filename')
+  
+  const object = await R2.get(`covers/${filename}`)
+  if (!object) {
+    return c.notFound()
+  }
+  
+  const headers = new Headers()
+  object.writeHttpMetadata(headers)
+  headers.set('Cache-Control', 'public, max-age=31536000')
+  
+  return new Response(object.body, { headers })
 })
 
 // Get avatar from R2
@@ -3705,7 +3789,7 @@ app.get('/', (c) => {
                     <!-- User Profile Cover Card (Hidden by default, shown when filtering by user) -->
                     <div id="userProfileCover" class="hidden bg-white rounded-xl shadow-lg border-2 border-gray-300 overflow-hidden">
                         <!-- Cover Photo -->
-                        <div class="h-48 bg-blue-500 relative">
+                        <div id="profileCoverPhoto" class="h-48 bg-blue-500 relative bg-cover bg-center">
                         </div>
                         
                         <!-- Profile Info -->
@@ -4840,6 +4924,36 @@ app.get('/', (c) => {
                                 </div>
                                 <p id="editAvatarNote" class="text-xs text-gray-500 mt-2">JPG, PNG (최대 5MB)</p>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">커버 사진 (배경 이미지)</label>
+                        <div class="space-y-3">
+                            <div id="editCoverPreview" class="w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative">
+                                <span class="text-white text-sm font-medium">커버 사진을 선택하세요</span>
+                            </div>
+                            <div class="flex space-x-2">
+                                <input 
+                                    id="editCover"
+                                    type="file"
+                                    accept="image/*"
+                                    onchange="previewEditCover(event)"
+                                    class="hidden"
+                                />
+                                <label 
+                                    for="editCover"
+                                    class="cursor-pointer inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition">
+                                    <i class="fas fa-image mr-2"></i>커버 사진 변경
+                                </label>
+                                <button 
+                                    type="button"
+                                    onclick="deleteCover()"
+                                    class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition">
+                                    <i class="fas fa-trash mr-2"></i>커버 사진 삭제
+                                </button>
+                            </div>
+                            <p class="text-xs text-gray-500">JPG, PNG (최대 10MB) - 페이스북처럼 개인 홈피를 꾸며보세요!</p>
                         </div>
                     </div>
                     

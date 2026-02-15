@@ -9,6 +9,7 @@ export interface User {
   name: string;
   bio?: string;
   avatar_url?: string;
+  cover_url?: string;
   church?: string;
   pastor?: string;
   denomination?: string;

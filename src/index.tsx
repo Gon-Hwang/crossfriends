@@ -3557,10 +3557,15 @@ app.get('/', (c) => {
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
-                            <h3 class="text-base font-bold mb-4 text-gray-800">
-                                <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
-                            </h3>
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border-2 border-blue-300 p-6 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-bold text-blue-800">
+                                    <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
+                                </h3>
+                                <span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                    기본 리워드
+                                </span>
+                            </div>
                             <div class="border-l-4 border-blue-600 pl-4 py-2 mb-4">
                                 <p class="font-bold text-blue-600 mb-2" id="verseReference">시편 23:1</p>
                                 <p id="verseText" class="text-gray-800 leading-relaxed" style="transition: opacity 0.5s ease-in-out;">
@@ -4552,7 +4557,7 @@ app.get('/', (c) => {
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">말씀 타이핑</h4>
+                                    <h4 class="font-semibold text-gray-800">말씀 타이핑 <span class="text-xs text-blue-600">(기본 리워드)</span></h4>
                                     <p class="text-sm text-gray-600">성경 말씀을 따라 쓰며 타이핑 연습을 하고 점수를 획득하세요.</p>
                                 </div>
                             </div>

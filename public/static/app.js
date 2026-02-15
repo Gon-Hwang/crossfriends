@@ -4630,6 +4630,9 @@ window.filterByUser = function(userId, userName) {
     filterUserId = userId;
     console.log('✅ Global filterUserId set to:', filterUserId);
     
+    // Show user profile cover
+    showUserProfileCover(userId);
+    
     // Reload posts with filter (no banner needed)
     loadPosts();
     
@@ -4661,11 +4664,111 @@ window.clearUserFilter = function() {
     filterUserId = null;
     console.log('✅ Global filterUserId cleared (set to null)');
     
+    // Hide user profile cover
+    hideUserProfileCover();
+    
     // Reload all posts
     loadPosts();
     
     // Show toast if filter was active
     if (wasFiltered) {
         showToast('전체 포스팅을 표시합니다.', 'success');
+    }
+}
+
+// =====================
+// User Profile Cover Functions
+// =====================
+
+async function showUserProfileCover(userId) {
+    try {
+        // Get user data
+        const response = await axios.get(`/api/users/${userId}?current_user_id=${currentUserId || 0}`);
+        const user = response.data.user;
+        
+        // Get user's post count
+        const postsResponse = await axios.get('/api/posts');
+        const userPostCount = postsResponse.data.posts.filter(p => p.user_id === userId).length;
+        
+        // Update cover card
+        const coverCard = document.getElementById('userProfileCover');
+        const newPostCard = document.getElementById('newPostCard');
+        
+        if (!coverCard || !newPostCard) return;
+        
+        // Update avatar
+        const avatar = document.getElementById('profileCoverAvatar');
+        if (user.avatar_url) {
+            avatar.innerHTML = `<img src="${user.avatar_url}" alt="${user.name}" class="w-full h-full object-cover">`;
+        } else {
+            avatar.innerHTML = '<i class="fas fa-user text-5xl"></i>';
+        }
+        
+        // Add role badge
+        const badge = document.getElementById('profileCoverBadge');
+        if (user.role === 'admin') {
+            badge.innerHTML = '<div class="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="관리자"><i class="fas fa-crown text-white text-sm"></i></div>';
+        } else if (user.role === 'moderator') {
+            badge.innerHTML = '<div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="운영자"><i class="fas fa-shield-alt text-white text-sm"></i></div>';
+        } else {
+            badge.innerHTML = '';
+        }
+        
+        // Update user info
+        document.getElementById('profileCoverName').textContent = user.name || '사용자';
+        document.getElementById('profileCoverEmail').textContent = user.email || '';
+        
+        // Update bio
+        const bioContainer = document.getElementById('profileCoverBio');
+        if (user.bio || user.introduction) {
+            bioContainer.innerHTML = `
+                <i class="fas fa-quote-left text-gray-400 mr-1"></i>
+                <span>${user.bio || user.introduction || '소개글이 없습니다.'}</span>
+                <i class="fas fa-quote-right text-gray-400 ml-1"></i>
+            `;
+        } else {
+            bioContainer.innerHTML = `
+                <i class="fas fa-quote-left text-gray-400 mr-1"></i>
+                <span class="text-gray-500">아직 소개글이 없습니다.</span>
+                <i class="fas fa-quote-right text-gray-400 ml-1"></i>
+            `;
+        }
+        
+        // Update stats
+        document.getElementById('profileCoverPostCount').textContent = userPostCount;
+        document.getElementById('profileCoverChurch').textContent = user.church || '교회 정보 없음';
+        document.getElementById('profileCoverLocation').textContent = user.location || user.region || '지역 정보 없음';
+        
+        // Update scores (check privacy)
+        const scoresDiv = document.getElementById('profileCoverScores');
+        if (user.scripture_score !== null && user.prayer_score !== null && user.activity_score !== null) {
+            scoresDiv.classList.remove('hidden');
+            document.getElementById('profileCoverScriptureScore').textContent = user.scripture_score || 0;
+            document.getElementById('profileCoverPrayerScore').textContent = user.prayer_score || 0;
+            document.getElementById('profileCoverActivityScore').textContent = user.activity_score || 0;
+        } else {
+            scoresDiv.classList.add('hidden');
+        }
+        
+        // Show cover card and hide new post card
+        coverCard.classList.remove('hidden');
+        newPostCard.classList.add('hidden');
+        
+    } catch (error) {
+        console.error('Failed to load user profile cover:', error);
+        showToast('프로필을 불러오는데 실패했습니다.', 'error');
+    }
+}
+
+function hideUserProfileCover() {
+    const coverCard = document.getElementById('userProfileCover');
+    const newPostCard = document.getElementById('newPostCard');
+    
+    if (coverCard) {
+        coverCard.classList.add('hidden');
+    }
+    
+    if (newPostCard) {
+        newPostCard.classList.remove('hidden');
     }
 }

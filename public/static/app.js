@@ -4280,7 +4280,7 @@ async function showUserProfileModal(userId) {
                         <div class="mt-6">
                             <button 
                                 onclick="filterByUser(${user.id}, '${user.name}'); hideProfile();"
-                                class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition shadow-md font-semibold">
+                                class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md font-semibold">
                                 <i class="fas fa-list mr-2"></i>포스팅 보기
                             </button>
                         </div>

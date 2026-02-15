@@ -1285,8 +1285,8 @@ window.showEditProfileModal = async function() {
                                 <i class="fas fa-trash mr-2"></i>커버 사진 삭제
                             </button>
                             
-                            <div id="editCoverPreviewInline" class="w-full h-24 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
-                                <span class="text-white text-xs font-semibold drop-shadow-lg">📸 커버 사진</span>
+                            <div id="editCoverPreviewInline" class="w-full h-24 rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
+                                <span class="text-gray-600 text-sm font-semibold"><i class="fas fa-image mr-2"></i>커버 사진</span>
                             </div>
                             
                             <p class="text-xs text-gray-500 mt-2 text-center">프로필: 최대 5MB / 커버: 최대 10MB</p>
@@ -1949,8 +1949,8 @@ async function deleteCoverInline() {
         const preview = document.getElementById('editCoverPreviewInline');
         if (preview) {
             preview.style.backgroundImage = '';
-            preview.className = 'w-full h-24 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-2';
-            preview.innerHTML = '<span class="text-white text-xs font-semibold drop-shadow-lg">📸 커버 사진</span>';
+            preview.className = 'w-full h-24 rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-2';
+            preview.innerHTML = '<span class="text-gray-600 text-sm font-semibold"><i class="fas fa-image mr-2"></i>커버 사진</span>';
         }
         
         // Clear file input

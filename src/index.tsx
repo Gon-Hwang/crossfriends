@@ -3702,6 +3702,86 @@ app.get('/', (c) => {
 
                 <!-- Main Feed -->
                 <div class="lg:col-span-2 space-y-4">
+                    <!-- User Profile Cover Card (Hidden by default, shown when filtering by user) -->
+                    <div id="userProfileCover" class="hidden bg-white rounded-xl shadow-lg border-2 border-gray-300 overflow-hidden">
+                        <!-- Cover Photo -->
+                        <div class="h-48 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 relative">
+                            <div class="absolute inset-0 bg-black bg-opacity-10"></div>
+                        </div>
+                        
+                        <!-- Profile Info -->
+                        <div class="relative px-6 pb-6">
+                            <!-- Profile Picture (Overlapping cover) -->
+                            <div class="flex items-end justify-between -mt-16 mb-4">
+                                <div class="relative">
+                                    <div id="profileCoverAvatar" class="w-32 h-32 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white border-4 border-white shadow-lg">
+                                        <i class="fas fa-user text-5xl"></i>
+                                    </div>
+                                    <!-- Admin/Moderator Badge -->
+                                    <div id="profileCoverBadge" class="absolute bottom-2 right-2"></div>
+                                </div>
+                                <button onclick="clearUserFilter()" class="mt-16 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition font-semibold flex items-center space-x-2">
+                                    <i class="fas fa-times"></i>
+                                    <span>전체 보기</span>
+                                </button>
+                            </div>
+                            
+                            <!-- User Info -->
+                            <div class="space-y-3">
+                                <div>
+                                    <h2 id="profileCoverName" class="text-2xl font-bold text-gray-800">사용자 이름</h2>
+                                    <p id="profileCoverEmail" class="text-sm text-gray-500">user@example.com</p>
+                                </div>
+                                
+                                <p id="profileCoverBio" class="text-gray-700 leading-relaxed">
+                                    <i class="fas fa-quote-left text-gray-400 mr-1"></i>
+                                    <span>사용자 소개글이 여기에 표시됩니다.</span>
+                                    <i class="fas fa-quote-right text-gray-400 ml-1"></i>
+                                </p>
+                                
+                                <!-- Stats -->
+                                <div class="flex items-center space-x-6 pt-3 border-t border-gray-200">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-clipboard-list text-blue-600"></i>
+                                        <span class="text-sm text-gray-700">
+                                            <span id="profileCoverPostCount" class="font-bold text-gray-800">0</span> 포스팅
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-church text-purple-600"></i>
+                                        <span id="profileCoverChurch" class="text-sm text-gray-700">교회 정보</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-map-marker-alt text-green-600"></i>
+                                        <span id="profileCoverLocation" class="text-sm text-gray-700">지역 정보</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Scores (if not private) -->
+                                <div id="profileCoverScores" class="flex items-center space-x-4 pt-3 border-t border-gray-200">
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-book-open text-blue-600"></i>
+                                        <span class="text-sm text-gray-700">
+                                            성경: <span id="profileCoverScriptureScore" class="font-bold text-blue-600">0</span>
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-praying-hands text-purple-600"></i>
+                                        <span class="text-sm text-gray-700">
+                                            기도: <span id="profileCoverPrayerScore" class="font-bold text-purple-600">0</span>
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <i class="fas fa-heart text-red-600"></i>
+                                        <span class="text-sm text-gray-700">
+                                            활동: <span id="profileCoverActivityScore" class="font-bold text-red-600">0</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- New Post Card -->
                     <div id="newPostCard" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
                         <div class="flex items-start space-x-4">

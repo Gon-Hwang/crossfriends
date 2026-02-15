@@ -3705,8 +3705,8 @@ app.get('/', (c) => {
                     <!-- User Profile Cover Card (Hidden by default, shown when filtering by user) -->
                     <div id="userProfileCover" class="hidden bg-white rounded-xl shadow-lg border-2 border-gray-300 overflow-hidden">
                         <!-- Cover Photo -->
-                        <div class="h-48 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 relative">
-                            <div class="absolute inset-0 bg-black bg-opacity-10"></div>
+                        <div class="h-48 bg-blue-500 relative">
+                            <div class="absolute inset-0 bg-black bg-opacity-5"></div>
                         </div>
                         
                         <!-- Profile Info -->

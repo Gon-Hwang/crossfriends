@@ -1310,6 +1310,14 @@ window.showEditProfileModal = async function() {
                                     class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
                             </div>
                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">자기소개</label>
+                                <textarea 
+                                    id="editBioInline"
+                                    rows="3"
+                                    placeholder="간단한 자기소개를 입력하세요..."
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">${user.bio || ''}</textarea>
+                            </div>
+                            <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">성별</label>
                                 <select 
                                     id="editGenderInline"
@@ -1840,6 +1848,7 @@ async function handleEditProfileSubmit(event) {
     event.preventDefault();
     
     const name = document.getElementById('editNameInline').value;
+    const bio = document.getElementById('editBioInline').value;
     const gender = document.getElementById('editGenderInline').value;
     const church = document.getElementById('editChurchInline').value;
     const pastor = document.getElementById('editPastorInline').value;
@@ -1943,9 +1952,10 @@ async function handleEditProfileSubmit(event) {
     }
 
     try {
-        // Update user info including faith_answers, school info, and privacy_settings
+        // Update user info including bio, faith_answers, school info, and privacy_settings
         await axios.put('/api/users/' + currentUserId, {
             name,
+            bio,
             gender,
             church,
             pastor,
@@ -4094,9 +4104,11 @@ async function showUserProfileModal(userId) {
                                     : '<i class="fas fa-user"></i>'}
                         </div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
+                        ${user.position ? `<p class="text-sm text-gray-600 mb-2"><i class="fas fa-user-tie mr-1"></i>${user.position}</p>` : ''}
                         <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
                             ${roleName}
                         </span>
+                        ${user.bio ? `<p class="text-sm text-gray-600 mt-3 px-2">${user.bio}</p>` : ''}
                         <div class="mt-4 text-xs text-gray-500">
                             <p>회원 ID: #${user.id}</p>
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -4160,6 +4172,7 @@ async function showUserProfileModal(userId) {
                         </h4>
                         <div class="space-y-2 text-sm text-gray-700">
                             <p><strong>이메일:</strong> ${user.email || '미입력'}</p>
+                            ${user.bio ? `<p><strong>자기소개:</strong> ${user.bio}</p>` : ''}
                             <p><strong>성별:</strong> ${user.gender || '미입력'}</p>
                             <p><strong>결혼:</strong> ${user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : '미입력'}</p>
                             <p><strong>전화번호:</strong> ${user.phone || '미입력'}</p>
@@ -4177,7 +4190,7 @@ async function showUserProfileModal(userId) {
                             <p><strong>소속 교회:</strong> ${user.church || '미입력'}</p>
                             <p><strong>담임목사:</strong> ${user.pastor || '미입력'}</p>
                             <p><strong>교단:</strong> ${user.denomination || '미입력'}</p>
-                            <p><strong>교회 위치:</strong> ${user.location || '미입력'}</p>
+                            ${user.location ? `<p><strong>교회 위치:</strong> ${user.location}</p>` : ''}
                             <p><strong>직분:</strong> ${user.position || '미입력'}</p>
                         </div>
                     </div>
@@ -4716,7 +4729,6 @@ async function showUserProfileCover(userId) {
         
         // Update user info
         document.getElementById('profileCoverName').textContent = user.name || '사용자';
-        document.getElementById('profileCoverEmail').textContent = user.email || '';
         
         // Update bio
         const bioContainer = document.getElementById('profileCoverBio');
@@ -4737,7 +4749,38 @@ async function showUserProfileCover(userId) {
         // Update stats
         document.getElementById('profileCoverPostCount').textContent = userPostCount;
         document.getElementById('profileCoverChurch').textContent = user.church || '교회 정보 없음';
-        document.getElementById('profileCoverLocation').textContent = user.location || user.region || '지역 정보 없음';
+        
+        // 교회 직분 정보 추가
+        const positionElement = document.getElementById('profileCoverPosition');
+        if (positionElement) {
+            if (user.position) {
+                positionElement.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-user-tie text-blue-600"></i>
+                        <span class="text-sm text-gray-700">${user.position}</span>
+                    </div>
+                `;
+                positionElement.classList.remove('hidden');
+            } else {
+                positionElement.classList.add('hidden');
+            }
+        }
+        
+        // 지역정보 - 없으면 요소 자체를 숨김
+        const locationElement = document.getElementById('profileCoverLocation');
+        if (locationElement) {
+            if (user.location) {
+                locationElement.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-map-marker-alt text-green-600"></i>
+                        <span class="text-sm text-gray-700">${user.location}</span>
+                    </div>
+                `;
+                locationElement.classList.remove('hidden');
+            } else {
+                locationElement.classList.add('hidden');
+            }
+        }
         
         // Update scores (check privacy)
         const scoresDiv = document.getElementById('profileCoverScores');

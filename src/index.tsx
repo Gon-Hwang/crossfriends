@@ -382,11 +382,11 @@ app.post('/api/users', async (c) => {
 app.put('/api/users/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
-  const { name, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings } = await c.req.json()
+  const { name, bio, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings } = await c.req.json()
   
   await DB.prepare(
-    'UPDATE users SET name = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, address = ?, phone = ?, privacy_settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(name, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, address || null, phone || null, privacy_settings || null, id).run()
+    'UPDATE users SET name = ?, bio = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, address = ?, phone = ?, privacy_settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).bind(name, bio || null, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, address || null, phone || null, privacy_settings || null, id).run()
   
   return c.json({ success: true })
 })
@@ -3726,7 +3726,6 @@ app.get('/', (c) => {
                             <div class="space-y-3">
                                 <div>
                                     <h2 id="profileCoverName" class="text-2xl font-bold text-gray-800">사용자 이름</h2>
-                                    <p id="profileCoverEmail" class="text-sm text-gray-500">user@example.com</p>
                                 </div>
                                 
                                 <p id="profileCoverBio" class="text-gray-700 leading-relaxed">
@@ -3736,7 +3735,7 @@ app.get('/', (c) => {
                                 </p>
                                 
                                 <!-- Stats -->
-                                <div class="flex items-center space-x-6 pt-3 border-t border-gray-200">
+                                <div class="flex items-center flex-wrap gap-4 pt-3 border-t border-gray-200">
                                     <div class="flex items-center space-x-2">
                                         <i class="fas fa-clipboard-list text-blue-600"></i>
                                         <span class="text-sm text-gray-700">
@@ -3747,9 +3746,11 @@ app.get('/', (c) => {
                                         <i class="fas fa-church text-purple-600"></i>
                                         <span id="profileCoverChurch" class="text-sm text-gray-700">교회 정보</span>
                                     </div>
-                                    <div class="flex items-center space-x-2">
-                                        <i class="fas fa-map-marker-alt text-green-600"></i>
-                                        <span id="profileCoverLocation" class="text-sm text-gray-700">지역 정보</span>
+                                    <div id="profileCoverPosition" class="hidden">
+                                        <!-- 직분 정보가 동적으로 삽입됩니다 -->
+                                    </div>
+                                    <div id="profileCoverLocation" class="hidden">
+                                        <!-- 지역 정보가 동적으로 삽입됩니다 -->
                                     </div>
                                 </div>
                                 

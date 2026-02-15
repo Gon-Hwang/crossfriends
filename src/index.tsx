@@ -3562,7 +3562,7 @@ app.get('/', (c) => {
                                 <h3 class="text-base font-bold text-blue-800">
                                     <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
                                 </h3>
-                                <span class="text-xs font-bold bg-blue-600 text-white px-3 py-1 rounded-full whitespace-nowrap">
+                                <span class="text-xs font-bold text-blue-800 whitespace-nowrap">
                                     🎁 기본 리워드
                                 </span>
                             </div>
@@ -3621,7 +3621,7 @@ app.get('/', (c) => {
                                     <h3 class="text-base font-bold text-purple-800">
                                         <i class="fas fa-video text-purple-600 mr-2"></i>오늘의 설교 말씀
                                     </h3>
-                                    <span class="text-xs font-bold bg-purple-600 text-white px-3 py-1 rounded-full whitespace-nowrap">
+                                    <span class="text-xs font-bold text-purple-800 whitespace-nowrap">
                                         🎁 리워드1
                                     </span>
                                 </div>

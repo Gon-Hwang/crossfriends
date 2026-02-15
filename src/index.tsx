@@ -4965,6 +4965,13 @@ app.get('/', (c) => {
                                 </p>
                                 <div id="editCoverPreview" class="w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
                                     <span class="text-white text-sm font-semibold drop-shadow-lg">📸 커버 사진 미리보기</span>
+                                    <button 
+                                        type="button"
+                                        onclick="return false;"
+                                        class="absolute top-2 right-2 text-blue-600 hover:text-blue-700 transition"
+                                        title="커버 사진 편집 (준비중)">
+                                        <i class="fas fa-edit text-lg"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>

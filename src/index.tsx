@@ -3558,10 +3558,13 @@ app.get('/', (c) => {
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
                         <!-- Today's Bible Verse -->
                         <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border-2 border-blue-300 p-6 transition-all duration-300">
-                            <div class="mb-4">
-                                <h3 class="text-base font-bold text-blue-800 leading-tight">
-                                    🎁 기본 리워드:<br/><i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-bold text-blue-800">
+                                    <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
                                 </h3>
+                                <span class="text-xs font-bold bg-blue-600 text-white px-3 py-1 rounded-full whitespace-nowrap">
+                                    🎁 기본 리워드
+                                </span>
                             </div>
                             <div class="border-l-4 border-blue-600 pl-4 py-2 mb-4">
                                 <p class="font-bold text-blue-600 mb-2" id="verseReference">시편 23:1</p>
@@ -3614,10 +3617,13 @@ app.get('/', (c) => {
                         <div id="sermonRewardSection" class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border-2 border-purple-300 p-4 transition-all duration-300">
                             <!-- Locked State (< 500 points) -->
                             <div id="sermonLocked">
-                                <div class="mb-3">
-                                    <h3 class="text-base font-bold text-purple-800 leading-tight">
-                                        🎁 리워드1:<br/><i class="fas fa-video text-purple-600 mr-2"></i>오늘의 설교 말씀
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="text-base font-bold text-purple-800">
+                                        <i class="fas fa-video text-purple-600 mr-2"></i>오늘의 설교 말씀
                                     </h3>
+                                    <span class="text-xs font-bold bg-purple-600 text-white px-3 py-1 rounded-full whitespace-nowrap">
+                                        🎁 리워드1
+                                    </span>
                                 </div>
                                 
                                 <!-- Current Score Display -->

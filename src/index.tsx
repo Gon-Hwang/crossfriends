@@ -4895,42 +4895,6 @@ app.get('/', (c) => {
                         </select>
                     </div>
                     
-                    <!-- 커버 사진을 먼저 배치 (더 눈에 잘 띄도록) -->
-                    <div class="border-t pt-4">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-image text-purple-600 mr-2"></i>커버 사진 (배경 이미지)
-                        </label>
-                        <div class="space-y-3">
-                            <div id="editCoverPreview" class="w-full h-40 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-dashed border-gray-300">
-                                <span class="text-white text-sm font-semibold drop-shadow-lg">📸 커버 사진을 선택하세요 (페이스북 스타일)</span>
-                            </div>
-                            <div class="flex space-x-2">
-                                <input 
-                                    id="editCover"
-                                    type="file"
-                                    accept="image/*"
-                                    onchange="previewEditCover(event)"
-                                    class="hidden"
-                                />
-                                <label 
-                                    for="editCover"
-                                    class="cursor-pointer inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold">
-                                    <i class="fas fa-image mr-2"></i>커버 사진 변경
-                                </label>
-                                <button 
-                                    type="button"
-                                    onclick="deleteCover()"
-                                    class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold">
-                                    <i class="fas fa-trash mr-2"></i>삭제
-                                </button>
-                            </div>
-                            <p class="text-xs text-gray-600 bg-blue-50 p-2 rounded">
-                                <i class="fas fa-info-circle text-blue-600 mr-1"></i>
-                                JPG, PNG (최대 10MB) - 페이스북처럼 개인 홈피를 멋지게 꾸며보세요!
-                            </p>
-                        </div>
-                    </div>
-                    
                     <div class="border-t pt-4">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                             <i class="fas fa-user-circle text-blue-600 mr-2"></i>프로필 사진
@@ -4947,20 +4911,50 @@ app.get('/', (c) => {
                                     onchange="previewEditAvatar(event)"
                                     class="hidden"
                                 />
-                                <div id="editAvatarButtons" class="flex space-x-2">
-                                    <label 
-                                        for="editAvatar"
-                                        class="cursor-pointer inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
-                                        <i class="fas fa-upload mr-2"></i>사진 변경
-                                    </label>
-                                    <button 
-                                        type="button"
-                                        onclick="deleteAvatar()"
-                                        class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold">
-                                        <i class="fas fa-trash mr-2"></i>삭제
-                                    </button>
+                                <input 
+                                    id="editCover"
+                                    type="file"
+                                    accept="image/*"
+                                    onchange="previewEditCover(event)"
+                                    class="hidden"
+                                />
+                                <div class="space-y-2">
+                                    <!-- 프로필 사진 버튼들 -->
+                                    <div class="flex space-x-2">
+                                        <label 
+                                            for="editAvatar"
+                                            class="cursor-pointer inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
+                                            <i class="fas fa-upload mr-2"></i>프로필 사진 변경
+                                        </label>
+                                        <button 
+                                            type="button"
+                                            onclick="deleteAvatar()"
+                                            class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold">
+                                            <i class="fas fa-trash mr-2"></i>프로필 사진 삭제
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- 커버 사진 버튼들 -->
+                                    <div class="flex space-x-2">
+                                        <label 
+                                            for="editCover"
+                                            class="cursor-pointer inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold">
+                                            <i class="fas fa-image mr-2"></i>커버 사진 변경
+                                        </label>
+                                        <button 
+                                            type="button"
+                                            onclick="deleteCover()"
+                                            class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold">
+                                            <i class="fas fa-trash mr-2"></i>커버 사진 삭제
+                                        </button>
+                                    </div>
                                 </div>
-                                <p id="editAvatarNote" class="text-xs text-gray-500 mt-2">JPG, PNG (최대 5MB)</p>
+                                <p id="editAvatarNote" class="text-xs text-gray-500 mt-2">
+                                    프로필: JPG, PNG (최대 5MB) / 커버: JPG, PNG (최대 10MB)
+                                </p>
+                                <div id="editCoverPreview" class="w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
+                                    <span class="text-white text-sm font-semibold drop-shadow-lg">📸 커버 사진 미리보기</span>
+                                </div>
                             </div>
                         </div>
                     </div>

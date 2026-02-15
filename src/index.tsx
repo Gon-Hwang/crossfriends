@@ -4444,10 +4444,23 @@ app.get('/', (c) => {
                         <h3 class="text-xl font-bold text-gray-800 mb-3">
                             환영합니다!
                         </h3>
-                        <p class="text-gray-700 leading-relaxed">
+                        <p class="text-gray-700 leading-relaxed mb-4">
                             크로스프렌즈는 기독교인들을 위한 행복하고 재미있는 소셜 미디어입니다. 
                             말씀, 기도, 활동을 통해 신앙 생활을 풍성하게 하고, 형제 자매들과 소통하세요!
                         </p>
+                        
+                        <!-- Bible Verse about Reward -->
+                        <div class="bg-blue-50 border-l-4 border-blue-600 rounded-r-lg p-4 mt-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-book-open text-blue-600 mt-1 mr-3 text-lg"></i>
+                                <div>
+                                    <p class="font-bold text-blue-800 mb-2">마태복음 5:12</p>
+                                    <p class="text-gray-700 leading-relaxed italic">
+                                        "기뻐하고 즐거워하라 하늘에서 너희의 상이 큼이라"
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Score System -->

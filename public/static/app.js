@@ -1237,8 +1237,17 @@ window.showEditProfileModal = async function() {
                                     : '<i class="fas fa-user"></i>'}
                         </div>
                         
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
+                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
+                            ${roleName}
+                        </span>
+                        <div class="mt-3 mb-4 text-xs text-gray-500">
+                            <p>회원 ID: #${user.id}</p>
+                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                        
                         ${user.role !== 'admin' ? `
-                        <div class="space-y-2">
+                        <div class="space-y-2 border-t pt-4">
                             <input 
                                 type="file" 
                                 id="editAvatarInline" 
@@ -1251,47 +1260,38 @@ window.showEditProfileModal = async function() {
                                 accept="image/*"
                                 onchange="previewEditCoverInline(event)"
                                 class="hidden" />
+                            
                             <label 
                                 for="editAvatarInline"
-                                class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition text-sm">
+                                class="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition text-sm font-semibold text-center">
                                 <i class="fas fa-upload mr-2"></i>프로필 사진 변경
                             </label>
                             <button 
                                 type="button"
                                 onclick="deleteAvatarInline()"
-                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
+                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-semibold">
                                 <i class="fas fa-trash mr-2"></i>프로필 사진 삭제
                             </button>
                             
-                            <div class="border-t pt-2 mt-3">
-                                <label 
-                                    for="editCover"
-                                    class="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition text-sm">
-                                    <i class="fas fa-image mr-2"></i>커버 사진 변경
-                                </label>
-                                <button 
-                                    type="button"
-                                    onclick="deleteCoverInline()"
-                                    class="block w-full px-4 py-2 mt-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition text-sm">
-                                    <i class="fas fa-trash mr-2"></i>커버 사진 삭제
-                                </button>
-                                <div id="editCoverPreviewInline" class="w-full h-24 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-2">
-                                    <span class="text-white text-xs font-semibold drop-shadow-lg">📸 커버 사진</span>
-                                </div>
+                            <label 
+                                for="editCover"
+                                class="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition text-sm font-semibold text-center">
+                                <i class="fas fa-image mr-2"></i>커버 사진 변경
+                            </label>
+                            <button 
+                                type="button"
+                                onclick="deleteCoverInline()"
+                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-semibold">
+                                <i class="fas fa-trash mr-2"></i>커버 사진 삭제
+                            </button>
+                            
+                            <div id="editCoverPreviewInline" class="w-full h-24 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
+                                <span class="text-white text-xs font-semibold drop-shadow-lg">📸 커버 사진</span>
                             </div>
                             
-                            <p class="text-xs text-gray-500 mt-2">프로필: 최대 5MB / 커버: 최대 10MB</p>
+                            <p class="text-xs text-gray-500 mt-2 text-center">프로필: 최대 5MB / 커버: 최대 10MB</p>
                         </div>
                         ` : ''}
-                        
-                        <h3 class="text-xl font-bold text-gray-800 mb-2 mt-4">${user.name}</h3>
-                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
-                            ${roleName}
-                        </span>
-                        <div class="mt-4 text-xs text-gray-500">
-                            <p>회원 ID: #${user.id}</p>
-                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        </div>
                     </div>
                 </div>
                 

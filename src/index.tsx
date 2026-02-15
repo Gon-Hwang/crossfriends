@@ -3558,13 +3558,10 @@ app.get('/', (c) => {
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
                         <!-- Today's Bible Verse -->
                         <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border-2 border-blue-300 p-6 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-base font-bold text-blue-800">
-                                    <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
+                            <div class="mb-4">
+                                <h3 class="text-base font-bold text-blue-800 leading-tight">
+                                    🎁 기본 리워드:<br/><i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
                                 </h3>
-                                <span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                    기본 리워드
-                                </span>
                             </div>
                             <div class="border-l-4 border-blue-600 pl-4 py-2 mb-4">
                                 <p class="font-bold text-blue-600 mb-2" id="verseReference">시편 23:1</p>
@@ -3614,10 +3611,10 @@ app.get('/', (c) => {
                         <!-- Reward1: Today's Sermon Section -->
                         <div id="sermonRewardSection" class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border-2 border-purple-300 p-4 transition-all duration-300">
                             <!-- Locked State (< 500 points) -->
-                            <div id="sermonLocked" class="text-center">
+                            <div id="sermonLocked">
                                 <div class="mb-3">
                                     <h3 class="text-base font-bold text-purple-800 leading-tight">
-                                        🎁 리워드1:<br/>오늘의 설교 말씀
+                                        🎁 리워드1:<br/><i class="fas fa-video text-purple-600 mr-2"></i>오늘의 설교 말씀
                                     </h3>
                                 </div>
                                 
@@ -4557,7 +4554,7 @@ app.get('/', (c) => {
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">말씀 타이핑 <span class="text-xs text-blue-600">(기본 리워드)</span></h4>
+                                    <h4 class="font-semibold text-gray-800">말씀 타이핑 <span class="font-semibold text-gray-800">(기본 리워드)</span></h4>
                                     <p class="text-sm text-gray-600">성경 말씀을 따라 쓰며 타이핑 연습을 하고 점수를 획득하세요.</p>
                                 </div>
                             </div>

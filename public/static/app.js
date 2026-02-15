@@ -1064,13 +1064,22 @@ async function loadEditProfileData() {
         const response = await axios.get('/api/users/' + currentUserId);
         const user = response.data.user;
         
-        // Load cover photo preview
+        // Load cover photo preview (for modal)
         const coverPreview = document.getElementById('editCoverPreview');
         if (coverPreview && user.cover_url) {
             coverPreview.style.backgroundImage = `url(${user.cover_url})`;
             coverPreview.style.backgroundSize = 'cover';
             coverPreview.style.backgroundPosition = 'center';
             coverPreview.innerHTML = '';
+        }
+        
+        // Load cover photo preview (for inline)
+        const coverPreviewInline = document.getElementById('editCoverPreviewInline');
+        if (coverPreviewInline && user.cover_url) {
+            coverPreviewInline.style.backgroundImage = `url(${user.cover_url})`;
+            coverPreviewInline.style.backgroundSize = 'cover';
+            coverPreviewInline.style.backgroundPosition = 'center';
+            coverPreviewInline.innerHTML = '';
         }
         
         // Load avatar preview
@@ -1236,18 +1245,42 @@ window.showEditProfileModal = async function() {
                                 accept="image/*"
                                 onchange="previewEditAvatarInline(event)"
                                 class="hidden" />
+                            <input 
+                                type="file" 
+                                id="editCover" 
+                                accept="image/*"
+                                onchange="previewEditCoverInline(event)"
+                                class="hidden" />
                             <label 
                                 for="editAvatarInline"
                                 class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition text-sm">
-                                <i class="fas fa-upload mr-2"></i>사진 변경
+                                <i class="fas fa-upload mr-2"></i>프로필 사진 변경
                             </label>
                             <button 
                                 type="button"
                                 onclick="deleteAvatarInline()"
                                 class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm">
-                                <i class="fas fa-trash mr-2"></i>사진 삭제
+                                <i class="fas fa-trash mr-2"></i>프로필 사진 삭제
                             </button>
-                            <p class="text-xs text-gray-500 mt-2">JPG, PNG 파일 (최대 5MB)</p>
+                            
+                            <div class="border-t pt-2 mt-3">
+                                <label 
+                                    for="editCover"
+                                    class="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition text-sm">
+                                    <i class="fas fa-image mr-2"></i>커버 사진 변경
+                                </label>
+                                <button 
+                                    type="button"
+                                    onclick="deleteCoverInline()"
+                                    class="block w-full px-4 py-2 mt-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition text-sm">
+                                    <i class="fas fa-trash mr-2"></i>커버 사진 삭제
+                                </button>
+                                <div id="editCoverPreviewInline" class="w-full h-24 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-2">
+                                    <span class="text-white text-xs font-semibold drop-shadow-lg">📸 커버 사진</span>
+                                </div>
+                            </div>
+                            
+                            <p class="text-xs text-gray-500 mt-2">프로필: 최대 5MB / 커버: 최대 10MB</p>
                         </div>
                         ` : ''}
                         
@@ -1790,6 +1823,11 @@ window.showEditProfileModal = async function() {
         // Update profile view content
         document.getElementById('profileViewContent').innerHTML = content;
         
+        // Load current cover photo and avatar
+        setTimeout(() => {
+            loadEditProfileData();
+        }, 100);
+        
         // Update header title to "프로필 수정"
         const profileViewHeader = document.querySelector('#profileView .flex.items-center.justify-between h2');
         if (profileViewHeader) {
@@ -1866,6 +1904,69 @@ async function deleteAvatarInline() {
     } catch (error) {
         console.error('Avatar delete error:', error);
         showToast('프로필 사진 삭제에 실패했습니다.', 'error');
+    }
+}
+
+// Preview cover photo in inline edit
+function previewEditCoverInline(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+            alert('파일 크기는 10MB를 초과할 수 없습니다.');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('editCoverPreviewInline');
+            if (preview) {
+                preview.style.backgroundImage = 'url(' + e.target.result + ')';
+                preview.style.backgroundSize = 'cover';
+                preview.style.backgroundPosition = 'center';
+                preview.innerHTML = '';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Delete cover photo in inline edit
+async function deleteCoverInline() {
+    if (!currentUserId) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (!confirm('커버 사진을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        await axios.delete('/api/users/' + currentUserId + '/cover');
+        
+        // Update preview to default
+        const preview = document.getElementById('editCoverPreviewInline');
+        if (preview) {
+            preview.style.backgroundImage = '';
+            preview.className = 'w-full h-24 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-2';
+            preview.innerHTML = '<span class="text-white text-xs font-semibold drop-shadow-lg">📸 커버 사진</span>';
+        }
+        
+        // Clear file input
+        const fileInput = document.getElementById('editCover');
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Refresh user data
+        const userResponse = await axios.get('/api/users/' + currentUserId);
+        currentUser = userResponse.data.user;
+        
+        showToast('커버 사진이 삭제되었습니다.', 'success');
+    } catch (error) {
+        console.error('Cover delete error:', error);
+        showToast('커버 사진 삭제에 실패했습니다.', 'error');
     }
 }
 

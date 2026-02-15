@@ -4821,6 +4821,16 @@ async function showUserProfileCover(userId) {
             scoresDiv.classList.add('hidden');
         }
         
+        // Show/hide edit cover button (only for own profile)
+        const editCoverBtn = document.getElementById('editCoverPhotoBtn');
+        if (editCoverBtn) {
+            if (currentUserId && parseInt(currentUserId) === userId) {
+                editCoverBtn.classList.remove('hidden');
+            } else {
+                editCoverBtn.classList.add('hidden');
+            }
+        }
+        
         // Show cover card and hide new post card
         coverCard.classList.remove('hidden');
         newPostCard.classList.add('hidden');

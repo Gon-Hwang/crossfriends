@@ -3793,6 +3793,14 @@ app.get('/', (c) => {
                     <div id="userProfileCover" class="hidden bg-white rounded-xl shadow-lg border-2 border-gray-300 overflow-hidden">
                         <!-- Cover Photo -->
                         <div id="profileCoverPhoto" class="h-48 bg-blue-500 relative bg-cover bg-center">
+                            <!-- Edit Icon (only shown for own profile) -->
+                            <button 
+                                id="editCoverPhotoBtn"
+                                onclick="showEditProfileModal()"
+                                class="hidden absolute top-4 right-4 w-10 h-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 cursor-pointer"
+                                title="커버 사진 수정">
+                                <i class="fas fa-pencil-alt text-gray-700"></i>
+                            </button>
                         </div>
                         
                         <!-- Profile Info -->

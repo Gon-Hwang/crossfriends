@@ -4422,9 +4422,9 @@ app.get('/', (c) => {
 
         <!-- How To Use Modal -->
         <div id="howToUseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center">
+                    <h2 class="text-3xl font-bold text-gray-800 flex items-center">
                         <div class="cross-icon mr-3" style="width: 28px; height: 28px;">
                             <div class="cross-dot top"></div>
                             <div class="cross-dot bottom"></div>
@@ -4460,7 +4460,7 @@ app.get('/', (c) => {
                         <div class="overflow-x-auto">
                             <table class="w-full border-collapse">
                                 <thead>
-                                    <tr class="bg-gradient-to-r from-blue-50 to-purple-50">
+                                    <tr class="bg-gray-50">
                                         <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-800">행동</th>
                                         <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-800">점수</th>
                                     </tr>
@@ -4518,7 +4518,7 @@ app.get('/', (c) => {
                             </table>
                         </div>
                         
-                        <div class="mt-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border-2 border-yellow-300">
+                        <div class="mt-4 bg-yellow-50 rounded-lg p-4 border-2 border-yellow-300">
                             <p class="text-center text-gray-800 font-semibold">
                                 <i class="fas fa-trophy text-yellow-500 mr-2"></i>
                                 총 점수 500점 이상 달성 시 리워드1 언락
@@ -4571,7 +4571,7 @@ app.get('/', (c) => {
                     </div>
 
                     <!-- Tips -->
-                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 shadow-md text-white">
+                    <div class="bg-blue-600 rounded-xl p-6 shadow-md text-white">
                         <h3 class="text-xl font-bold mb-3">
                             <i class="fas fa-lightbulb mr-2"></i>Tips
                         </h3>

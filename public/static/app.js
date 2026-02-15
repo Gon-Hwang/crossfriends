@@ -1056,6 +1056,37 @@ function updateCities() {
     }
 }
 
+// Load edit profile data
+async function loadEditProfileData() {
+    if (!currentUser) return;
+    
+    try {
+        const response = await axios.get('/api/users/' + currentUserId);
+        const user = response.data.user;
+        
+        // Load cover photo preview
+        const coverPreview = document.getElementById('editCoverPreview');
+        if (coverPreview && user.cover_url) {
+            coverPreview.style.backgroundImage = `url(${user.cover_url})`;
+            coverPreview.style.backgroundSize = 'cover';
+            coverPreview.style.backgroundPosition = 'center';
+            coverPreview.innerHTML = '';
+        }
+        
+        // Load avatar preview
+        const avatarPreview = document.getElementById('editAvatarPreview');
+        if (avatarPreview && user.avatar_url) {
+            avatarPreview.innerHTML = `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" />`;
+        }
+        
+        // Update current user data
+        currentUser = { ...currentUser, ...user };
+        
+    } catch (error) {
+        console.error('Failed to load edit profile data:', error);
+    }
+}
+
 // Avatar preview
 function previewAvatar(event) {
     const file = event.target.files[0];
@@ -1857,6 +1888,7 @@ async function handleEditProfileSubmit(event) {
     const phone = document.getElementById('editPhoneInline').value;
     const address = document.getElementById('editAddressInline').value;
     const avatarFile = document.getElementById('editAvatarInline')?.files[0];
+    const coverFile = document.getElementById('editCover')?.files[0];
     
     // 학교 정보 수집 (기존 방식)
     const elementary_school = document.getElementById('editElementarySchoolInline')?.value || '';
@@ -1991,6 +2023,20 @@ async function handleEditProfileSubmit(event) {
                 });
             } catch (uploadError) {
                 console.error('Avatar upload error:', uploadError);
+            }
+        }
+
+        // Upload new cover photo if selected
+        if (coverFile) {
+            const formData = new FormData();
+            formData.append('cover', coverFile);
+            
+            try {
+                await axios.post('/api/users/' + currentUserId + '/cover', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } catch (uploadError) {
+                console.error('Cover upload error:', uploadError);
             }
         }
 

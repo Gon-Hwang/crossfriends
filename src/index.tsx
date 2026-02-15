@@ -4571,25 +4571,25 @@ app.get('/', (c) => {
                     </div>
 
                     <!-- Tips -->
-                    <div class="bg-blue-600 rounded-xl p-6 shadow-md text-white">
-                        <h3 class="text-xl font-bold mb-3">
-                            <i class="fas fa-lightbulb mr-2"></i>Tips
+                    <div class="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 shadow-md">
+                        <h3 class="text-xl font-bold mb-3 text-blue-800">
+                            <i class="fas fa-lightbulb mr-2 text-blue-600"></i>Tips
                         </h3>
-                        <ul class="space-y-2 text-sm">
+                        <ul class="space-y-2 text-sm text-gray-700">
                             <li class="flex items-start">
-                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-blue-600"></i>
                                 <span>매일 조금씩 활동하여 꾸준히 점수를 쌓아보세요!</span>
                             </li>
                             <li class="flex items-start">
-                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-blue-600"></i>
                                 <span>다른 형제 자매의 기도 제목에 기도해주고 격려해주세요.</span>
                             </li>
                             <li class="flex items-start">
-                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-blue-600"></i>
                                 <span>말씀 타이핑으로 성경 구절을 암송하세요.</span>
                             </li>
                             <li class="flex items-start">
-                                <i class="fas fa-arrow-right mr-2 mt-1"></i>
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-blue-600"></i>
                                 <span>프로필을 자세히 작성하면 더 깊은 교제가 가능해요!</span>
                             </li>
                         </ul>

@@ -4597,7 +4597,7 @@ app.get('/', (c) => {
                 </div>
                 
                 <div class="mt-6 text-center">
-                    <button onclick="hideHowToUse(); showSignupModal();" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-semibold shadow-lg">
+                    <button onclick="hideHowToUse(); showSignupModal();" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition font-semibold shadow-lg">
                         <i class="fas fa-user-plus mr-2"></i>지금 가입하고 시작하기
                     </button>
                 </div>

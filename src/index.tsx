@@ -3581,13 +3581,10 @@ app.get('/', (c) => {
                                 
                                 <!-- Typing Input Area (Initially Hidden) -->
                                 <div id="typingArea" class="mt-4 pt-4 border-t-2 border-gray-200 hidden">
-                                    <div class="flex items-center justify-between mb-2">
+                                    <div class="mb-2">
                                         <label class="text-sm font-semibold text-gray-700">
                                             <i class="fas fa-keyboard text-blue-600 mr-1"></i>말씀 타이핑
                                         </label>
-                                        <button onclick="resetTyping()" class="text-xs text-gray-500 hover:text-gray-700 underline">
-                                            <i class="fas fa-redo mr-1"></i>초기화
-                                        </button>
                                     </div>
                                     <textarea 
                                         id="typingInput"

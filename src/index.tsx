@@ -3712,18 +3712,14 @@ app.get('/', (c) => {
                         <!-- Profile Info -->
                         <div class="relative px-6 pb-6">
                             <!-- Profile Picture (Overlapping cover) -->
-                            <div class="flex items-end justify-between -mt-16 mb-4">
-                                <div class="relative">
+                            <div class="-mt-16 mb-4">
+                                <div class="relative inline-block">
                                     <div id="profileCoverAvatar" class="w-32 h-32 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white border-4 border-white shadow-lg">
                                         <i class="fas fa-user text-5xl"></i>
                                     </div>
                                     <!-- Admin/Moderator Badge -->
                                     <div id="profileCoverBadge" class="absolute bottom-2 right-2"></div>
                                 </div>
-                                <button onclick="clearUserFilter()" class="mt-16 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition font-semibold flex items-center space-x-2">
-                                    <i class="fas fa-times"></i>
-                                    <span>전체 보기</span>
-                                </button>
                             </div>
                             
                             <!-- User Info -->

@@ -4290,7 +4290,6 @@ async function showUserProfileModal(userId) {
                         </span>
                         ${user.bio ? `<p class="text-sm text-gray-600 mt-3 px-2">${user.bio}</p>` : ''}
                         <div class="mt-4 text-xs text-gray-500">
-                            <p>회원 ID: #${user.id}</p>
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                         </div>
                         
@@ -4351,12 +4350,12 @@ async function showUserProfileModal(userId) {
                             <i class="fas fa-info-circle mr-2"></i>기본 정보
                         </h4>
                         <div class="space-y-2 text-sm text-gray-700">
-                            <p><strong>이메일:</strong> ${user.email || '미입력'}</p>
+                            ${user.email ? `<p><strong>이메일:</strong> ${user.email}</p>` : ''}
                             ${user.bio ? `<p><strong>자기소개:</strong> ${user.bio}</p>` : ''}
-                            <p><strong>성별:</strong> ${user.gender || '미입력'}</p>
-                            <p><strong>결혼:</strong> ${user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : '미입력'}</p>
-                            <p><strong>전화번호:</strong> ${user.phone || '미입력'}</p>
-                            <p><strong>주소:</strong> ${user.address || '미입력'}</p>
+                            ${user.gender ? `<p><strong>성별:</strong> ${user.gender}</p>` : ''}
+                            ${user.marital_status ? `<p><strong>결혼:</strong> ${user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : user.marital_status}</p>` : ''}
+                            ${user.phone ? `<p><strong>전화번호:</strong> ${user.phone}</p>` : ''}
+                            ${user.address ? `<p><strong>주소:</strong> ${user.address}</p>` : ''}
                         </div>
                     </div>
                     ` : ''}
@@ -4367,11 +4366,11 @@ async function showUserProfileModal(userId) {
                             <i class="fas fa-church mr-2"></i>교회 정보
                         </h4>
                         <div class="space-y-2 text-sm text-gray-700">
-                            <p><strong>소속 교회:</strong> ${user.church || '미입력'}</p>
-                            <p><strong>담임목사:</strong> ${user.pastor || '미입력'}</p>
-                            <p><strong>교단:</strong> ${user.denomination || '미입력'}</p>
+                            ${user.church ? `<p><strong>소속 교회:</strong> ${user.church}</p>` : ''}
+                            ${user.pastor ? `<p><strong>담임목사:</strong> ${user.pastor}</p>` : ''}
+                            ${user.denomination ? `<p><strong>교단:</strong> ${user.denomination}</p>` : ''}
                             ${user.location ? `<p><strong>교회 위치:</strong> ${user.location}</p>` : ''}
-                            <p><strong>직분:</strong> ${user.position || '미입력'}</p>
+                            ${user.position ? `<p><strong>직분:</strong> ${user.position}</p>` : ''}
                         </div>
                     </div>
                     ` : ''}
@@ -4437,7 +4436,7 @@ async function showUserProfileModal(userId) {
                                 ${(() => {
                                     const careers = user.careers ? JSON.parse(user.careers) : [];
                                     if (careers.length === 0) {
-                                        return '<p class="ml-2">미입력</p>';
+                                        return '';
                                     }
                                     return careers.map(career => {
                                         const parts = [];
@@ -4459,22 +4458,22 @@ async function showUserProfileModal(userId) {
                             <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
                         </h4>
                         <div class="space-y-3 text-sm text-gray-700">
-                            ${user.elementary_school !== null ? `
+                            ${user.elementary_school !== null && user.elementary_school ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">초등학교:</p>
-                                <p class="ml-2">${user.elementary_school || '미입력'}</p>
+                                <p class="ml-2">${user.elementary_school}</p>
                             </div>
                             ` : ''}
-                            ${user.middle_school !== null ? `
+                            ${user.middle_school !== null && user.middle_school ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">중학교:</p>
-                                <p class="ml-2">${user.middle_school || '미입력'}</p>
+                                <p class="ml-2">${user.middle_school}</p>
                             </div>
                             ` : ''}
-                            ${user.high_school !== null ? `
+                            ${user.high_school !== null && user.high_school ? `
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">고등학교:</p>
-                                <p class="ml-2">${user.high_school || '미입력'}</p>
+                                <p class="ml-2">${user.high_school}</p>
                             </div>
                             ` : ''}
                             ${user.universities !== null ? `
@@ -4487,7 +4486,7 @@ async function showUserProfileModal(userId) {
                                         universities.push({ school: user.university || '', major: user.university_major || '' });
                                     }
                                     if (universities.length === 0) {
-                                        return '<p class="ml-2">미입력</p>';
+                                        return '';
                                     }
                                     return universities.map(edu => {
                                         const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
@@ -4506,7 +4505,7 @@ async function showUserProfileModal(userId) {
                                         masters.push({ school: user.masters || '', major: user.masters_major || '' });
                                     }
                                     if (masters.length === 0) {
-                                        return '<p class="ml-2">미입력</p>';
+                                        return '';
                                     }
                                     return masters.map(edu => {
                                         const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
@@ -4525,7 +4524,7 @@ async function showUserProfileModal(userId) {
                                         phds.push({ school: user.phd || '', major: user.phd_major || '' });
                                     }
                                     if (phds.length === 0) {
-                                        return '<p class="ml-2">미입력</p>';
+                                        return '';
                                     }
                                     return phds.map(edu => {
                                         const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');

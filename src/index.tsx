@@ -2471,6 +2471,11 @@ app.get('/admin', (c) => {
             window.createFakeComments = function() { console.log('Function will be replaced after DOM loads'); };
             window.createFakeLikes = function() { console.log('Function will be replaced after DOM loads'); };
             window.simulateTimePass = function() { console.log('Function will be replaced after DOM loads'); };
+            window.createRandomFriendships = function() { console.log('Function will be replaced after DOM loads'); };
+            window.deleteFriendship = function() { console.log('Function will be replaced after DOM loads'); };
+            window.deleteAllFriendships = function() { console.log('Function will be replaced after DOM loads'); };
+            window.showFriendshipGraph = function() { console.log('Function will be replaced after DOM loads'); };
+            window.closeGraphModal = function() { console.log('Function will be replaced after DOM loads'); };
         </script>
     </head>
     <body class="bg-gray-50">
@@ -2489,7 +2494,7 @@ app.get('/admin', (c) => {
 
         <div class="max-w-7xl mx-auto px-4 py-8">
             <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
@@ -2517,6 +2522,15 @@ app.get('/admin', (c) => {
                             <p class="text-3xl font-bold" id="totalComments">0</p>
                         </div>
                         <i class="fas fa-comments text-4xl opacity-50"></i>
+                    </div>
+                </div>
+                <div class="bg-pink-500 text-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-pink-100 text-sm">총 친구 관계</p>
+                            <p class="text-3xl font-bold" id="totalFriendships">0</p>
+                        </div>
+                        <i class="fas fa-user-friends text-4xl opacity-50"></i>
                     </div>
                 </div>
             </div>
@@ -2637,6 +2651,81 @@ app.get('/admin', (c) => {
                 </div>
             </div>
 
+            <!-- Friendships Management -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <i class="fas fa-user-friends text-purple-600 mr-2"></i>친구 관계 관리
+                    </h2>
+                    <div class="flex space-x-2">
+                        <button onclick="createRandomFriendships()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                            <i class="fas fa-random mr-2"></i>랜덤 친구 생성
+                        </button>
+                        <button onclick="loadFriendships()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-sync-alt mr-2"></i>새로고침
+                        </button>
+                        <button onclick="deleteAllFriendships()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                            <i class="fas fa-trash-alt mr-2"></i>모두 삭제
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">ID</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">친구 신청</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">친구 승인</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">상태</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">생성일</th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="friendshipsTableBody" class="divide-y divide-gray-200">
+                            <!-- Friendships will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Friendship Graph Modal -->
+            <div id="graphModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold" id="graphTitle">친구 네트워크</h2>
+                            <p class="text-blue-100 text-sm mt-1" id="graphSubtitle"></p>
+                        </div>
+                        <button onclick="closeGraphModal()" class="text-white hover:text-gray-200 transition">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-auto" style="max-height: calc(90vh - 120px);">
+                        <div class="mb-4 flex gap-4 text-sm">
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full bg-blue-500"></div>
+                                <span>선택된 사용자</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full bg-green-500"></div>
+                                <span>친구 (수락됨)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+                                <span>대기 중</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full bg-red-500"></div>
+                                <span>거절됨</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-center">
+                            <canvas id="friendshipCanvas" width="900" height="600" class="border border-gray-300 rounded-lg bg-white"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Posts Management -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
@@ -2700,6 +2789,7 @@ app.get('/admin', (c) => {
                     document.getElementById('totalUsers').textContent = response.data.users;
                     document.getElementById('totalPosts').textContent = response.data.posts;
                     document.getElementById('totalComments').textContent = response.data.comments;
+                    document.getElementById('totalFriendships').textContent = response.data.friendships || 0;
                     
                     // Post type statistics
                     if (response.data.postTypes) {
@@ -3416,6 +3506,355 @@ app.get('/admin', (c) => {
             }
 
 
+            // Friendships Management Functions
+            async function loadFriendships() {
+                try {
+                    const response = await axios.get('/api/admin/friendships', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    
+                    const tbody = document.getElementById('friendshipsTableBody');
+                    tbody.innerHTML = response.data.friendships.map(friendship => {
+                        const statusBadge = friendship.status === 'accepted' 
+                            ? '<span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">수락됨</span>'
+                            : friendship.status === 'pending'
+                            ? '<span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">대기중</span>'
+                            : '<span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">거절됨</span>';
+                        
+                        const date = new Date(friendship.created_at);
+                        const formattedDate = date.toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        return \`
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm">\${friendship.id}</td>
+                                <td class="px-4 py-3 text-sm">
+                                    <div class="font-semibold text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showFriendshipGraph(\${friendship.user_id}, '\${friendship.user_name}')">\${friendship.user_name}</div>
+                                    <div class="text-xs text-gray-500">\${friendship.user_email}</div>
+                                    <div class="text-xs text-gray-400">\${friendship.user_church || '-'}</div>
+                                </td>
+                                <td class="px-4 py-3 text-sm">
+                                    <div class="font-semibold text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showFriendshipGraph(\${friendship.friend_id}, '\${friendship.friend_name}')">\${friendship.friend_name}</div>
+                                    <div class="text-xs text-gray-500">\${friendship.friend_email}</div>
+                                    <div class="text-xs text-gray-400">\${friendship.friend_church || '-'}</div>
+                                </td>
+                                <td class="px-4 py-3 text-sm">\${statusBadge}</td>
+                                <td class="px-4 py-3 text-sm text-gray-500">\${formattedDate}</td>
+                                <td class="px-4 py-3 text-sm">
+                                    <button 
+                                        onclick="deleteFriendship(\${friendship.id})"
+                                        class="text-red-600 hover:text-red-800 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        \`;
+                    }).join('');
+                } catch (error) {
+                    console.error('Failed to load friendships:', error);
+                    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                        alert('관리자 권한이 필요합니다.');
+                        window.location.href = '/';
+                    }
+                }
+            }
+
+            window.deleteFriendship = async function(friendshipId) {
+                if (!confirm('이 친구 관계를 삭제하시겠습니까?')) return;
+                
+                try {
+                    await axios.delete(\`/api/admin/friendships/\${friendshipId}\`, {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    alert('친구 관계가 삭제되었습니다.');
+                    loadStats();
+                    loadFriendships();
+                } catch (error) {
+                    console.error('Failed to delete friendship:', error);
+                    alert('친구 관계 삭제에 실패했습니다.');
+                }
+            }
+
+            window.deleteAllFriendships = async function() {
+                if (!confirm('⚠️ 경고: 모든 친구 관계를 삭제하시겠습니까?\\n\\n이 작업은 되돌릴 수 없습니다.')) {
+                    return;
+                }
+                
+                // Double confirmation
+                const confirmText = prompt('정말로 삭제하시려면 "DELETE"를 입력하세요:');
+                if (confirmText !== 'DELETE') {
+                    alert('삭제가 취소되었습니다.');
+                    return;
+                }
+                
+                try {
+                    const response = await axios.delete('/api/admin/friendships', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    alert(\`\${response.data.deleted_count}개의 친구 관계가 삭제되었습니다.\`);
+                    loadStats();
+                    loadFriendships();
+                } catch (error) {
+                    console.error('Failed to delete all friendships:', error);
+                    alert('친구 관계 삭제에 실패했습니다.');
+                }
+            }
+
+            window.createRandomFriendships = async function() {
+                const count = prompt('생성할 랜덤 친구 관계 개수를 입력하세요:', '20');
+                if (!count || isNaN(count)) {
+                    alert('올바른 숫자를 입력해주세요.');
+                    return;
+                }
+                
+                try {
+                    // Show loading message
+                    const originalText = event.target.innerHTML;
+                    event.target.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>생성 중...';
+                    event.target.disabled = true;
+                    
+                    const response = await axios.post('/api/admin/create-fake-friendships', 
+                        { count: parseInt(count) },
+                        {
+                            headers: { 'X-Admin-ID': adminId }
+                        }
+                    );
+                    
+                    // Restore button
+                    event.target.innerHTML = originalText;
+                    event.target.disabled = false;
+                    
+                    alert(\`✅ \${response.data.count}개의 랜덤 친구 관계가 생성되었습니다!\\n\\n- 수락됨: 약 80%\\n- 대기중: 약 10%\\n- 거절됨: 약 10%\`);
+                    loadStats();
+                    loadFriendships();
+                } catch (error) {
+                    console.error('Failed to create friendships:', error);
+                    alert('친구 관계 생성에 실패했습니다: ' + (error.response?.data?.error || error.message));
+                    event.target.innerHTML = originalText;
+                    event.target.disabled = false;
+                }
+            }
+
+            // Friendship Graph Functions
+            window.showFriendshipGraph = async function(userId, userName) {
+                try {
+                    // Get all friendships for this user
+                    const response = await axios.get('/api/admin/friendships', {
+                        headers: { 'X-Admin-ID': adminId }
+                    });
+                    
+                    const allFriendships = response.data.friendships || [];
+                    
+                    // Filter friendships related to this user
+                    const userFriendships = allFriendships.filter(f => 
+                        f.user_id === userId || f.friend_id === userId
+                    );
+                    
+                    // Build nodes and edges
+                    const nodes = new Map();
+                    const edges = [];
+                    
+                    // Add center node (selected user)
+                    nodes.set(userId, {
+                        id: userId,
+                        name: userName,
+                        x: 450,
+                        y: 300,
+                        isCenter: true
+                    });
+                    
+                    // Add connected nodes
+                    userFriendships.forEach(f => {
+                        const friendId = f.user_id === userId ? f.friend_id : f.user_id;
+                        const friendName = f.user_id === userId ? f.friend_name : f.user_name;
+                        
+                        if (!nodes.has(friendId)) {
+                            nodes.set(friendId, {
+                                id: friendId,
+                                name: friendName,
+                                x: 0, // Will be calculated
+                                y: 0,
+                                isCenter: false
+                            });
+                        }
+                        
+                        edges.push({
+                            from: f.user_id,
+                            to: f.friend_id,
+                            status: f.status
+                        });
+                    });
+                    
+                    // Get friendships between connected nodes (2nd degree)
+                    const connectedIds = Array.from(nodes.keys()).filter(id => id !== userId);
+                    const secondDegree = allFriendships.filter(f => 
+                        connectedIds.includes(f.user_id) && connectedIds.includes(f.friend_id)
+                    );
+                    
+                    secondDegree.forEach(f => {
+                        edges.push({
+                            from: f.user_id,
+                            to: f.friend_id,
+                            status: f.status
+                        });
+                    });
+                    
+                    // Position nodes in a circle around center
+                    const connectedNodes = Array.from(nodes.values()).filter(n => !n.isCenter);
+                    const angleStep = (2 * Math.PI) / Math.max(connectedNodes.length, 1);
+                    const radius = 200;
+                    
+                    connectedNodes.forEach((node, i) => {
+                        const angle = i * angleStep;
+                        node.x = 450 + radius * Math.cos(angle);
+                        node.y = 300 + radius * Math.sin(angle);
+                    });
+                    
+                    // Show modal and draw graph
+                    document.getElementById('graphModal').classList.remove('hidden');
+                    document.getElementById('graphTitle').textContent = \`\${userName}의 친구 네트워크\`;
+                    document.getElementById('graphSubtitle').textContent = \`\${connectedNodes.length}명의 친구 • \${edges.length}개의 관계\`;
+                    
+                    drawFriendshipGraph(Array.from(nodes.values()), edges);
+                    
+                } catch (error) {
+                    console.error('Failed to load friendship graph:', error);
+                    alert('친구 네트워크를 불러오는데 실패했습니다.');
+                }
+            }
+            
+            window.closeGraphModal = function() {
+                document.getElementById('graphModal').classList.add('hidden');
+            }
+            
+            function drawFriendshipGraph(nodes, edges) {
+                const canvas = document.getElementById('friendshipCanvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Calculate dynamic sizing based on number of nodes
+                const nodeCount = nodes.length;
+                let nodeRadius, fontSize, centerFontSize;
+                
+                // Dynamic sizing logic
+                if (nodeCount <= 10) {
+                    nodeRadius = 12;
+                    fontSize = 11;
+                    centerFontSize = 13;
+                } else if (nodeCount <= 20) {
+                    nodeRadius = 10;
+                    fontSize = 10;
+                    centerFontSize = 12;
+                } else if (nodeCount <= 30) {
+                    nodeRadius = 8;
+                    fontSize = 9;
+                    centerFontSize = 10;
+                } else if (nodeCount <= 50) {
+                    nodeRadius = 7;
+                    fontSize = 8;
+                    centerFontSize = 9;
+                } else if (nodeCount <= 100) {
+                    nodeRadius = 6;
+                    fontSize = 7;
+                    centerFontSize = 8;
+                } else {
+                    nodeRadius = 5;
+                    fontSize = 6;
+                    centerFontSize = 7;
+                }
+                
+                // Draw edges first
+                edges.forEach(edge => {
+                    const fromNode = nodes.find(n => n.id === edge.from);
+                    const toNode = nodes.find(n => n.id === edge.to);
+                    
+                    if (fromNode && toNode) {
+                        ctx.beginPath();
+                        ctx.moveTo(fromNode.x, fromNode.y);
+                        ctx.lineTo(toNode.x, toNode.y);
+                        
+                        // Color based on status
+                        if (edge.status === 'accepted') {
+                            ctx.strokeStyle = '#10b981'; // green
+                            ctx.lineWidth = 2;
+                        } else if (edge.status === 'pending') {
+                            ctx.strokeStyle = '#f59e0b'; // yellow
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([5, 5]); // dashed
+                        } else {
+                            ctx.strokeStyle = '#ef4444'; // red
+                            ctx.lineWidth = 1;
+                            ctx.setLineDash([2, 2]);
+                        }
+                        
+                        ctx.stroke();
+                        ctx.setLineDash([]); // reset dash
+                        
+                        // Draw arrow
+                        const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
+                        const arrowLength = 8;
+                        const arrowX = toNode.x - (nodeRadius + 2) * Math.cos(angle);
+                        const arrowY = toNode.y - (nodeRadius + 2) * Math.sin(angle);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(arrowX, arrowY);
+                        ctx.lineTo(
+                            arrowX - arrowLength * Math.cos(angle - Math.PI / 6),
+                            arrowY - arrowLength * Math.sin(angle - Math.PI / 6)
+                        );
+                        ctx.moveTo(arrowX, arrowY);
+                        ctx.lineTo(
+                            arrowX - arrowLength * Math.cos(angle + Math.PI / 6),
+                            arrowY - arrowLength * Math.sin(angle + Math.PI / 6)
+                        );
+                        ctx.stroke();
+                    }
+                });
+                
+                // Draw nodes
+                nodes.forEach(node => {
+                    // Node circle - dynamic size based on node count
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, nodeRadius, 0, 2 * Math.PI);
+                    
+                    if (node.isCenter) {
+                        ctx.fillStyle = '#3b82f6'; // blue
+                    } else {
+                        ctx.fillStyle = '#10b981'; // green
+                    }
+                    ctx.fill();
+                    
+                    // White border
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Node label - dynamic font size
+                    ctx.fillStyle = '#1f2937';
+                    const nodeFontSize = node.isCenter ? centerFontSize : fontSize;
+                    ctx.font = node.isCenter ? 'bold ' + nodeFontSize + 'px Arial' : nodeFontSize + 'px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    
+                    // Text with background
+                    const textWidth = ctx.measureText(node.name).width;
+                    const textY = node.y + nodeRadius + 3;
+                    const textHeight = nodeFontSize + 4;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.fillRect(node.x - textWidth / 2 - 2, textY, textWidth + 4, textHeight);
+                    
+                    ctx.fillStyle = '#1f2937';
+                    ctx.fillText(node.name, node.x, textY + 2);
+                });
+            }
+
             // Initialize
             if (!adminId) {
                 alert('로그인이 필요합니다.');
@@ -3424,6 +3863,7 @@ app.get('/admin', (c) => {
                 loadStats();
                 loadUsers();
                 loadAdminPosts();
+                loadFriendships();
             }
         </script>
     </body>

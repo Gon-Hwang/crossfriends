@@ -4425,7 +4425,27 @@ async function showUserProfileModal(userId) {
                     </div>
                     ` : ''}
                     
-                    ${showCareerInfo && user.careers !== null ? `
+                    ${(() => {
+                        // Check if career info should be shown and has content
+                        if (!showCareerInfo || user.careers === null) return '';
+                        
+                        const careers = user.careers ? JSON.parse(user.careers) : [];
+                        // Hide entire section if no careers
+                        if (careers.length === 0) return '';
+                        
+                        const careerItems = careers.map(career => {
+                            const parts = [];
+                            if (career.company) parts.push(career.company);
+                            if (career.position) parts.push(career.position);
+                            const text = parts.join(' - ');
+                            const period = career.period ? ' (' + career.period + ')' : '';
+                            return '<p class="ml-2">• ' + text + period + '</p>';
+                        }).join('');
+                        
+                        // Only show section if there are career items
+                        if (!careerItems) return '';
+                        
+                        return `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
                         <h4 class="font-semibold text-purple-800 mb-3">
                             <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
@@ -4433,109 +4453,130 @@ async function showUserProfileModal(userId) {
                         <div class="space-y-3 text-sm text-gray-700">
                             <div>
                                 <p class="font-medium text-gray-800 mb-1">경력:</p>
-                                ${(() => {
-                                    const careers = user.careers ? JSON.parse(user.careers) : [];
-                                    if (careers.length === 0) {
-                                        return '';
-                                    }
-                                    return careers.map(career => {
-                                        const parts = [];
-                                        if (career.company) parts.push(career.company);
-                                        if (career.position) parts.push(career.position);
-                                        const text = parts.join(' - ');
-                                        const period = career.period ? ' (' + career.period + ')' : '';
-                                        return '<p class="ml-2">• ' + text + period + '</p>';
-                                    }).join('');
-                                })()}
+                                ${careerItems}
                             </div>
                         </div>
                     </div>
-                    ` : ''}
+                        `;
+                    })()}
                     
-                    ${showEducationInfo && (user.elementary_school !== null || user.middle_school !== null || user.high_school !== null || user.universities !== null || user.masters_degrees !== null || user.phd_degrees !== null) ? `
+                    ${(() => {
+                        // Check if education info should be shown
+                        if (!showEducationInfo) return '';
+                        
+                        // Build education items
+                        let educationItems = '';
+                        
+                        // Elementary school
+                        if (user.elementary_school && user.elementary_school.trim()) {
+                            educationItems += `
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">초등학교:</p>
+                                <p class="ml-2">${user.elementary_school}</p>
+                            </div>
+                            `;
+                        }
+                        
+                        // Middle school
+                        if (user.middle_school && user.middle_school.trim()) {
+                            educationItems += `
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">중학교:</p>
+                                <p class="ml-2">${user.middle_school}</p>
+                            </div>
+                            `;
+                        }
+                        
+                        // High school
+                        if (user.high_school && user.high_school.trim()) {
+                            educationItems += `
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">고등학교:</p>
+                                <p class="ml-2">${user.high_school}</p>
+                            </div>
+                            `;
+                        }
+                        
+                        // Universities
+                        if (user.universities !== null) {
+                            const universities = user.universities ? JSON.parse(user.universities) : [];
+                            if (universities.length === 0 && (user.university || user.university_major)) {
+                                universities.push({ school: user.university || '', major: user.university_major || '' });
+                            }
+                            if (universities.length > 0) {
+                                const univItems = universities.map(edu => {
+                                    const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                    return '<p class="ml-2">• ' + text + '</p>';
+                                }).join('');
+                                if (univItems) {
+                                    educationItems += `
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">대학교:</p>
+                                ${univItems}
+                            </div>
+                                    `;
+                                }
+                            }
+                        }
+                        
+                        // Masters
+                        if (user.masters_degrees !== null) {
+                            const masters = user.masters_degrees ? JSON.parse(user.masters_degrees) : [];
+                            if (masters.length === 0 && (user.masters || user.masters_major)) {
+                                masters.push({ school: user.masters || '', major: user.masters_major || '' });
+                            }
+                            if (masters.length > 0) {
+                                const mastersItems = masters.map(edu => {
+                                    const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                    return '<p class="ml-2">• ' + text + '</p>';
+                                }).join('');
+                                if (mastersItems) {
+                                    educationItems += `
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">석사:</p>
+                                ${mastersItems}
+                            </div>
+                                    `;
+                                }
+                            }
+                        }
+                        
+                        // PhDs
+                        if (user.phd_degrees !== null) {
+                            const phds = user.phd_degrees ? JSON.parse(user.phd_degrees) : [];
+                            if (phds.length === 0 && (user.phd || user.phd_major)) {
+                                phds.push({ school: user.phd || '', major: user.phd_major || '' });
+                            }
+                            if (phds.length > 0) {
+                                const phdItems = phds.map(edu => {
+                                    const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                    return '<p class="ml-2">• ' + text + '</p>';
+                                }).join('');
+                                if (phdItems) {
+                                    educationItems += `
+                            <div>
+                                <p class="font-medium text-gray-800 mb-1">박사:</p>
+                                ${phdItems}
+                            </div>
+                                    `;
+                                }
+                            }
+                        }
+                        
+                        // Only show section if there are education items
+                        if (!educationItems || educationItems.trim() === '') return '';
+                        
+                        return `
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
                         <h4 class="font-semibold text-orange-800 mb-3">
                             <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
                         </h4>
                         <div class="space-y-3 text-sm text-gray-700">
-                            ${user.elementary_school !== null && user.elementary_school ? `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">초등학교:</p>
-                                <p class="ml-2">${user.elementary_school}</p>
-                            </div>
-                            ` : ''}
-                            ${user.middle_school !== null && user.middle_school ? `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">중학교:</p>
-                                <p class="ml-2">${user.middle_school}</p>
-                            </div>
-                            ` : ''}
-                            ${user.high_school !== null && user.high_school ? `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">고등학교:</p>
-                                <p class="ml-2">${user.high_school}</p>
-                            </div>
-                            ` : ''}
-                            ${user.universities !== null ? `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">대학교:</p>
-                                ${(() => {
-                                    const universities = user.universities ? JSON.parse(user.universities) : [];
-                                    // 하위 호환성: 기존 단일 필드 데이터 처리
-                                    if (universities.length === 0 && (user.university || user.university_major)) {
-                                        universities.push({ school: user.university || '', major: user.university_major || '' });
-                                    }
-                                    if (universities.length === 0) {
-                                        return '';
-                                    }
-                                    return universities.map(edu => {
-                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
-                                        return '<p class="ml-2">• ' + text + '</p>';
-                                    }).join('');
-                                })()}
-                            </div>
-                            ` : ''}
-                            ${user.masters_degrees !== null ? `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">석사:</p>
-                                ${(() => {
-                                    const masters = user.masters_degrees ? JSON.parse(user.masters_degrees) : [];
-                                    // 하위 호환성: 기존 단일 필드 데이터 처리
-                                    if (masters.length === 0 && (user.masters || user.masters_major)) {
-                                        masters.push({ school: user.masters || '', major: user.masters_major || '' });
-                                    }
-                                    if (masters.length === 0) {
-                                        return '';
-                                    }
-                                    return masters.map(edu => {
-                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
-                                        return '<p class="ml-2">• ' + text + '</p>';
-                                    }).join('');
-                                })()}
-                            </div>
-                            ` : ''}
-                            ${user.phd_degrees !== null ? `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">박사:</p>
-                                ${(() => {
-                                    const phds = user.phd_degrees ? JSON.parse(user.phd_degrees) : [];
-                                    // 하위 호환성: 기존 단일 필드 데이터 처리
-                                    if (phds.length === 0 && (user.phd || user.phd_major)) {
-                                        phds.push({ school: user.phd || '', major: user.phd_major || '' });
-                                    }
-                                    if (phds.length === 0) {
-                                        return '';
-                                    }
-                                    return phds.map(edu => {
-                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
-                                        return '<p class="ml-2">• ' + text + '</p>';
-                                    }).join('');
-                                })()}
-                            </div>
-                            ` : ''}
+                            ${educationItems}
                         </div>
                     </div>
-                    ` : ''}
+                        `;
+                    })()}
                 </div>
             </div>
         `;

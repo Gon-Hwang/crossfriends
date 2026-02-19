@@ -712,17 +712,30 @@ app.post('/api/posts', async (c) => {
     updatedScores.activity_score = newScore
   }
   
-  // 다른 사람의 포스팅을 공유한 경우 활동 점수 5점 추가
+  // 다른 사람의 포스팅을 공유한 경우 해당 카테고리 점수 5점 추가
   if (shared_post_id) {
-    const originalPost = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(shared_post_id).first()
+    const originalPost = await DB.prepare('SELECT user_id, background_color FROM posts WHERE id = ?').bind(shared_post_id).first()
     
     // 원저자와 공유자가 다른 경우에만 점수 부여
     if (originalPost && originalPost.user_id !== user_id) {
-      const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
-      const currentScore = user?.activity_score || 0
+      // 원본 포스트의 배경색에 따라 점수 카테고리 결정
+      let scoreField = 'activity_score'
+      if (originalPost.background_color === '#F87171') {
+        // 기도 포스팅 공유 -> 기도 점수
+        scoreField = 'prayer_score'
+      } else if (originalPost.background_color === '#F5E398') {
+        // 말씀 포스팅 공유 -> 성경 점수
+        scoreField = 'scripture_score'
+      } else {
+        // 활동 포스팅 공유 -> 활동 점수
+        scoreField = 'activity_score'
+      }
+      
+      const user = await DB.prepare(`SELECT ${scoreField} FROM users WHERE id = ?`).bind(user_id).first()
+      const currentScore = user?.[scoreField] || 0
       const newScore = currentScore + 5
-      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
-      updatedScores.activity_score = newScore
+      await DB.prepare(`UPDATE users SET ${scoreField} = ? WHERE id = ?`).bind(newScore, user_id).run()
+      updatedScores[scoreField] = newScore
     }
   }
   
@@ -891,16 +904,29 @@ app.delete('/api/posts/:id', async (c) => {
       await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
     }
     
-    // 다른 사람의 포스팅을 공유한 경우 활동 점수 5점 차감
+    // 다른 사람의 포스팅을 공유한 경우 해당 카테고리 점수 5점 차감
     if (post.shared_post_id) {
-      const originalPost = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(post.shared_post_id).first()
+      const originalPost = await DB.prepare('SELECT user_id, background_color FROM posts WHERE id = ?').bind(post.shared_post_id).first()
       
       // 원저자와 공유자가 다른 경우에만 점수 차감
       if (originalPost && originalPost.user_id !== post.user_id) {
-        const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
-        const currentScore = user?.activity_score || 0
+        // 원본 포스트의 배경색에 따라 점수 카테고리 결정
+        let scoreField = 'activity_score'
+        if (originalPost.background_color === '#F87171') {
+          // 기도 포스팅 공유 -> 기도 점수
+          scoreField = 'prayer_score'
+        } else if (originalPost.background_color === '#F5E398') {
+          // 말씀 포스팅 공유 -> 성경 점수
+          scoreField = 'scripture_score'
+        } else {
+          // 활동 포스팅 공유 -> 활동 점수
+          scoreField = 'activity_score'
+        }
+        
+        const user = await DB.prepare(`SELECT ${scoreField} FROM users WHERE id = ?`).bind(post.user_id).first()
+        const currentScore = user?.[scoreField] || 0
         const newScore = Math.max(0, currentScore - 5) // 0점 이하로 내려가지 않도록
-        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
+        await DB.prepare(`UPDATE users SET ${scoreField} = ? WHERE id = ?`).bind(newScore, post.user_id).run()
       }
     }
   }
@@ -942,28 +968,44 @@ app.post('/api/posts/:id/comments', async (c) => {
   const postId = c.req.param('id')
   const { user_id, content } = await c.req.json()
   
-  // Get post author
-  const post = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(postId).first()
+  // Get post author and background color
+  const post = await DB.prepare('SELECT user_id, background_color FROM posts WHERE id = ?').bind(postId).first()
   
   const result = await DB.prepare(
     'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)'
   ).bind(postId, user_id, content).run()
   
-  // 댓글 작성자에게 활동 점수 5점 추가
-  const commenter = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
-  const commenterScore = commenter?.activity_score || 0
-  const newCommenterScore = commenterScore + 5
-  await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newCommenterScore, user_id).run()
+  let updatedScores = {}
   
-  // 포스트 작성자에게도 활동 점수 5점 추가 (자기 포스트에 댓글 단 경우 제외)
-  if (post && post.user_id !== user_id) {
-    const author = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
-    const authorScore = author?.activity_score || 0
-    const newAuthorScore = authorScore + 5
-    await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+  // 포스트 타입에 따라 점수 카테고리 결정
+  let scoreField = 'activity_score'
+  if (post.background_color === '#F87171') {
+    // 기도 포스팅 댓글 -> 기도 점수
+    scoreField = 'prayer_score'
+  } else if (post.background_color === '#F5E398') {
+    // 말씀 포스팅 댓글 -> 성경 점수
+    scoreField = 'scripture_score'
+  } else {
+    // 활동 포스팅 댓글 -> 활동 점수
+    scoreField = 'activity_score'
   }
   
-  return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, new_activity_score: newCommenterScore }, 201)
+  // 댓글 작성자에게 해당 카테고리 점수 5점 추가
+  const commenter = await DB.prepare(`SELECT ${scoreField} FROM users WHERE id = ?`).bind(user_id).first()
+  const commenterScore = commenter?.[scoreField] || 0
+  const newCommenterScore = commenterScore + 5
+  await DB.prepare(`UPDATE users SET ${scoreField} = ? WHERE id = ?`).bind(newCommenterScore, user_id).run()
+  updatedScores[scoreField] = newCommenterScore
+  
+  // 포스트 작성자에게도 해당 카테고리 점수 5점 추가 (자기 포스트에 댓글 단 경우 제외)
+  if (post && post.user_id !== user_id) {
+    const author = await DB.prepare(`SELECT ${scoreField} FROM users WHERE id = ?`).bind(post.user_id).first()
+    const authorScore = author?.[scoreField] || 0
+    const newAuthorScore = authorScore + 5
+    await DB.prepare(`UPDATE users SET ${scoreField} = ? WHERE id = ?`).bind(newAuthorScore, post.user_id).run()
+  }
+  
+  return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, updated_scores: updatedScores }, 201)
 })
 
 // Update comment
@@ -987,12 +1029,14 @@ app.delete('/api/comments/:id', async (c) => {
   // 댓글 정보 조회 (사용자 ID와 포스트 ID 확인)
   const comment = await DB.prepare('SELECT user_id, post_id FROM comments WHERE id = ?').bind(commentId).first()
   
-  // Get post author
+  // Get post author and background color
   let postAuthorId = null
+  let postBackgroundColor = null
   if (comment) {
-    const post = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(comment.post_id).first()
+    const post = await DB.prepare('SELECT user_id, background_color FROM posts WHERE id = ?').bind(comment.post_id).first()
     if (post) {
       postAuthorId = post.user_id
+      postBackgroundColor = post.background_color
     }
   }
   
@@ -1002,19 +1046,32 @@ app.delete('/api/comments/:id', async (c) => {
   // Delete comment
   await DB.prepare('DELETE FROM comments WHERE id = ?').bind(commentId).run()
   
-  // 댓글 작성자의 활동 점수 5점 차감
+  // 포스트 타입에 따라 점수 카테고리 결정
+  let scoreField = 'activity_score'
+  if (postBackgroundColor === '#F87171') {
+    // 기도 포스팅 댓글 -> 기도 점수
+    scoreField = 'prayer_score'
+  } else if (postBackgroundColor === '#F5E398') {
+    // 말씀 포스팅 댓글 -> 성경 점수
+    scoreField = 'scripture_score'
+  } else {
+    // 활동 포스팅 댓글 -> 활동 점수
+    scoreField = 'activity_score'
+  }
+  
+  // 댓글 작성자의 해당 카테고리 점수 5점 차감
   if (comment) {
-    const commenter = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(comment.user_id).first()
-    const commenterScore = commenter?.activity_score || 0
+    const commenter = await DB.prepare(`SELECT ${scoreField} FROM users WHERE id = ?`).bind(comment.user_id).first()
+    const commenterScore = commenter?.[scoreField] || 0
     const newCommenterScore = Math.max(0, commenterScore - 5)
-    await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newCommenterScore, comment.user_id).run()
+    await DB.prepare(`UPDATE users SET ${scoreField} = ? WHERE id = ?`).bind(newCommenterScore, comment.user_id).run()
     
-    // 포스트 작성자의 활동 점수 5점 차감 (자기 포스트에 댓글 단 경우 제외)
+    // 포스트 작성자의 해당 카테고리 점수 5점 차감 (자기 포스트에 댓글 단 경우 제외)
     if (postAuthorId && postAuthorId !== comment.user_id) {
-      const author = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(postAuthorId).first()
-      const authorScore = author?.activity_score || 0
+      const author = await DB.prepare(`SELECT ${scoreField} FROM users WHERE id = ?`).bind(postAuthorId).first()
+      const authorScore = author?.[scoreField] || 0
       const newAuthorScore = Math.max(0, authorScore - 5)
-      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newAuthorScore, postAuthorId).run()
+      await DB.prepare(`UPDATE users SET ${scoreField} = ? WHERE id = ?`).bind(newAuthorScore, postAuthorId).run()
     }
   }
   

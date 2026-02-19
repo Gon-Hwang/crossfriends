@@ -2614,6 +2614,21 @@ app.get('/api/friends/:userId', async (c) => {
   }
 })
 
+// Get user's notifications
+app.get('/api/notifications/:userId', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('userId')
+  
+  try {
+    // For now, return empty array as notifications table doesn't exist yet
+    // TODO: Create notifications table and implement proper notification system
+    return c.json({ notifications: [] })
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error)
+    return c.json({ error: 'Failed to fetch notifications', notifications: [] }, 500)
+  }
+})
+
 // Admin: Get all friendships
 app.get('/api/admin/friendships', requireAdmin, async (c) => {
   const { DB } = c.env
@@ -4383,7 +4398,11 @@ app.get('/', (c) => {
                                     <!-- Admin/Moderator badge will be added here dynamically -->
                                 </div>
                                 <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
-                                <button onclick="logout()" class="text-red-600 hover:text-red-700 transition cursor-pointer ml-2" title="로그아웃">
+                                <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-600 hover:text-blue-600 transition cursor-pointer" title="알림">
+                                    <i class="fas fa-bell text-lg"></i>
+                                    <span id="notificationDot" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                                </button>
+                                <button onclick="logout()" class="text-red-600 hover:text-red-700 transition cursor-pointer" title="로그아웃">
                                     <i class="fas fa-sign-out-alt text-lg"></i>
                                 </button>
                             </div>
@@ -4848,11 +4867,23 @@ app.get('/', (c) => {
                     </div>
                 </div>
 
-                <!-- Right Sidebar - Friend List -->
+                <!-- Right Sidebar - Friend List & Notifications -->
                 <div class="lg:col-span-1 hidden lg:block">
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
+                        <!-- Tab Buttons -->
+                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 overflow-hidden">
+                            <div class="flex">
+                                <button id="friendsTabBtn" onclick="showFriendsTab()" class="flex-1 px-4 py-3 bg-green-500 text-white font-semibold transition hover:bg-green-600">
+                                    <i class="fas fa-user-friends mr-2"></i>친구
+                                </button>
+                                <button id="notificationsTabBtn" onclick="showNotificationsTab()" class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 font-semibold transition hover:bg-gray-300">
+                                    <i class="fas fa-bell mr-2"></i>알림
+                                </button>
+                            </div>
+                        </div>
+                        
                         <!-- Friend List Card -->
-                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
+                        <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
                             <!-- Header -->
                             <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
                                 <i class="fas fa-user-friends text-green-600 text-xl mr-2"></i>
@@ -4865,6 +4896,24 @@ app.get('/', (c) => {
                                 <div class="text-center py-8 text-gray-400">
                                     <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
                                     <p class="text-sm">친구가 없습니다</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notifications Card -->
+                        <div id="notificationsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
+                            <!-- Header -->
+                            <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
+                                <i class="fas fa-bell text-blue-600 text-xl mr-2"></i>
+                                <h3 class="text-lg font-bold text-gray-800">알림</h3>
+                            </div>
+                            
+                            <!-- Notifications List Container -->
+                            <div id="sidebarNotificationsList" class="space-y-3">
+                                <!-- Notifications will be loaded here dynamically -->
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-bell text-4xl mb-3 opacity-40"></i>
+                                    <p class="text-sm">알림이 없습니다</p>
                                 </div>
                             </div>
                         </div>

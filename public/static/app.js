@@ -5180,3 +5180,143 @@ function isFriend(userId) {
     return friendsList.some(friend => friend.id === userId);
 }
 
+
+// =====================
+// Notification Functions
+// =====================
+
+let notificationsList = [];
+
+// Toggle notifications in header
+function toggleNotifications() {
+    showNotificationsTab();
+}
+
+// Show friends tab
+function showFriendsTab() {
+    // Update tab buttons
+    const friendsBtn = document.getElementById('friendsTabBtn');
+    const notificationsBtn = document.getElementById('notificationsTabBtn');
+    
+    if (friendsBtn && notificationsBtn) {
+        friendsBtn.classList.remove('bg-gray-200', 'text-gray-700');
+        friendsBtn.classList.add('bg-green-500', 'text-white');
+        
+        notificationsBtn.classList.remove('bg-blue-500', 'text-white');
+        notificationsBtn.classList.add('bg-gray-200', 'text-gray-700');
+    }
+    
+    // Update content visibility
+    const friendsContent = document.getElementById('friendsTabContent');
+    const notificationsContent = document.getElementById('notificationsTabContent');
+    
+    if (friendsContent && notificationsContent) {
+        friendsContent.classList.remove('hidden');
+        notificationsContent.classList.add('hidden');
+    }
+}
+
+// Show notifications tab
+function showNotificationsTab() {
+    // Update tab buttons
+    const friendsBtn = document.getElementById('friendsTabBtn');
+    const notificationsBtn = document.getElementById('notificationsTabBtn');
+    
+    if (friendsBtn && notificationsBtn) {
+        friendsBtn.classList.remove('bg-green-500', 'text-white');
+        friendsBtn.classList.add('bg-gray-200', 'text-gray-700');
+        
+        notificationsBtn.classList.remove('bg-gray-200', 'text-gray-700');
+        notificationsBtn.classList.add('bg-blue-500', 'text-white');
+    }
+    
+    // Update content visibility
+    const friendsContent = document.getElementById('friendsTabContent');
+    const notificationsContent = document.getElementById('notificationsTabContent');
+    
+    if (friendsContent && notificationsContent) {
+        friendsContent.classList.add('hidden');
+        notificationsContent.classList.remove('hidden');
+    }
+    
+    // Load notifications if not loaded yet
+    loadNotifications();
+}
+
+// Load notifications
+async function loadNotifications() {
+    if (!currentUserId) return;
+    
+    try {
+        const response = await axios.get(`/api/notifications/${currentUserId}`);
+        notificationsList = response.data.notifications || [];
+        console.log('Notifications loaded:', notificationsList.length);
+        updateSidebarNotificationsList();
+    } catch (error) {
+        console.error('Failed to load notifications:', error);
+        notificationsList = [];
+        updateSidebarNotificationsList();
+    }
+}
+
+// Update sidebar notifications list UI
+function updateSidebarNotificationsList() {
+    const container = document.getElementById('sidebarNotificationsList');
+    if (!container) return;
+    
+    if (!notificationsList || notificationsList.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+                <i class="fas fa-bell text-4xl mb-3 opacity-40"></i>
+                <p class="text-sm">알림이 없습니다</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = notificationsList.map(notification => `
+        <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition ${notification.is_read ? 'opacity-60' : 'bg-blue-50'}">
+            <div class="flex-shrink-0">
+                <i class="fas fa-${getNotificationIcon(notification.type)} text-blue-600 text-lg"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-800 font-medium">
+                    ${notification.message}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    ${formatNotificationTime(notification.created_at)}
+                </p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Get notification icon based on type
+function getNotificationIcon(type) {
+    const icons = {
+        'friend_request': 'user-plus',
+        'friend_accept': 'user-check',
+        'comment': 'comment',
+        'like': 'heart',
+        'post': 'file-alt',
+        'mention': 'at'
+    };
+    return icons[type] || 'bell';
+}
+
+// Format notification time
+function formatNotificationTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}일 전`;
+    if (hours > 0) return `${hours}시간 전`;
+    if (minutes > 0) return `${minutes}분 전`;
+    return '방금 전';
+}
+

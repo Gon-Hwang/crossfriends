@@ -5123,7 +5123,7 @@ function updateSidebarFriendsList() {
     
     container.innerHTML = friendsList.map(friend => `
         <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition cursor-pointer"
-             onclick="viewUserProfile(${friend.id})">
+             onclick="showUserProfileCover(${friend.id})">
             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center text-white flex-shrink-0">
                 ${friend.avatar_url 
                     ? `<img src="${friend.avatar_url}" alt="${friend.name}" class="w-full h-full object-cover" />`

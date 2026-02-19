@@ -5463,6 +5463,12 @@ app.get('/', (c) => {
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">다른 사람 포스팅 공유</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-bold">5점</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">오늘의 말씀 타이핑</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
                                             <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">100점</span>

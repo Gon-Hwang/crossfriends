@@ -2620,12 +2620,111 @@ app.get('/api/notifications/:userId', async (c) => {
   const userId = c.req.param('userId')
   
   try {
-    // For now, return empty array as notifications table doesn't exist yet
-    // TODO: Create notifications table and implement proper notification system
-    return c.json({ notifications: [] })
+    // Get friend requests (pending friendships)
+    const { results: friendRequests } = await DB.prepare(`
+      SELECT 
+        f.id,
+        f.user_id,
+        f.friend_id,
+        f.created_at,
+        u.name,
+        u.email,
+        u.avatar_url
+      FROM friendships f
+      JOIN users u ON u.id = f.user_id
+      WHERE f.friend_id = ? AND f.status = 'pending'
+      ORDER BY f.created_at DESC
+    `).bind(userId).all()
+    
+    // Convert to notification format
+    const notifications = friendRequests.map((req: any) => ({
+      id: req.id,
+      type: 'friend_request',
+      from_user_id: req.user_id,
+      from_user_name: req.name,
+      from_user_avatar: req.avatar_url,
+      created_at: req.created_at,
+      is_read: false
+    }))
+    
+    return c.json({ notifications })
   } catch (error) {
     console.error('Failed to fetch notifications:', error)
     return c.json({ error: 'Failed to fetch notifications', notifications: [] }, 500)
+  }
+})
+
+// Send friend request
+app.post('/api/friend-request', async (c) => {
+  const { DB } = c.env
+  const { fromUserId, toUserId } = await c.req.json()
+  
+  try {
+    // Check if friendship already exists
+    const { results: existing } = await DB.prepare(`
+      SELECT id, status FROM friendships
+      WHERE (user_id = ? AND friend_id = ?)
+         OR (user_id = ? AND friend_id = ?)
+    `).bind(fromUserId, toUserId, toUserId, fromUserId).all()
+    
+    if (existing && existing.length > 0) {
+      const friendship = existing[0] as any
+      if (friendship.status === 'accepted') {
+        return c.json({ error: '이미 친구입니다' }, 400)
+      } else if (friendship.status === 'pending') {
+        return c.json({ error: '이미 친구 제안을 보냈습니다' }, 400)
+      }
+    }
+    
+    // Create friend request
+    const now = new Date().toISOString()
+    await DB.prepare(`
+      INSERT INTO friendships (user_id, friend_id, status, created_at, updated_at)
+      VALUES (?, ?, 'pending', ?, ?)
+    `).bind(fromUserId, toUserId, now, now).run()
+    
+    return c.json({ success: true, message: '친구 제안을 보냈습니다' })
+  } catch (error) {
+    console.error('Failed to send friend request:', error)
+    return c.json({ error: 'Failed to send friend request' }, 500)
+  }
+})
+
+// Accept friend request
+app.post('/api/friend-request/accept', async (c) => {
+  const { DB } = c.env
+  const { requestId } = await c.req.json()
+  
+  try {
+    const now = new Date().toISOString()
+    await DB.prepare(`
+      UPDATE friendships
+      SET status = 'accepted', updated_at = ?
+      WHERE id = ? AND status = 'pending'
+    `).bind(now, requestId).run()
+    
+    return c.json({ success: true, message: '친구 제안을 승인했습니다' })
+  } catch (error) {
+    console.error('Failed to accept friend request:', error)
+    return c.json({ error: 'Failed to accept friend request' }, 500)
+  }
+})
+
+// Reject friend request
+app.post('/api/friend-request/reject', async (c) => {
+  const { DB } = c.env
+  const { requestId } = await c.req.json()
+  
+  try {
+    await DB.prepare(`
+      DELETE FROM friendships
+      WHERE id = ? AND status = 'pending'
+    `).bind(requestId).run()
+    
+    return c.json({ success: true, message: '친구 제안을 거절했습니다' })
+  } catch (error) {
+    console.error('Failed to reject friend request:', error)
+    return c.json({ error: 'Failed to reject friend request' }, 500)
   }
 })
 

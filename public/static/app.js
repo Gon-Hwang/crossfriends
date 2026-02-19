@@ -2411,6 +2411,9 @@ async function handleSignup() {
         // Load friends list
         await loadFriendsList();
         
+        // Load notifications
+        await loadNotifications();
+        
         updateAuthUI();
         loadPosts();
     } catch (error) {
@@ -2467,6 +2470,9 @@ async function handleLogin() {
             
             // Load friends list
             await loadFriendsList();
+            
+            // Load notifications
+            await loadNotifications();
             
             updateAuthUI();
             hideLoginModal();
@@ -4159,6 +4165,9 @@ async function autoLogin() {
                 // Load friends list
                 await loadFriendsList();
                 
+                // Load notifications
+                await loadNotifications();
+                
                 loadPosts();
                 console.log('자동 로그인 성공:', currentUser.name, '(역할:', currentUser.role + ')');
             }
@@ -4230,9 +4239,25 @@ async function showUserProfileModal(userId) {
         
         // Fetch friend count
         let friendCount = 0;
+        let isFriend = false;
+        let hasPendingRequest = false;
         try {
             const friendsResponse = await axios.get(`/api/friends/${userId}`);
             friendCount = friendsResponse.data.friends?.length || 0;
+            
+            // Check if current user is friend with this user
+            if (currentUserId && currentUserId !== userId) {
+                const myFriendsResponse = await axios.get(`/api/friends/${currentUserId}`);
+                const myFriends = myFriendsResponse.data.friends || [];
+                isFriend = myFriends.some(f => f.id === userId);
+                
+                // Check for pending request
+                const notificationsResponse = await axios.get(`/api/notifications/${userId}`);
+                const notifications = notificationsResponse.data.notifications || [];
+                hasPendingRequest = notifications.some(n => 
+                    n.type === 'friend_request' && n.from_user_id === currentUserId
+                );
+            }
         } catch (e) {
             console.error('Failed to fetch friend count:', e);
         }
@@ -4300,6 +4325,31 @@ async function showUserProfileModal(userId) {
                                 <i class="fas fa-list mr-2"></i>포스팅 보기
                             </button>
                         </div>
+                        
+                        <!-- Friend Request Button -->
+                        ${!isOwnProfile && currentUserId ? `
+                        <div class="mt-3">
+                            ${isFriend ? `
+                                <button 
+                                    disabled
+                                    class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold">
+                                    <i class="fas fa-user-check mr-2"></i>이미 친구입니다
+                                </button>
+                            ` : hasPendingRequest ? `
+                                <button 
+                                    disabled
+                                    class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold">
+                                    <i class="fas fa-clock mr-2"></i>친구 제안 대기 중
+                                </button>
+                            ` : `
+                                <button 
+                                    onclick="sendFriendRequest(${user.id}, '${user.name}')"
+                                    class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-md font-semibold">
+                                    <i class="fas fa-user-plus mr-2"></i>친구 제안 전송
+                                </button>
+                            `}
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
                 
@@ -5334,24 +5384,66 @@ function updateSidebarNotificationsList() {
                 <p class="text-sm">알림이 없습니다</p>
             </div>
         `;
+        // Hide red dot when no notifications
+        updateNotificationBadge();
         return;
     }
     
-    container.innerHTML = notificationsList.map(notification => `
-        <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition ${notification.is_read ? 'opacity-60' : 'bg-blue-50'}">
-            <div class="flex-shrink-0">
-                <i class="fas fa-${getNotificationIcon(notification.type)} text-blue-600 text-lg"></i>
+    container.innerHTML = notificationsList.map(notification => {
+        if (notification.type === 'friend_request') {
+            return `
+                <div class="flex items-start space-x-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
+                            ${notification.from_user_avatar 
+                                ? `<img src="${notification.from_user_avatar}" alt="${notification.from_user_name}" class="w-full h-full object-cover">` 
+                                : `<i class="fas fa-user text-gray-600"></i>`
+                            }
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-800 font-medium mb-1">
+                            <span class="font-bold">${notification.from_user_name}</span>님이 친구 제안을 보냈습니다
+                        </p>
+                        <p class="text-xs text-gray-500 mb-2">
+                            ${formatNotificationTime(notification.created_at)}
+                        </p>
+                        <div class="flex space-x-2">
+                            <button 
+                                onclick="acceptFriendRequest(${notification.id}, '${notification.from_user_name}')"
+                                class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-semibold">
+                                수락
+                            </button>
+                            <button 
+                                onclick="rejectFriendRequest(${notification.id})"
+                                class="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition font-semibold">
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition ${notification.is_read ? 'opacity-60' : 'bg-blue-50'}">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-${getNotificationIcon(notification.type)} text-blue-600 text-lg"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-800 font-medium">
+                        ${notification.message}
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        ${formatNotificationTime(notification.created_at)}
+                    </p>
+                </div>
             </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-sm text-gray-800 font-medium">
-                    ${notification.message}
-                </p>
-                <p class="text-xs text-gray-500 mt-1">
-                    ${formatNotificationTime(notification.created_at)}
-                </p>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
+    
+    // Show/hide red dot based on unread notifications
+    updateNotificationBadge();
 }
 
 // Get notification icon based on type
@@ -5381,5 +5473,81 @@ function formatNotificationTime(dateString) {
     if (hours > 0) return `${hours}시간 전`;
     if (minutes > 0) return `${minutes}분 전`;
     return '방금 전';
+}
+
+// Update notification badge (red dot)
+function updateNotificationBadge() {
+    const badge = document.getElementById('notificationDot');
+    if (!badge) return;
+    
+    const hasUnread = notificationsList && notificationsList.length > 0;
+    if (hasUnread) {
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+// Send friend request
+async function sendFriendRequest(toUserId, toUserName) {
+    if (!currentUserId) {
+        showToast('로그인이 필요합니다', 'error');
+        return;
+    }
+    
+    if (!confirm(`${toUserName}님에게 친구 제안을 보내시겠습니까?`)) {
+        return;
+    }
+    
+    try {
+        const response = await axios.post('/api/friend-request', {
+            fromUserId: currentUserId,
+            toUserId: toUserId
+        });
+        
+        showToast(response.data.message, 'success');
+        
+        // Refresh profile modal to update button state
+        await showUserProfileModal(toUserId);
+    } catch (error) {
+        console.error('Failed to send friend request:', error);
+        const message = error.response?.data?.error || '친구 제안 전송에 실패했습니다';
+        showToast(message, 'error');
+    }
+}
+
+// Accept friend request
+async function acceptFriendRequest(requestId, fromUserName) {
+    try {
+        const response = await axios.post('/api/friend-request/accept', {
+            requestId: requestId
+        });
+        
+        showToast(response.data.message, 'success');
+        
+        // Reload notifications and friends list
+        await loadNotifications();
+        await loadFriendsList();
+    } catch (error) {
+        console.error('Failed to accept friend request:', error);
+        showToast('친구 제안 승인에 실패했습니다', 'error');
+    }
+}
+
+// Reject friend request
+async function rejectFriendRequest(requestId) {
+    try {
+        const response = await axios.post('/api/friend-request/reject', {
+            requestId: requestId
+        });
+        
+        showToast(response.data.message, 'success');
+        
+        // Reload notifications
+        await loadNotifications();
+    } catch (error) {
+        console.error('Failed to reject friend request:', error);
+        showToast('친구 제안 거절에 실패했습니다', 'error');
+    }
 }
 

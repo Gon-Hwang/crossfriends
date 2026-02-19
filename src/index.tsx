@@ -1760,6 +1760,7 @@ app.get('/api/admin/stats', requireAdmin, async (c) => {
   const postCount = await DB.prepare('SELECT COUNT(*) as count FROM posts').first()
   const commentCount = await DB.prepare('SELECT COUNT(*) as count FROM comments').first()
   const prayerCount = await DB.prepare('SELECT COUNT(*) as count FROM prayer_requests').first()
+  const friendshipCount = await DB.prepare('SELECT COUNT(*) as count FROM friendships').first()
   
   // Post type counts by background color
   const prayerPostCount = await DB.prepare("SELECT COUNT(*) as count FROM posts WHERE background_color = '#F87171'").first()
@@ -1775,6 +1776,7 @@ app.get('/api/admin/stats', requireAdmin, async (c) => {
     posts: postCount?.count || 0,
     comments: commentCount?.count || 0,
     prayers: prayerCount?.count || 0,
+    friendships: friendshipCount?.count || 0,
     postTypes: {
       prayer: prayerPostCount?.count || 0,      // 중보 기도
       verse: versePostCount?.count || 0,        // 말씀
@@ -2437,6 +2439,152 @@ app.delete('/api/admin/delete-fake-posts', requireAdmin, async (c) => {
   } catch (error) {
     console.error('Error deleting fake posts:', error)
     return c.json({ success: false, error: 'Failed to delete fake posts' }, 500)
+  }
+})
+
+// =====================
+// Friendship Management APIs
+// =====================
+
+// Admin: Get all friendships
+app.get('/api/admin/friendships', requireAdmin, async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const friendships = await DB.prepare(`
+      SELECT 
+        f.id,
+        f.user_id,
+        f.friend_id,
+        f.status,
+        f.created_at,
+        u1.name as user_name,
+        u1.email as user_email,
+        u1.church as user_church,
+        u2.name as friend_name,
+        u2.email as friend_email,
+        u2.church as friend_church
+      FROM friendships f
+      JOIN users u1 ON f.user_id = u1.id
+      JOIN users u2 ON f.friend_id = u2.id
+      ORDER BY f.created_at DESC
+    `).all()
+    
+    return c.json({
+      success: true,
+      friendships: friendships.results || []
+    })
+  } catch (error) {
+    console.error('Error loading friendships:', error)
+    return c.json({ success: false, error: 'Failed to load friendships' }, 500)
+  }
+})
+
+// Admin: Create random friendships with realistic distribution
+app.post('/api/admin/create-fake-friendships', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const { count = 20 } = await c.req.json()
+  
+  try {
+    // Get all users
+    const users = await DB.prepare('SELECT id FROM users').all()
+    
+    if (!users.results || users.results.length < 2) {
+      return c.json({ 
+        success: false, 
+        error: '최소 2명 이상의 사용자가 필요합니다.' 
+      }, 400)
+    }
+    
+    const userIds = users.results.map((u: any) => u.id)
+    let created = 0
+    const maxAttempts = count * 3 // Prevent infinite loop
+    let attempts = 0
+    
+    while (created < count && attempts < maxAttempts) {
+      attempts++
+      
+      // Pick two random users
+      const userId = userIds[Math.floor(Math.random() * userIds.length)]
+      const friendId = userIds[Math.floor(Math.random() * userIds.length)]
+      
+      // Skip if same user
+      if (userId === friendId) continue
+      
+      // Realistic status distribution
+      // 80% accepted, 10% pending, 10% rejected
+      const rand = Math.random()
+      let status = 'accepted'
+      if (rand > 0.9) status = 'pending'
+      else if (rand > 0.8) status = 'rejected'
+      
+      try {
+        // Try to insert (will fail if duplicate due to UNIQUE constraint)
+        await DB.prepare(`
+          INSERT INTO friendships (user_id, friend_id, status)
+          VALUES (?, ?, ?)
+        `).bind(userId, friendId, status).run()
+        
+        created++
+      } catch (err) {
+        // Duplicate or other error, just continue
+        continue
+      }
+    }
+    
+    return c.json({
+      success: true,
+      count: created,
+      message: `${created}개의 친구 관계가 생성되었습니다.`
+    })
+  } catch (error) {
+    console.error('Error creating friendships:', error)
+    return c.json({ 
+      success: false, 
+      error: '친구 관계 생성에 실패했습니다: ' + (error as Error).message 
+    }, 500)
+  }
+})
+
+// Admin: Delete individual friendship
+app.delete('/api/admin/friendships/:id', requireAdmin, async (c) => {
+  const { DB } = c.env
+  const id = c.req.param('id')
+  
+  try {
+    await DB.prepare('DELETE FROM friendships WHERE id = ?').bind(id).run()
+    
+    return c.json({
+      success: true,
+      message: '친구 관계가 삭제되었습니다.'
+    })
+  } catch (error) {
+    console.error('Error deleting friendship:', error)
+    return c.json({ 
+      success: false, 
+      error: '친구 관계 삭제에 실패했습니다.' 
+    }, 500)
+  }
+})
+
+// Admin: Delete all friendships
+app.delete('/api/admin/friendships', requireAdmin, async (c) => {
+  const { DB } = c.env
+  
+  try {
+    const result = await DB.prepare('DELETE FROM friendships').run()
+    
+    return c.json({
+      success: true,
+      deleted_count: result.meta.changes || 0,
+      message: `${result.meta.changes || 0}개의 친구 관계가 삭제되었습니다.`
+    })
+  } catch (error) {
+    console.error('Error deleting all friendships:', error)
+    return c.json({ 
+      success: false, 
+      error: '친구 관계 삭제에 실패했습니다.' 
+    }, 500)
   }
 })
 

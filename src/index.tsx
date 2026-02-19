@@ -4600,6 +4600,12 @@ app.get('/', (c) => {
                                         </span>
                                     </div>
                                     <div class="flex items-center space-x-2">
+                                        <i class="fas fa-user-friends text-pink-600"></i>
+                                        <span class="text-sm text-gray-700">
+                                            <span id="profileCoverFriendCount" class="font-bold text-pink-600">0</span> 친구
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
                                         <i class="fas fa-church text-purple-600"></i>
                                         <span id="profileCoverChurch" class="text-sm text-gray-700">교회 정보</span>
                                     </div>

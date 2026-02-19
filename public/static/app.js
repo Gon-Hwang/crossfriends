@@ -4345,20 +4345,6 @@ async function showUserProfileModal(userId) {
                     </div>
                     ` : ''}
                     
-                    <!-- Friend Count Section -->
-                    <div class="bg-pink-50 border-l-4 border-pink-600 p-4 rounded">
-                        <h4 class="font-semibold text-pink-800 mb-3">
-                            <i class="fas fa-user-friends mr-2"></i>친구 정보
-                        </h4>
-                        <div class="text-center bg-white p-4 rounded-lg border-2 border-pink-200">
-                            <div class="flex flex-col items-center">
-                                <i class="fas fa-users text-pink-600 text-3xl mb-2"></i>
-                                <span class="text-sm text-gray-600 mb-1">친구 수</span>
-                                <span class="text-3xl font-bold text-pink-600">${friendCount}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
                     ${showBasicInfo ? `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <h4 class="font-semibold text-blue-800 mb-3">
@@ -4902,6 +4888,15 @@ async function showUserProfileCover(userId) {
         const postsResponse = await axios.get('/api/posts');
         const userPostCount = postsResponse.data.posts.filter(p => p.user_id === userId).length;
         
+        // Get friend count
+        let friendCount = 0;
+        try {
+            const friendsResponse = await axios.get(`/api/friends/${userId}`);
+            friendCount = friendsResponse.data.friends?.length || 0;
+        } catch (e) {
+            console.error('Failed to fetch friend count:', e);
+        }
+        
         // Update cover card
         const coverCard = document.getElementById('userProfileCover');
         const newPostCard = document.getElementById('newPostCard');
@@ -4960,6 +4955,7 @@ async function showUserProfileCover(userId) {
         
         // Update stats
         document.getElementById('profileCoverPostCount').textContent = userPostCount;
+        document.getElementById('profileCoverFriendCount').textContent = friendCount;
         document.getElementById('profileCoverChurch').textContent = user.church || '교회 정보 없음';
         
         // 교회 직분 정보 추가

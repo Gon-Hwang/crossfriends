@@ -4491,26 +4491,26 @@ app.get('/', (c) => {
                         </div>
                     
                         <!-- Reward1: Today's Sermon Section -->
-                        <div id="sermonRewardSection" class="bg-white rounded-xl shadow-lg border-2 border-purple-300 p-4 transition-all duration-300">
+                        <div id="sermonRewardSection" class="bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300">
                             <!-- Locked State (< 500 points) -->
                             <div id="sermonLocked">
                                 <div class="flex items-center justify-between mb-3">
-                                    <h3 class="text-base font-bold text-purple-800">
-                                        <i class="fas fa-video text-purple-600 mr-2"></i>오늘의 설교 말씀
+                                    <h3 class="text-base font-bold text-blue-800">
+                                        <i class="fas fa-video text-blue-600 mr-2"></i>오늘의 설교 말씀
                                     </h3>
-                                    <span class="text-xs font-bold text-purple-800 whitespace-nowrap">
+                                    <span class="text-xs font-bold text-blue-800 whitespace-nowrap">
                                         🎁 리워드1
                                     </span>
                                 </div>
                                 
                                 <!-- Current Score Display -->
-                                <div class="bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg p-3 mb-3">
+                                <div class="bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg p-3 mb-3">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-sm font-semibold text-gray-700">현재 종합점수</span>
-                                        <span id="rewardTotalScore" class="text-xl font-bold text-purple-600">0</span>
+                                        <span id="rewardTotalScore" class="text-xl font-bold text-blue-600">0</span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div id="rewardProgressBar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                        <div id="rewardProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
                                     </div>
                                 </div>
                                 

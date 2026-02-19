@@ -4129,10 +4129,10 @@ app.get('/', (c) => {
                                 </div>
                                 
                                 <!-- Login Required Overlay for Typing -->
-                                <div id="typingLoginOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-white bg-opacity-95 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                                <div id="typingLoginOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-white bg-opacity-95 backdrop-blur-sm rounded-lg flex items-center justify-center z-10" style="padding-left: 20px; padding-right: 20px;">
                                     <button 
                                         disabled
-                                        class="w-11/12 py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold text-base cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
+                                        class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold text-base cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
                                         <i class="fas fa-lock text-lg"></i>
                                         <span>로그인 후 이용 가능</span>
                                     </button>

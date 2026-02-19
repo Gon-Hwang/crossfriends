@@ -1181,12 +1181,24 @@ window.hideViewProfileModal = function() {
 }
 
 // Edit Profile Modal functions
-window.showEditProfileModal = async function() {
+window.showEditProfileModal = async function(targetUserId) {
     if (!currentUser) return;
+    
+    // Use provided targetUserId, or fallback to currentUserId
+    const editUserId = targetUserId || currentUserId;
+    
+    // Check permission: must be own profile or admin
+    const isOwnProfile = editUserId === currentUserId;
+    const isAdmin = currentUser.role === 'admin';
+    
+    if (!isOwnProfile && !isAdmin) {
+        alert('프로필 수정 권한이 없습니다.');
+        return;
+    }
     
     try {
         // Fetch latest user data to get faith_answers and privacy_settings
-        const response = await axios.get('/api/users/' + currentUserId);
+        const response = await axios.get('/api/users/' + editUserId);
         const user = response.data.user;
         
         // Parse faith answers if exists
@@ -1222,6 +1234,9 @@ window.showEditProfileModal = async function() {
         
         const content = `
             <form id="editProfileForm" onsubmit="handleEditProfileSubmit(event)" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Hidden field to store the user ID being edited -->
+                <input type="hidden" id="editingUserId" value="${user.id}">
+                
                 <!-- Profile Section -->
                 <div class="md:col-span-1">
                     <div class="bg-gray-50 rounded-lg p-6 text-center">
@@ -1979,6 +1994,9 @@ function cancelEditProfile() {
 async function handleEditProfileSubmit(event) {
     event.preventDefault();
     
+    // Get the user ID being edited (from hidden field)
+    const editingUserId = parseInt(document.getElementById('editingUserId').value);
+    
     const name = document.getElementById('editNameInline').value;
     const bio = document.getElementById('editBioInline').value;
     const gender = document.getElementById('editGenderInline').value;
@@ -2086,7 +2104,7 @@ async function handleEditProfileSubmit(event) {
 
     try {
         // Update user info including bio, faith_answers, school info, and privacy_settings
-        await axios.put('/api/users/' + currentUserId, {
+        await axios.put('/api/users/' + editingUserId, {
             name,
             bio,
             gender,
@@ -2119,7 +2137,7 @@ async function handleEditProfileSubmit(event) {
             formData.append('avatar', avatarFile);
             
             try {
-                await axios.post('/api/users/' + currentUserId + '/avatar', formData, {
+                await axios.post('/api/users/' + editingUserId + '/avatar', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } catch (uploadError) {
@@ -2133,7 +2151,7 @@ async function handleEditProfileSubmit(event) {
             formData.append('cover', coverFile);
             
             try {
-                await axios.post('/api/users/' + currentUserId + '/cover', formData, {
+                await axios.post('/api/users/' + editingUserId + '/cover', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } catch (uploadError) {
@@ -2142,14 +2160,18 @@ async function handleEditProfileSubmit(event) {
         }
 
         // Refresh user data
-        const userResponse = await axios.get('/api/users/' + currentUserId);
-        currentUser = userResponse.data.user;
-        updateAuthUI();
+        const userResponse = await axios.get('/api/users/' + editingUserId);
+        
+        // Update currentUser if editing own profile
+        if (editingUserId === currentUserId) {
+            currentUser = userResponse.data.user;
+            updateAuthUI();
+        }
         
         showToast('프로필이 수정되었습니다! 👍', 'success');
         
         // Go back to profile view
-        showUserProfileModal(currentUserId);
+        showUserProfileModal(editingUserId);
         
         // Reload posts to update user info in posts
         loadPosts();
@@ -2259,7 +2281,7 @@ async function handleEditProfile() {
             formData.append('avatar', avatarFile);
             
             try {
-                await axios.post('/api/users/' + currentUserId + '/avatar', formData, {
+                await axios.post('/api/users/' + editingUserId + '/avatar', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } catch (uploadError) {
@@ -2273,7 +2295,7 @@ async function handleEditProfile() {
             formData.append('cover', coverFile);
             
             try {
-                await axios.post('/api/users/' + currentUserId + '/cover', formData, {
+                await axios.post('/api/users/' + editingUserId + '/cover', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } catch (uploadError) {
@@ -4694,18 +4716,19 @@ async function showUserProfileModal(userId) {
                 // Reset h2 content to default "프로필"
                 h2.innerHTML = '<i class="fas fa-user text-blue-600 mr-2"></i>프로필';
                 
-                // Add edit button inside h2 if viewing own profile
-                if (isOwnProfile) {
-                    console.log('수정 버튼 추가 중...');
+                // Add edit button inside h2 if viewing own profile OR admin viewing any profile
+                const canEditProfile = isOwnProfile || (currentUser?.role === 'admin');
+                if (canEditProfile) {
+                    console.log('수정 버튼 추가 중... (본인 프로필 또는 관리자)');
                     const editBtn = document.createElement('button');
-                    editBtn.onclick = function() { showEditProfileModal(); };
+                    editBtn.onclick = function() { showEditProfileModal(${user.id}); };
                     editBtn.className = 'text-blue-600 hover:text-blue-700 transition ml-3 relative -top-0.5';
-                    editBtn.title = '프로필 수정';
+                    editBtn.title = isOwnProfile ? '프로필 수정' : '프로필 수정 (관리자)';
                     editBtn.innerHTML = '<i class="fas fa-edit text-lg"></i>';
                     h2.appendChild(editBtn);
                     console.log('수정 버튼 추가 완료!');
                 } else {
-                    console.log('본인 프로필이 아니므로 수정 버튼 미표시');
+                    console.log('본인 프로필이 아니고 관리자도 아니므로 수정 버튼 미표시');
                 }
             }
         }

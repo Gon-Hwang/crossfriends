@@ -2634,7 +2634,7 @@ app.get('/admin', (c) => {
                         <i class="fas fa-shield-alt mr-2"></i>관리자 패널
                     </h1>
                     <a href="/" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-                        <i class="fas fa-home mr-2"></i>홈으로
+                        <i class="fas fa-home"></i>
                     </a>
                 </div>
             </div>

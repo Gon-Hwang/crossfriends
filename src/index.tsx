@@ -1102,8 +1102,25 @@ app.post('/api/posts/:id/like', async (c) => {
     // Unlike - deduct points from both liker and post author
     await DB.prepare('DELETE FROM likes WHERE post_id = ? AND user_id = ?').bind(postId, user_id).run()
     
+    // 기도 포스팅이면 기도 점수 처리 (일반 반응 1점, 원저자 보너스 2점)
+    if (post.background_color === '#F87171') {
+      // Liker loses 1 point
+      const liker = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
+      const likerScore = liker?.prayer_score || 0
+      const newLikerScore = Math.max(0, likerScore - 1)
+      await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newLikerScore, user_id).run()
+      updatedScores.prayer_score = newLikerScore
+      
+      // Post author loses 2 points (only if not liking own post)
+      if (post.user_id !== user_id) {
+        const author = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(post.user_id).first()
+        const authorScore = author?.prayer_score || 0
+        const newAuthorScore = Math.max(0, authorScore - 2)
+        await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+      }
+    }
     // 말씀 포스팅이면 성경 점수 처리
-    if (post.background_color === '#F5E398') {
+    else if (post.background_color === '#F5E398') {
       // Liker loses 1 point
       const liker = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
       const likerScore = liker?.scripture_score || 0
@@ -1145,8 +1162,25 @@ app.post('/api/posts/:id/like', async (c) => {
     // Like - add points to both liker and post author
     await DB.prepare('INSERT INTO likes (post_id, user_id) VALUES (?, ?)').bind(postId, user_id).run()
     
+    // 기도 포스팅이면 기도 점수 처리 (일반 반응 1점, 원저자 보너스 2점)
+    if (post.background_color === '#F87171') {
+      // Liker gains 1 point
+      const liker = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(user_id).first()
+      const likerScore = liker?.prayer_score || 0
+      const newLikerScore = likerScore + 1
+      await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newLikerScore, user_id).run()
+      updatedScores.prayer_score = newLikerScore
+      
+      // Post author gains 2 points (only if not liking own post)
+      if (post.user_id !== user_id) {
+        const author = await DB.prepare('SELECT prayer_score FROM users WHERE id = ?').bind(post.user_id).first()
+        const authorScore = author?.prayer_score || 0
+        const newAuthorScore = authorScore + 2
+        await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+      }
+    }
     // 말씀 포스팅이면 성경 점수 처리
-    if (post.background_color === '#F5E398') {
+    else if (post.background_color === '#F5E398') {
       // Liker gains 1 point
       const liker = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(user_id).first()
       const likerScore = liker?.scripture_score || 0

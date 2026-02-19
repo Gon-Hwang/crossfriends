@@ -4280,12 +4280,12 @@ async function showUserProfileModal(userId) {
         
         // Parse privacy settings
         const privacySettings = user.privacy_settings ? JSON.parse(user.privacy_settings) : {};
-        const showBasicInfo = isOwnProfile || privacySettings.basic_info !== false;
-        const showChurchInfo = isOwnProfile || privacySettings.church_info !== false;
-        const showFaithAnswers = isOwnProfile || privacySettings.faith_answers !== false;
-        const showEducationInfo = isOwnProfile || privacySettings.education_info !== false;
-        const showCareerInfo = isOwnProfile || privacySettings.career_info !== false;
-        const showScores = isOwnProfile || privacySettings.scores !== false;
+        const showBasicInfo = isOwnProfile || (privacySettings.basic_info === true);
+        const showChurchInfo = isOwnProfile || (privacySettings.church_info === true);
+        const showFaithAnswers = isOwnProfile || (privacySettings.faith_answers === true);
+        const showEducationInfo = isOwnProfile || (privacySettings.education_info === true);
+        const showCareerInfo = isOwnProfile || (privacySettings.career_info === true);
+        const showScores = isOwnProfile || (privacySettings.scores === true);
         
         console.log('프로필 수정 아이콘 표시 체크:', {
             currentUserId,

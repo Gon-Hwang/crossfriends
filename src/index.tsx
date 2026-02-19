@@ -3074,7 +3074,7 @@ app.get('/admin', (c) => {
                             <i class="fas fa-heart mr-1"></i>반응 생성
                         </button>
                         <button onclick="simulateTimePass()" class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition text-sm font-semibold shadow-lg">
-                            <i class="fas fa-magic mr-2"></i>🌱 개연성 시뮬레이션
+                            <i class="fas fa-magic mr-2"></i>🌱 활동 시뮬레이션
                         </button>
                         <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
                             <i class="fas fa-sync-alt mr-1"></i>새로고침

@@ -4344,38 +4344,74 @@ async function showUserProfileModal(userId) {
                     </div>
                     ` : ''}
                     
-                    ${showBasicInfo ? `
+                    ${(() => {
+                        // Check if basic info should be shown
+                        if (!showBasicInfo) return '';
+                        
+                        // Build basic info items
+                        let basicItems = '';
+                        if (user.email) basicItems += `<p><strong>이메일:</strong> ${user.email}</p>`;
+                        if (user.bio) basicItems += `<p><strong>자기소개:</strong> ${user.bio}</p>`;
+                        if (user.gender) basicItems += `<p><strong>성별:</strong> ${user.gender}</p>`;
+                        if (user.marital_status) {
+                            const status = user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : user.marital_status;
+                            basicItems += `<p><strong>결혼:</strong> ${status}</p>`;
+                        }
+                        if (user.phone) basicItems += `<p><strong>전화번호:</strong> ${user.phone}</p>`;
+                        if (user.address) basicItems += `<p><strong>주소:</strong> ${user.address}</p>`;
+                        
+                        // Only show section if there are items
+                        if (!basicItems) return '';
+                        
+                        return `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <h4 class="font-semibold text-blue-800 mb-3">
                             <i class="fas fa-info-circle mr-2"></i>기본 정보
                         </h4>
                         <div class="space-y-2 text-sm text-gray-700">
-                            ${user.email ? `<p><strong>이메일:</strong> ${user.email}</p>` : ''}
-                            ${user.bio ? `<p><strong>자기소개:</strong> ${user.bio}</p>` : ''}
-                            ${user.gender ? `<p><strong>성별:</strong> ${user.gender}</p>` : ''}
-                            ${user.marital_status ? `<p><strong>결혼:</strong> ${user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : user.marital_status}</p>` : ''}
-                            ${user.phone ? `<p><strong>전화번호:</strong> ${user.phone}</p>` : ''}
-                            ${user.address ? `<p><strong>주소:</strong> ${user.address}</p>` : ''}
+                            ${basicItems}
                         </div>
                     </div>
-                    ` : ''}
+                        `;
+                    })()}
                     
-                    ${showChurchInfo ? `
+                    ${(() => {
+                        // Check if church info should be shown
+                        if (!showChurchInfo) return '';
+                        
+                        // Build church info items
+                        let churchItems = '';
+                        if (user.church) churchItems += `<p><strong>소속 교회:</strong> ${user.church}</p>`;
+                        if (user.pastor) churchItems += `<p><strong>담임목사:</strong> ${user.pastor}</p>`;
+                        if (user.denomination) churchItems += `<p><strong>교단:</strong> ${user.denomination}</p>`;
+                        if (user.location) churchItems += `<p><strong>교회 위치:</strong> ${user.location}</p>`;
+                        if (user.position) churchItems += `<p><strong>직분:</strong> ${user.position}</p>`;
+                        
+                        // Only show section if there are items
+                        if (!churchItems) return '';
+                        
+                        return `
                     <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
                         <h4 class="font-semibold text-green-800 mb-3">
                             <i class="fas fa-church mr-2"></i>교회 정보
                         </h4>
                         <div class="space-y-2 text-sm text-gray-700">
-                            ${user.church ? `<p><strong>소속 교회:</strong> ${user.church}</p>` : ''}
-                            ${user.pastor ? `<p><strong>담임목사:</strong> ${user.pastor}</p>` : ''}
-                            ${user.denomination ? `<p><strong>교단:</strong> ${user.denomination}</p>` : ''}
-                            ${user.location ? `<p><strong>교회 위치:</strong> ${user.location}</p>` : ''}
-                            ${user.position ? `<p><strong>직분:</strong> ${user.position}</p>` : ''}
+                            ${churchItems}
                         </div>
                     </div>
-                    ` : ''}
+                        `;
+                    })()}
                     
-                    ${(isOwnProfile || showFaithAnswers) && faithAnswers ? `
+                    ${(() => {
+                        // Check if faith answers should be shown
+                        if (!showFaithAnswers && !isOwnProfile) return '';
+                        if (!faithAnswers) return '';
+                        
+                        // Check if there are any answered questions
+                        const hasAnswers = Object.values(faithAnswers).some(answer => answer && answer !== '-' && answer.trim() !== '');
+                        if (!hasAnswers) return '';
+                        
+                        return `
                     <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
                         <h4 class="font-semibold text-yellow-800 mb-3">
                             <i class="fas fa-cross mr-2"></i>신앙 고백
@@ -4423,7 +4459,8 @@ async function showUserProfileModal(userId) {
                             </div>
                         </div>
                     </div>
-                    ` : ''}
+                        `;
+                    })()}
                     
                     ${(() => {
                         // Check if career info should be shown and has content

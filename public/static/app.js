@@ -2408,6 +2408,9 @@ async function handleSignup() {
         // Load user scores from API
         await loadUserScores();
         
+        // Load friends list
+        await loadFriendsList();
+        
         updateAuthUI();
         loadPosts();
     } catch (error) {
@@ -2461,6 +2464,9 @@ async function handleLogin() {
             
             // Load user scores from API
             await loadUserScores();
+            
+            // Load friends list
+            await loadFriendsList();
             
             updateAuthUI();
             hideLoginModal();
@@ -5101,7 +5107,7 @@ async function loadFriendsList() {
     
     try {
         const response = await axios.get(`/api/friends/${currentUserId}`);
-        friendsList = response.data.friends || [];
+        friendsList = response.data || [];
         console.log('Friends loaded:', friendsList.length);
         updateSidebarFriendsList();
     } catch (error) {

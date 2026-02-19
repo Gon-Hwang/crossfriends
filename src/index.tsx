@@ -4504,7 +4504,7 @@ app.get('/', (c) => {
                                 </div>
                                 
                                 <!-- Current Score Display -->
-                                <div class="bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg p-3 mb-3">
+                                <div class="bg-blue-50 rounded-lg p-3 mb-3">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-sm font-semibold text-gray-700">현재 종합점수</span>
                                         <span id="rewardTotalScore" class="text-xl font-bold text-blue-600">0</span>
@@ -4875,7 +4875,7 @@ app.get('/', (c) => {
                             <!-- Header -->
                             <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
                                 <i class="fas fa-user-friends text-blue-600 text-xl mr-2"></i>
-                                <h3 class="text-lg font-bold text-gray-800">친구 목록</h3>
+                                <h3 class="text-base font-bold text-gray-800">친구 목록</h3>
                             </div>
                             
                             <!-- Friends List Container -->
@@ -4893,7 +4893,7 @@ app.get('/', (c) => {
                             <!-- Header -->
                             <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
                                 <i class="fas fa-bell text-blue-600 text-xl mr-2"></i>
-                                <h3 class="text-lg font-bold text-gray-800">알림</h3>
+                                <h3 class="text-base font-bold text-gray-800">알림</h3>
                             </div>
                             
                             <!-- Notifications List Container -->

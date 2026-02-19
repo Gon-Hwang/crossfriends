@@ -4870,18 +4870,6 @@ app.get('/', (c) => {
                 <!-- Right Sidebar - Friend List & Notifications -->
                 <div class="lg:col-span-1 hidden lg:block">
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
-                        <!-- Tab Buttons -->
-                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 overflow-hidden">
-                            <div class="flex">
-                                <button id="friendsTabBtn" onclick="showFriendsTab()" class="flex-1 px-4 py-3 bg-green-500 text-white font-semibold transition hover:bg-green-600">
-                                    <i class="fas fa-user-friends mr-2"></i>친구
-                                </button>
-                                <button id="notificationsTabBtn" onclick="showNotificationsTab()" class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 font-semibold transition hover:bg-gray-300">
-                                    <i class="fas fa-bell mr-2"></i>알림
-                                </button>
-                            </div>
-                        </div>
-                        
                         <!-- Friend List Card -->
                         <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
                             <!-- Header -->

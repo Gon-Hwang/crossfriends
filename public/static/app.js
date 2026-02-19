@@ -5186,61 +5186,48 @@ function isFriend(userId) {
 // =====================
 
 let notificationsList = [];
+let isNotificationActive = false;
 
 // Toggle notifications in header
 function toggleNotifications() {
-    showNotificationsTab();
-}
-
-// Show friends tab
-function showFriendsTab() {
-    // Update tab buttons
-    const friendsBtn = document.getElementById('friendsTabBtn');
-    const notificationsBtn = document.getElementById('notificationsTabBtn');
-    
-    if (friendsBtn && notificationsBtn) {
-        friendsBtn.classList.remove('bg-gray-200', 'text-gray-700');
-        friendsBtn.classList.add('bg-green-500', 'text-white');
-        
-        notificationsBtn.classList.remove('bg-blue-500', 'text-white');
-        notificationsBtn.classList.add('bg-gray-200', 'text-gray-700');
-    }
-    
-    // Update content visibility
+    const notificationBtn = document.getElementById('notificationBtn');
     const friendsContent = document.getElementById('friendsTabContent');
     const notificationsContent = document.getElementById('notificationsTabContent');
     
-    if (friendsContent && notificationsContent) {
-        friendsContent.classList.remove('hidden');
-        notificationsContent.classList.add('hidden');
-    }
-}
-
-// Show notifications tab
-function showNotificationsTab() {
-    // Update tab buttons
-    const friendsBtn = document.getElementById('friendsTabBtn');
-    const notificationsBtn = document.getElementById('notificationsTabBtn');
-    
-    if (friendsBtn && notificationsBtn) {
-        friendsBtn.classList.remove('bg-green-500', 'text-white');
-        friendsBtn.classList.add('bg-gray-200', 'text-gray-700');
+    if (isNotificationActive) {
+        // Switch to friends
+        isNotificationActive = false;
         
-        notificationsBtn.classList.remove('bg-gray-200', 'text-gray-700');
-        notificationsBtn.classList.add('bg-blue-500', 'text-white');
+        // Update button style
+        if (notificationBtn) {
+            notificationBtn.classList.remove('text-blue-600');
+            notificationBtn.classList.add('text-gray-600');
+        }
+        
+        // Show friends, hide notifications
+        if (friendsContent && notificationsContent) {
+            friendsContent.classList.remove('hidden');
+            notificationsContent.classList.add('hidden');
+        }
+    } else {
+        // Switch to notifications
+        isNotificationActive = true;
+        
+        // Update button style
+        if (notificationBtn) {
+            notificationBtn.classList.remove('text-gray-600');
+            notificationBtn.classList.add('text-blue-600');
+        }
+        
+        // Show notifications, hide friends
+        if (friendsContent && notificationsContent) {
+            friendsContent.classList.add('hidden');
+            notificationsContent.classList.remove('hidden');
+        }
+        
+        // Load notifications
+        loadNotifications();
     }
-    
-    // Update content visibility
-    const friendsContent = document.getElementById('friendsTabContent');
-    const notificationsContent = document.getElementById('notificationsTabContent');
-    
-    if (friendsContent && notificationsContent) {
-        friendsContent.classList.add('hidden');
-        notificationsContent.classList.remove('hidden');
-    }
-    
-    // Load notifications if not loaded yet
-    loadNotifications();
 }
 
 // Load notifications

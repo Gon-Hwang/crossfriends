@@ -168,6 +168,23 @@ app.get('/api/users/:id', async (c) => {
   return c.json({ user: { ...filteredUser, ministry_score: filteredMinistryScore } })
 })
 
+// Get user by email
+app.get('/api/users/email/:email', async (c) => {
+  const { DB } = c.env
+  const email = c.req.param('email')
+  
+  const user = await DB.prepare('SELECT id, email, name, bio, avatar_url, cover_url, church, pastor, denomination, location, position, gender, faith_answers, role, created_at, updated_at, scripture_score, prayer_score, activity_score FROM users WHERE email = ?').bind(email).first()
+  
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404)
+  }
+  
+  // Calculate ministry score
+  const ministryScore = (user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)
+  
+  return c.json({ user: { ...user, ministry_score: ministryScore } })
+})
+
 // View user profile (HTML page)
 app.get('/users/:id', async (c) => {
   const { DB } = c.env

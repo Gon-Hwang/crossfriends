@@ -4049,18 +4049,17 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = 'toast-notification fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-[10000] transform transition-all duration-300 translate-x-0';
     
-    // Set color based on type
+    // Set color to blue for all types (unified design)
+    toast.classList.add('bg-blue-600');
+    
+    // Set icon based on type
     if (type === 'success') {
-        toast.classList.add('bg-green-600');
         toast.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
     } else if (type === 'error') {
-        toast.classList.add('bg-red-600');
         toast.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>${message}`;
     } else if (type === 'warning') {
-        toast.classList.add('bg-yellow-600');
         toast.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i>${message}`;
     } else {
-        toast.classList.add('bg-blue-600');
         toast.innerHTML = `<i class="fas fa-info-circle mr-2"></i>${message}`;
     }
     

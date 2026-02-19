@@ -4333,19 +4333,25 @@ async function showUserProfileModal(userId) {
                                 <button 
                                     disabled
                                     class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold">
-                                    <i class="fas fa-user-check mr-2"></i>이미 친구입니다
+                                    <i class="fas fa-user-check mr-2"></i>친구
                                 </button>
                             ` : hasPendingRequest ? `
                                 <button 
                                     disabled
-                                    class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold">
-                                    <i class="fas fa-clock mr-2"></i>친구 제안 대기 중
+                                    class="w-full px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold leading-tight">
+                                    <div class="flex flex-col items-center">
+                                        <div><i class="fas fa-clock mr-1"></i>친구</div>
+                                        <div class="text-sm">승인 대기중</div>
+                                    </div>
                                 </button>
                             ` : `
                                 <button 
                                     onclick="sendFriendRequest(${user.id}, '${user.name}')"
-                                    class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-md font-semibold">
-                                    <i class="fas fa-user-plus mr-2"></i>친구 제안 전송
+                                    class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-md font-semibold leading-tight">
+                                    <div class="flex flex-col items-center">
+                                        <div><i class="fas fa-user-plus mr-1"></i>친구</div>
+                                        <div class="text-sm">제안 전송</div>
+                                    </div>
                                 </button>
                             `}
                         </div>

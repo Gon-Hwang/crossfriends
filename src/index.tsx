@@ -4419,7 +4419,7 @@ app.get('/', (c) => {
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg border-2 border-blue-300 p-6 transition-all duration-300">
+                        <div class="bg-white rounded-xl shadow-lg border-2 border-blue-300 p-6 transition-all duration-300">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-base font-bold text-blue-800">
                                     <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
@@ -4491,7 +4491,7 @@ app.get('/', (c) => {
                         </div>
                     
                         <!-- Reward1: Today's Sermon Section -->
-                        <div id="sermonRewardSection" class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border-2 border-purple-300 p-4 transition-all duration-300">
+                        <div id="sermonRewardSection" class="bg-white rounded-xl shadow-lg border-2 border-purple-300 p-4 transition-all duration-300">
                             <!-- Locked State (< 500 points) -->
                             <div id="sermonLocked">
                                 <div class="flex items-center justify-between mb-3">
@@ -4874,7 +4874,7 @@ app.get('/', (c) => {
                         <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
                             <!-- Header -->
                             <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
-                                <i class="fas fa-user-friends text-green-600 text-xl mr-2"></i>
+                                <i class="fas fa-user-friends text-blue-600 text-xl mr-2"></i>
                                 <h3 class="text-lg font-bold text-gray-800">친구 목록</h3>
                             </div>
                             

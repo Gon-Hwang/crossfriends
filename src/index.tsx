@@ -4826,7 +4826,7 @@ app.get('/', (c) => {
                                         />
                                         <label 
                                             for="postVideoFile"
-                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition"
+                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
                                             title="동영상 첨부">
                                             <i class="fas fa-video"></i>
                                         </label>

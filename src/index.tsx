@@ -712,6 +712,20 @@ app.post('/api/posts', async (c) => {
     updatedScores.activity_score = newScore
   }
   
+  // 다른 사람의 포스팅을 공유한 경우 활동 점수 5점 추가
+  if (shared_post_id) {
+    const originalPost = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(shared_post_id).first()
+    
+    // 원저자와 공유자가 다른 경우에만 점수 부여
+    if (originalPost && originalPost.user_id !== user_id) {
+      const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(user_id).first()
+      const currentScore = user?.activity_score || 0
+      const newScore = currentScore + 5
+      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, user_id).run()
+      updatedScores.activity_score = newScore
+    }
+  }
+  
   return c.json({ id: result.meta.last_row_id, user_id, content, ...updatedScores }, 201)
 })
 
@@ -848,8 +862,8 @@ app.delete('/api/posts/:id', async (c) => {
   const { DB } = c.env
   const id = c.req.param('id')
   
-  // 삭제 전에 포스트 정보 조회 (기도 포스팅인지 확인)
-  const post = await DB.prepare('SELECT user_id, background_color FROM posts WHERE id = ?').bind(id).first()
+  // 삭제 전에 포스트 정보 조회 (기도 포스팅인지, 공유 포스팅인지 확인)
+  const post = await DB.prepare('SELECT user_id, background_color, shared_post_id FROM posts WHERE id = ?').bind(id).first()
   
   if (post) {
     // 기도 포스팅(중보 기도 - 빨간색 배경)이면 점수 차감
@@ -875,6 +889,19 @@ app.delete('/api/posts/:id', async (c) => {
       const currentScore = user?.activity_score || 0
       const newScore = Math.max(0, currentScore - 10) // 0점 이하로 내려가지 않도록
       await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
+    }
+    
+    // 다른 사람의 포스팅을 공유한 경우 활동 점수 5점 차감
+    if (post.shared_post_id) {
+      const originalPost = await DB.prepare('SELECT user_id FROM posts WHERE id = ?').bind(post.shared_post_id).first()
+      
+      // 원저자와 공유자가 다른 경우에만 점수 차감
+      if (originalPost && originalPost.user_id !== post.user_id) {
+        const user = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(post.user_id).first()
+        const currentScore = user?.activity_score || 0
+        const newScore = Math.max(0, currentScore - 5) // 0점 이하로 내려가지 않도록
+        await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newScore, post.user_id).run()
+      }
     }
   }
   

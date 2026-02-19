@@ -4501,7 +4501,7 @@ app.get('/', (c) => {
                                     <i class="fas fa-bell text-lg"></i>
                                     <span id="notificationDot" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
                                 </button>
-                                <button onclick="logout()" class="text-red-600 hover:text-red-700 transition cursor-pointer" title="로그아웃">
+                                <button onclick="logout()" class="text-gray-600 hover:text-gray-800 transition cursor-pointer" title="로그아웃">
                                     <i class="fas fa-sign-out-alt text-lg"></i>
                                 </button>
                             </div>

@@ -2473,6 +2473,39 @@ app.delete('/api/admin/delete-fake-posts', requireAdmin, async (c) => {
 // Friendship Management APIs
 // =====================
 
+// Get user's friends list
+app.get('/api/friends/:userId', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('userId')
+  
+  try {
+    const { results } = await DB.prepare(`
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.avatar_url,
+        u.church,
+        u.denomination
+      FROM friendships f
+      JOIN users u ON (
+        CASE 
+          WHEN f.user_id = ? THEN u.id = f.friend_id
+          WHEN f.friend_id = ? THEN u.id = f.user_id
+        END
+      )
+      WHERE (f.user_id = ? OR f.friend_id = ?)
+        AND f.status = 'accepted'
+      ORDER BY u.name ASC
+    `).bind(userId, userId, userId, userId).all()
+    
+    return c.json({ friends: results })
+  } catch (error) {
+    console.error('Failed to fetch friends:', error)
+    return c.json({ error: 'Failed to fetch friends', friends: [] }, 500)
+  }
+})
+
 // Admin: Get all friendships
 app.get('/api/admin/friendships', requireAdmin, async (c) => {
   const { DB } = c.env
@@ -4254,7 +4287,7 @@ app.get('/', (c) => {
 
         <!-- Main Content -->
         <div class="max-w-7xl mx-auto px-4 py-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <!-- Left Sidebar -->
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
@@ -4698,6 +4731,29 @@ app.get('/', (c) => {
                     <!-- Posts Feed -->
                     <div id="postsFeed" class="space-y-4">
                         <!-- Posts will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Right Sidebar - Friend List -->
+                <div class="lg:col-span-1 hidden lg:block">
+                    <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
+                        <!-- Friend List Card -->
+                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
+                            <!-- Header -->
+                            <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
+                                <i class="fas fa-user-friends text-green-600 text-xl mr-2"></i>
+                                <h3 class="text-lg font-bold text-gray-800">친구 목록</h3>
+                            </div>
+                            
+                            <!-- Friends List Container -->
+                            <div id="sidebarFriendsList" class="space-y-3">
+                                <!-- Friends will be loaded here dynamically -->
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
+                                    <p class="text-sm">친구가 없습니다</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

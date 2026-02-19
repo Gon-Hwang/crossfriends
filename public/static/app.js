@@ -4151,6 +4151,9 @@ async function autoLogin() {
                 // Load user scores from API
                 await loadUserScores();
                 
+                // Load friends list
+                await loadFriendsList();
+                
                 loadPosts();
                 console.log('자동 로그인 성공:', currentUser.name, '(역할:', currentUser.role + ')');
             }
@@ -5080,5 +5083,65 @@ async function uploadCover() {
         console.error('Cover upload failed:', error);
         throw error;
     }
+}
+
+
+// =====================
+// Friend List Functions
+// =====================
+
+// Load friends list
+async function loadFriendsList() {
+    if (!currentUserId) return;
+    
+    try {
+        const response = await axios.get(`/api/friends/${currentUserId}`);
+        friendsList = response.data.friends || [];
+        console.log('Friends loaded:', friendsList.length);
+        updateSidebarFriendsList();
+    } catch (error) {
+        console.error('Failed to load friends:', error);
+        friendsList = [];
+        updateSidebarFriendsList();
+    }
+}
+
+// Update sidebar friend list UI
+function updateSidebarFriendsList() {
+    const container = document.getElementById('sidebarFriendsList');
+    if (!container) return;
+    
+    if (!friendsList || friendsList.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+                <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
+                <p class="text-sm">친구가 없습니다</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = friendsList.map(friend => `
+        <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition cursor-pointer"
+             onclick="viewUserProfile(${friend.id})">
+            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center text-white flex-shrink-0">
+                ${friend.avatar_url 
+                    ? `<img src="${friend.avatar_url}" alt="${friend.name}" class="w-full h-full object-cover" />`
+                    : `<i class="fas fa-user text-gray-500"></i>`
+                }
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="font-bold text-gray-800 text-sm truncate">${friend.name}</div>
+                <div class="text-xs text-gray-500 truncate">
+                    ${friend.church || friend.denomination || '교회 정보 없음'}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Check if user is a friend
+function isFriend(userId) {
+    return friendsList.some(friend => friend.id === userId);
 }
 

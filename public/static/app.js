@@ -4858,6 +4858,11 @@ window.clearUserFilter = function() {
 // User Profile Cover Functions
 // =====================
 
+// Filter posts by user (wrapper function)
+async function filterByUser(userId, userName) {
+    await showUserProfileCover(userId);
+}
+
 async function showUserProfileCover(userId) {
     try {
         // Get user data
@@ -5122,16 +5127,21 @@ function updateSidebarFriendsList() {
     }
     
     container.innerHTML = friendsList.map(friend => `
-        <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition cursor-pointer"
-             onclick="showUserProfileCover(${friend.id})">
-            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center text-white flex-shrink-0">
+        <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition">
+            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition"
+                 onclick="showUserProfileModal(${friend.id})"
+                 title="${friend.name} 프로필 보기">
                 ${friend.avatar_url 
                     ? `<img src="${friend.avatar_url}" alt="${friend.name}" class="w-full h-full object-cover" />`
                     : `<i class="fas fa-user text-gray-500"></i>`
                 }
             </div>
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-gray-800 text-sm truncate">${friend.name}</div>
+                <div class="font-bold text-gray-800 text-sm truncate cursor-pointer hover:text-blue-600 transition"
+                     onclick="filterByUser(${friend.id}, \`${friend.name}\`)"
+                     title="${friend.name} 님의 포스팅만 보기">
+                    ${friend.name}
+                </div>
                 <div class="text-xs text-gray-500 truncate">
                     ${friend.church || friend.denomination || '교회 정보 없음'}
                 </div>

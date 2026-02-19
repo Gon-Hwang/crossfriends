@@ -4127,7 +4127,32 @@ app.get('/', (c) => {
                                     ></textarea>
                                     <div id="typingResult" class="mt-2 text-sm hidden"></div>
                                 </div>
+                                
+                                <!-- Login Required Overlay (Same style as 500 point unlock) -->
+                                <div id="typingLoginOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-white bg-opacity-95 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                                    <button 
+                                        disabled
+                                        class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold text-base cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
+                                        <i class="fas fa-lock text-lg"></i>
+                                        <span>로그인 후 이용 가능</span>
+                                    </button>
+                                </div>
                             </div>
+                            
+                            <!-- Script to show/hide login overlay -->
+                            <script>
+                                (function() {
+                                    const userId = localStorage.getItem('currentUserId');
+                                    const overlay = document.getElementById('typingLoginOverlay');
+                                    
+                                    if (!userId) {
+                                        // Not logged in - show overlay
+                                        if (overlay) {
+                                            overlay.classList.remove('hidden');
+                                        }
+                                    }
+                                })();
+                            </script>
                         </div>
                     
                         <!-- Reward1: Today's Sermon Section -->

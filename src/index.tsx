@@ -5942,6 +5942,39 @@ app.get('/', (c) => {
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/app.js?v=${Date.now()}"></script>
+        <script>
+            // Auto-login on page load
+            (async function() {
+                const storedUserId = localStorage.getItem('currentUserId');
+                const storedEmail = localStorage.getItem('currentUserEmail');
+                
+                if (storedUserId && storedEmail) {
+                    try {
+                        const response = await axios.get(\`/api/users/email/\${storedEmail}\`);
+                        
+                        if (response.data.user) {
+                            currentUserId = response.data.user.id;
+                            currentUser = response.data.user;
+                            
+                            localStorage.setItem('currentUserId', response.data.user.id);
+                            
+                            updateAuthUI();
+                            
+                            await loadUserScores();
+                            await loadFriendsList();
+                            
+                            loadPosts();
+                            console.log('자동 로그인 성공:', currentUser.name);
+                        }
+                    } catch (error) {
+                        console.error('자동 로그인 실패:', error);
+                        localStorage.removeItem('currentUserId');
+                        localStorage.removeItem('currentUserEmail');
+                        localStorage.removeItem('currentUser');
+                    }
+                }
+            })();
+        </script>
     </body>
     </html>
   `)

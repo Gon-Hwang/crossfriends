@@ -4229,6 +4229,15 @@ async function showUserProfileModal(userId) {
         const response = await axios.get(url);
         const user = response.data.user;
         
+        // Fetch friend count
+        let friendCount = 0;
+        try {
+            const friendsResponse = await axios.get(`/api/friends/${userId}`);
+            friendCount = friendsResponse.data.friends?.length || 0;
+        } catch (e) {
+            console.error('Failed to fetch friend count:', e);
+        }
+        
         // Parse faith answers if exists
         let faithAnswers = null;
         if (user.faith_answers) {
@@ -4335,6 +4344,20 @@ async function showUserProfileModal(userId) {
                         </div>
                     </div>
                     ` : ''}
+                    
+                    <!-- Friend Count Section -->
+                    <div class="bg-pink-50 border-l-4 border-pink-600 p-4 rounded">
+                        <h4 class="font-semibold text-pink-800 mb-3">
+                            <i class="fas fa-user-friends mr-2"></i>친구 정보
+                        </h4>
+                        <div class="text-center bg-white p-4 rounded-lg border-2 border-pink-200">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-users text-pink-600 text-3xl mb-2"></i>
+                                <span class="text-sm text-gray-600 mb-1">친구 수</span>
+                                <span class="text-3xl font-bold text-pink-600">${friendCount}</span>
+                            </div>
+                        </div>
+                    </div>
                     
                     ${showBasicInfo ? `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
@@ -5107,7 +5130,7 @@ async function loadFriendsList() {
     
     try {
         const response = await axios.get(`/api/friends/${currentUserId}`);
-        friendsList = response.data || [];
+        friendsList = response.data.friends || [];
         console.log('Friends loaded:', friendsList.length);
         updateSidebarFriendsList();
     } catch (error) {

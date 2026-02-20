@@ -5811,4 +5811,8 @@ window.hideHowToUse = hideHowToUse;
 window.hideLoginModal = hideLoginModal;
 window.hideSignupModal = hideSignupModal;
 window.hideEditProfileModal = hideEditProfileModal;
+window.updateNotificationBadge = updateNotificationBadge;
+window.checkNotificationsInBackground = checkNotificationsInBackground;
+window.startNotificationPolling = startNotificationPolling;
+window.stopNotificationPolling = stopNotificationPolling;
 

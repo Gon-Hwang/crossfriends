@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>알림 배지 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .notification-icon {
+            position: relative;
+            display: inline-block;
+            font-size: 32px;
+            cursor: pointer;
+        }
+        .red-dot {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 12px;
+            height: 12px;
+            background-color: red;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .hidden {
+            display: none;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔔 알림 배지 테스트</h1>
+    
+    <div class="notification-icon" id="notificationBell">
+        🔔
+        <span id="notificationDot" class="red-dot hidden"></span>
+    </div>
+    
+    <div>
+        <h2>테스트 버튼</h2>
+        <button onclick="testLoadNotifications()">1. 알림 로드 (loadNotifications)</button>
+        <button onclick="testCheckBackground()">2. 백그라운드 체크 (checkNotificationsInBackground)</button>
+        <button onclick="testUpdateBadge()">3. 배지 업데이트 (updateNotificationBadge)</button>
+        <button onclick="showRedDot()">4. 빨간점 강제 표시</button>
+        <button onclick="hideRedDot()">5. 빨간점 숨기기</button>
+        <button onclick="loginAsUser()">6. 사용자 1로 로그인</button>
+    </div>
+    
+    <div id="status">
+        <h3>상태</h3>
+        <div id="output"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="/static/app.js"></script>
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            const time = new Date().toLocaleTimeString();
+            output.innerHTML += `<div>[${time}] ${message}</div>`;
+            console.log(message);
+        }
+
+        async function loginAsUser() {
+            try {
+                log('🔐 사용자 1로 로그인 시도...');
+                const response = await axios.post('/api/login', {
+                    email: 'admin@crossfriends.org'
+                });
+                
+                if (response.data && response.data.userId) {
+                    window.currentUserId = response.data.userId;
+                    window.currentUser = response.data.user;
+                    localStorage.setItem('currentUserId', response.data.userId);
+                    localStorage.setItem('currentUserEmail', 'admin@crossfriends.org');
+                    log(`✅ 로그인 성공! User ID: ${response.data.userId}`);
+                } else {
+                    log('❌ 로그인 실패');
+                }
+            } catch (error) {
+                log(`❌ 로그인 오류: ${error.message}`);
+            }
+        }
+
+        async function testLoadNotifications() {
+            try {
+                log('📥 loadNotifications() 호출...');
+                if (typeof window.loadNotifications === 'function') {
+                    await window.loadNotifications();
+                    log('✅ loadNotifications() 완료');
+                } else {
+                    log('❌ loadNotifications() 함수를 찾을 수 없습니다');
+                }
+            } catch (error) {
+                log(`❌ 오류: ${error.message}`);
+            }
+        }
+
+        async function testCheckBackground() {
+            try {
+                log('🔄 checkNotificationsInBackground() 호출...');
+                if (typeof window.checkNotificationsInBackground === 'function') {
+                    await window.checkNotificationsInBackground();
+                    log('✅ checkNotificationsInBackground() 완료');
+                } else {
+                    log('❌ checkNotificationsInBackground() 함수를 찾을 수 없습니다');
+                }
+            } catch (error) {
+                log(`❌ 오류: ${error.message}`);
+            }
+        }
+
+        function testUpdateBadge() {
+            try {
+                log('🔔 updateNotificationBadge() 호출...');
+                if (typeof window.updateNotificationBadge === 'function') {
+                    window.updateNotificationBadge();
+                    log('✅ updateNotificationBadge() 완료');
+                } else {
+                    log('❌ updateNotificationBadge() 함수를 찾을 수 없습니다');
+                }
+            } catch (error) {
+                log(`❌ 오류: ${error.message}`);
+            }
+        }
+
+        function showRedDot() {
+            const dot = document.getElementById('notificationDot');
+            dot.classList.remove('hidden');
+            log('🔴 빨간점 표시됨');
+        }
+
+        function hideRedDot() {
+            const dot = document.getElementById('notificationDot');
+            dot.classList.add('hidden');
+            log('⚪ 빨간점 숨김');
+        }
+
+        // 초기 상태 표시
+        log('📊 페이지 로드 완료');
+        log(`currentUserId: ${window.currentUserId || 'null'}`);
+        log(`notificationsList: ${window.notificationsList ? window.notificationsList.length : 'null'}`);
+    </script>
+</body>
+</html>

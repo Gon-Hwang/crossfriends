@@ -6207,6 +6207,10 @@ app.get('/', (c) => {
                             
                             await loadUserScores();
                             await loadFriendsList();
+                            await loadNotifications();
+                            
+                            // Start notification polling
+                            startNotificationPolling();
                             
                             loadPosts();
                             console.log('자동 로그인 성공:', currentUser.name);

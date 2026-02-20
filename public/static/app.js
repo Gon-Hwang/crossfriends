@@ -2436,6 +2436,9 @@ async function handleSignup() {
         // Load notifications
         await loadNotifications();
         
+        // Start notification polling
+        startNotificationPolling();
+        
         updateAuthUI();
         loadPosts();
     } catch (error) {
@@ -2496,6 +2499,9 @@ async function handleLogin() {
             // Load notifications
             await loadNotifications();
             
+            // Start notification polling
+            startNotificationPolling();
+            
             updateAuthUI();
             hideLoginModal();
             loadPosts();
@@ -2543,6 +2549,9 @@ function logout() {
     // Reset video tracking
     maxWatchedTime = 0;
     lastCheckedTime = 0;
+    
+    // Stop notification polling
+    stopNotificationPolling();
     
     // Reset UI
     updateAuthUI();
@@ -4215,6 +4224,9 @@ async function autoLogin() {
                 // Load notifications
                 await loadNotifications();
                 
+                // Start notification polling
+                startNotificationPolling();
+                
                 loadPosts();
                 console.log('자동 로그인 성공:', currentUser.name, '(역할:', currentUser.role + ')');
             }
@@ -5623,6 +5635,53 @@ function updateNotificationBadge() {
         badge.classList.remove('hidden');
     } else {
         badge.classList.add('hidden');
+    }
+}
+
+// Check for new notifications in background (without marking as read)
+async function checkNotificationsInBackground() {
+    if (!currentUserId) return;
+    
+    try {
+        const response = await axios.get(`/api/notifications/${currentUserId}`);
+        const newNotifications = response.data.notifications || [];
+        
+        // Update local list without marking as read
+        notificationsList = newNotifications;
+        
+        // Update badge to show/hide red dot
+        updateNotificationBadge();
+        
+        console.log('Background notification check:', newNotifications.length, 'notifications');
+    } catch (error) {
+        console.error('Failed to check notifications in background:', error);
+    }
+}
+
+// Start notification polling
+let notificationPollingInterval = null;
+
+function startNotificationPolling() {
+    // Check immediately
+    checkNotificationsInBackground();
+    
+    // Then check every 30 seconds
+    if (notificationPollingInterval) {
+        clearInterval(notificationPollingInterval);
+    }
+    
+    notificationPollingInterval = setInterval(() => {
+        checkNotificationsInBackground();
+    }, 30000); // 30 seconds
+    
+    console.log('Notification polling started (every 30 seconds)');
+}
+
+function stopNotificationPolling() {
+    if (notificationPollingInterval) {
+        clearInterval(notificationPollingInterval);
+        notificationPollingInterval = null;
+        console.log('Notification polling stopped');
     }
 }
 

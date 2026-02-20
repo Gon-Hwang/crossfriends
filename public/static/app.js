@@ -5421,16 +5421,28 @@ async function loadNotifications() {
         updateSidebarNotificationsList();
         
         // Mark all notifications as read
-        if (notificationsList.length > 0) {
+        if (notificationsList.length > 0 && notificationsList.some(n => !n.is_read)) {
             try {
                 await axios.post('/api/notifications/mark-read', {
                     userId: currentUserId
                 });
+                
+                // Update local state: mark all as read
+                notificationsList = notificationsList.map(n => ({
+                    ...n,
+                    is_read: true
+                }));
+                
                 // Update notification badge (hide red dot)
                 updateNotificationBadge();
+                
+                console.log('All notifications marked as read');
             } catch (error) {
                 console.error('Failed to mark notifications as read:', error);
             }
+        } else {
+            // Even if no unread, still update badge
+            updateNotificationBadge();
         }
     } catch (error) {
         console.error('Failed to load notifications:', error);
@@ -5605,7 +5617,8 @@ function updateNotificationBadge() {
     const badge = document.getElementById('notificationDot');
     if (!badge) return;
     
-    const hasUnread = notificationsList && notificationsList.length > 0;
+    // Check if there are any unread notifications
+    const hasUnread = notificationsList && notificationsList.some(n => !n.is_read);
     if (hasUnread) {
         badge.classList.remove('hidden');
     } else {

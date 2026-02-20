@@ -3673,15 +3673,40 @@ async function createComment(postId) {
             content
         });
         
-        // 댓글 작성 시 활동 점수 5점 추가
-        if (response.data.new_activity_score !== undefined) {
-            activityScore = response.data.new_activity_score;
-            updateTypingScoreDisplay();
-            const inputElement = document.getElementById(`comment-input-${postId}`);
-            if (inputElement) {
-                showFloatingScore(inputElement, '+5');
+        // 댓글 작성 시 점수 업데이트 (카테고리별로 다름)
+        if (response.data.updated_scores) {
+            const scores = response.data.updated_scores;
+            
+            // 기도 점수 업데이트
+            if (scores.prayer_score !== undefined) {
+                prayerScore = scores.prayer_score;
+                updateTypingScoreDisplay();
+                const inputElement = document.getElementById(`comment-input-${postId}`);
+                if (inputElement) {
+                    showFloatingScore(inputElement, '+5');
+                }
+                showToast('댓글 작성! 기도 점수 +5점', 'success');
             }
-            showToast('댓글 작성! 활동 점수 +5점', 'success');
+            // 성경 점수 업데이트
+            else if (scores.scripture_score !== undefined) {
+                scriptureScore = scores.scripture_score;
+                updateTypingScoreDisplay();
+                const inputElement = document.getElementById(`comment-input-${postId}`);
+                if (inputElement) {
+                    showFloatingScore(inputElement, '+5');
+                }
+                showToast('댓글 작성! 성경 점수 +5점', 'success');
+            }
+            // 활동 점수 업데이트
+            else if (scores.activity_score !== undefined) {
+                activityScore = scores.activity_score;
+                updateTypingScoreDisplay();
+                const inputElement = document.getElementById(`comment-input-${postId}`);
+                if (inputElement) {
+                    showFloatingScore(inputElement, '+5');
+                }
+                showToast('댓글 작성! 활동 점수 +5점', 'success');
+            }
         }
         
         input.value = '';
@@ -5394,6 +5419,19 @@ async function loadNotifications() {
         notificationsList = response.data.notifications || [];
         console.log('Notifications loaded:', notificationsList.length);
         updateSidebarNotificationsList();
+        
+        // Mark all notifications as read
+        if (notificationsList.length > 0) {
+            try {
+                await axios.post('/api/notifications/mark-read', {
+                    userId: currentUserId
+                });
+                // Update notification badge (hide red dot)
+                updateNotificationBadge();
+            } catch (error) {
+                console.error('Failed to mark notifications as read:', error);
+            }
+        }
     } catch (error) {
         console.error('Failed to load notifications:', error);
         notificationsList = [];

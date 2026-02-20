@@ -2795,6 +2795,25 @@ app.post('/api/friend-request/reject', async (c) => {
   }
 })
 
+// Mark all notifications as read
+app.post('/api/notifications/mark-read', async (c) => {
+  const { DB } = c.env
+  const { userId } = await c.req.json()
+  
+  try {
+    await DB.prepare(`
+      UPDATE notifications
+      SET is_read = 1
+      WHERE user_id = ? AND is_read = 0
+    `).bind(userId).run()
+    
+    return c.json({ success: true, message: '모든 알림을 읽음으로 표시했습니다' })
+  } catch (error) {
+    console.error('Failed to mark notifications as read:', error)
+    return c.json({ error: 'Failed to mark notifications as read' }, 500)
+  }
+})
+
 // Admin: Get all friendships
 app.get('/api/admin/friendships', requireAdmin, async (c) => {
   const { DB } = c.env

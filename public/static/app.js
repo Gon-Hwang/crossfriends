@@ -5452,6 +5452,64 @@ function updateSidebarNotificationsList() {
                     </div>
                 </div>
             `;
+        } else if (notification.type === 'comment') {
+            const postPreview = notification.post_content 
+                ? (notification.post_content.length > 30 
+                    ? notification.post_content.substring(0, 30) + '...' 
+                    : notification.post_content)
+                : '게시물';
+            return `
+                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-green-50 border border-green-200'}">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
+                            ${notification.from_user_avatar 
+                                ? `<img src="${notification.from_user_avatar}" alt="${notification.from_user_name}" class="w-full h-full object-cover">` 
+                                : `<i class="fas fa-user text-gray-600"></i>`
+                            }
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-800 mb-1">
+                            <span class="font-bold">${notification.from_user_name}</span>님이 회원님의 게시물에 댓글을 남겼습니다
+                        </p>
+                        <p class="text-xs text-gray-500 mb-2">
+                            "${postPreview}"
+                        </p>
+                        <p class="text-xs text-gray-400">
+                            ${formatNotificationTime(notification.created_at)}
+                        </p>
+                    </div>
+                </div>
+            `;
+        } else if (notification.type === 'like') {
+            const postPreview = notification.post_content 
+                ? (notification.post_content.length > 30 
+                    ? notification.post_content.substring(0, 30) + '...' 
+                    : notification.post_content)
+                : '게시물';
+            return `
+                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-yellow-50 border border-yellow-200'}">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
+                            ${notification.from_user_avatar 
+                                ? `<img src="${notification.from_user_avatar}" alt="${notification.from_user_name}" class="w-full h-full object-cover">` 
+                                : `<i class="fas fa-user text-gray-600"></i>`
+                            }
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-800 mb-1">
+                            <span class="font-bold">${notification.from_user_name}</span>님이 회원님의 게시물을 좋아합니다
+                        </p>
+                        <p class="text-xs text-gray-500 mb-2">
+                            "${postPreview}"
+                        </p>
+                        <p class="text-xs text-gray-400">
+                            ${formatNotificationTime(notification.created_at)}
+                        </p>
+                    </div>
+                </div>
+            `;
         }
         
         return `
@@ -5461,7 +5519,7 @@ function updateSidebarNotificationsList() {
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-gray-800 font-medium">
-                        ${notification.message}
+                        ${notification.message || '새 알림이 있습니다'}
                     </p>
                     <p class="text-xs text-gray-500 mt-1">
                         ${formatNotificationTime(notification.created_at)}

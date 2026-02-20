@@ -1020,6 +1020,13 @@ app.post('/api/posts/:id/comments', async (c) => {
     const authorScore = author?.[scoreField] || 0
     const newAuthorScore = authorScore + 5
     await DB.prepare(`UPDATE users SET ${scoreField} = ? WHERE id = ?`).bind(newAuthorScore, post.user_id).run()
+    
+    // Create notification for post author
+    const now = new Date().toISOString()
+    await DB.prepare(`
+      INSERT INTO notifications (user_id, from_user_id, type, post_id, comment_id, created_at)
+      VALUES (?, ?, 'comment', ?, ?, ?)
+    `).bind(post.user_id, user_id, postId, result.meta.last_row_id, now).run()
   }
   
   return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, updated_scores: updatedScores }, 201)
@@ -1194,6 +1201,13 @@ app.post('/api/posts/:id/like', async (c) => {
         const authorScore = author?.prayer_score || 0
         const newAuthorScore = authorScore + 2
         await DB.prepare('UPDATE users SET prayer_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+        
+        // Create notification for post author
+        const now = new Date().toISOString()
+        await DB.prepare(`
+          INSERT INTO notifications (user_id, from_user_id, type, post_id, created_at)
+          VALUES (?, ?, 'like', ?, ?)
+        `).bind(post.user_id, user_id, postId, now).run()
       }
     }
     // 말씀 포스팅이면 성경 점수 처리
@@ -1211,6 +1225,13 @@ app.post('/api/posts/:id/like', async (c) => {
         const authorScore = author?.scripture_score || 0
         const newAuthorScore = authorScore + 2
         await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+        
+        // Create notification for post author
+        const now = new Date().toISOString()
+        await DB.prepare(`
+          INSERT INTO notifications (user_id, from_user_id, type, post_id, created_at)
+          VALUES (?, ?, 'like', ?, ?)
+        `).bind(post.user_id, user_id, postId, now).run()
       }
     }
     // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 처리
@@ -1230,6 +1251,13 @@ app.post('/api/posts/:id/like', async (c) => {
           const authorScore = author?.activity_score || 0
           const newAuthorScore = authorScore + 2
           await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind(newAuthorScore, post.user_id).run()
+          
+          // Create notification for post author
+          const now = new Date().toISOString()
+          await DB.prepare(`
+            INSERT INTO notifications (user_id, from_user_id, type, post_id, created_at)
+            VALUES (?, ?, 'like', ?, ?)
+          `).bind(post.user_id, user_id, postId, now).run()
         }
       }
     }
@@ -2620,6 +2648,27 @@ app.get('/api/notifications/:userId', async (c) => {
   const userId = c.req.param('userId')
   
   try {
+    // Get all notifications (comments, likes, friend requests)
+    const { results: dbNotifications } = await DB.prepare(`
+      SELECT 
+        n.id,
+        n.type,
+        n.from_user_id,
+        n.post_id,
+        n.comment_id,
+        n.is_read,
+        n.created_at,
+        u.name as from_user_name,
+        u.avatar_url as from_user_avatar,
+        p.content as post_content
+      FROM notifications n
+      JOIN users u ON u.id = n.from_user_id
+      LEFT JOIN posts p ON p.id = n.post_id
+      WHERE n.user_id = ?
+      ORDER BY n.created_at DESC
+      LIMIT 50
+    `).bind(userId).all()
+    
     // Get friend requests (pending friendships)
     const { results: friendRequests } = await DB.prepare(`
       SELECT 
@@ -2636,8 +2685,8 @@ app.get('/api/notifications/:userId', async (c) => {
       ORDER BY f.created_at DESC
     `).bind(userId).all()
     
-    // Convert to notification format
-    const notifications = friendRequests.map((req: any) => ({
+    // Convert friend requests to notification format
+    const friendRequestNotifications = friendRequests.map((req: any) => ({
       id: req.id,
       type: 'friend_request',
       from_user_id: req.user_id,
@@ -2647,7 +2696,25 @@ app.get('/api/notifications/:userId', async (c) => {
       is_read: false
     }))
     
-    return c.json({ notifications })
+    // Convert database notifications to notification format
+    const notifications = dbNotifications.map((n: any) => ({
+      id: n.id,
+      type: n.type,
+      from_user_id: n.from_user_id,
+      from_user_name: n.from_user_name,
+      from_user_avatar: n.from_user_avatar,
+      post_id: n.post_id,
+      comment_id: n.comment_id,
+      post_content: n.post_content,
+      created_at: n.created_at,
+      is_read: n.is_read === 1
+    }))
+    
+    // Combine all notifications and sort by date
+    const allNotifications = [...notifications, ...friendRequestNotifications]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    
+    return c.json({ notifications: allNotifications })
   } catch (error) {
     console.error('Failed to fetch notifications:', error)
     return c.json({ error: 'Failed to fetch notifications', notifications: [] }, 500)

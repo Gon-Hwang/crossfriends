@@ -4721,7 +4721,7 @@ async function showUserProfileModal(userId) {
                 if (canEditProfile) {
                     console.log('수정 버튼 추가 중... (본인 프로필 또는 관리자)');
                     const editBtn = document.createElement('button');
-                    editBtn.onclick = function() { showEditProfileModal(${user.id}); };
+                    editBtn.onclick = function() { showEditProfileModal(user.id); };
                     editBtn.className = 'text-blue-600 hover:text-blue-700 transition ml-3 relative -top-0.5';
                     editBtn.title = isOwnProfile ? '프로필 수정' : '프로필 수정 (관리자)';
                     editBtn.innerHTML = '<i class="fas fa-edit text-lg"></i>';

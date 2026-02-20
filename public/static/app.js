@@ -5627,24 +5627,44 @@ function formatNotificationTime(dateString) {
 // Update notification badge (red dot)
 function updateNotificationBadge() {
     const badge = document.getElementById('notificationDot');
-    if (!badge) return;
+    console.log('🔔 updateNotificationBadge called');
+    console.log('  - Badge element:', badge ? 'found' : 'NOT FOUND');
+    console.log('  - notificationsList:', notificationsList ? notificationsList.length : 'null');
+    
+    if (!badge) {
+        console.error('❌ notificationDot element not found!');
+        return;
+    }
     
     // Check if there are any unread notifications
     const hasUnread = notificationsList && notificationsList.some(n => !n.is_read);
+    console.log('  - hasUnread:', hasUnread);
+    console.log('  - Unread count:', notificationsList ? notificationsList.filter(n => !n.is_read).length : 0);
+    
     if (hasUnread) {
         badge.classList.remove('hidden');
+        console.log('  ✅ Red dot SHOWN');
     } else {
         badge.classList.add('hidden');
+        console.log('  ❌ Red dot HIDDEN');
     }
 }
 
 // Check for new notifications in background (without marking as read)
 async function checkNotificationsInBackground() {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+        console.log('⏭️ checkNotificationsInBackground: No user logged in');
+        return;
+    }
+    
+    console.log('🔍 checkNotificationsInBackground: Checking for user', currentUserId);
     
     try {
         const response = await axios.get(`/api/notifications/${currentUserId}`);
         const newNotifications = response.data.notifications || [];
+        
+        console.log('📬 Received notifications:', newNotifications.length);
+        console.log('📬 Unread:', newNotifications.filter(n => !n.is_read).length);
         
         // Update local list without marking as read
         notificationsList = newNotifications;
@@ -5652,9 +5672,9 @@ async function checkNotificationsInBackground() {
         // Update badge to show/hide red dot
         updateNotificationBadge();
         
-        console.log('Background notification check:', newNotifications.length, 'notifications');
+        console.log('✅ Background notification check complete');
     } catch (error) {
-        console.error('Failed to check notifications in background:', error);
+        console.error('❌ Failed to check notifications in background:', error);
     }
 }
 

@@ -5580,3 +5580,43 @@ async function rejectFriendRequest(requestId) {
     }
 }
 
+// =====================
+// Expose functions to window object for inline onclick handlers
+// =====================
+window.createPost = createPost;
+window.handleLogin = handleLogin;
+window.handleSignup = handleSignup;
+window.logout = logout;
+window.likePost = likePost;
+window.deletePost = deletePost;
+window.sharePost = sharePost;
+window.editPost = editPost;
+window.showComments = showComments;
+window.sendComment = sendComment;
+window.filterByUser = filterByUser;
+window.clearUserFilter = clearUserFilter;
+window.showUserProfileModal = showUserProfileModal;
+window.hideProfile = hideProfile;
+window.showEditProfileModal = showEditProfileModal;
+window.cancelEditProfile = cancelEditProfile;
+window.handleEditProfileSubmit = handleEditProfileSubmit;
+window.selectBackgroundColor = selectBackgroundColor;
+window.resetBackgroundColor = resetBackgroundColor;
+window.previewPostImage = previewPostImage;
+window.previewPostVideo = previewPostVideo;
+window.removePostImage = removePostImage;
+window.removePostVideo = removePostVideo;
+window.removeSharedPost = removeSharedPost;
+window.loadPosts = loadPosts;
+window.loadFriendsList = loadFriendsList;
+window.loadNotifications = loadNotifications;
+window.toggleNotifications = toggleNotifications;
+window.sendFriendRequest = sendFriendRequest;
+window.acceptFriendRequest = acceptFriendRequest;
+window.rejectFriendRequest = rejectFriendRequest;
+window.showHowToUse = showHowToUse;
+window.hideHowToUse = hideHowToUse;
+window.hideLoginModal = hideLoginModal;
+window.hideSignupModal = hideSignupModal;
+window.hideEditProfileModal = hideEditProfileModal;
+

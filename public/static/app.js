@@ -2433,8 +2433,8 @@ async function handleSignup() {
         // Load friends list
         await loadFriendsList();
         
-        // Load notifications
-        await loadNotifications();
+        // Load notifications (don't mark as read yet)
+        await loadNotifications(false);
         
         // Start notification polling
         startNotificationPolling();
@@ -2496,8 +2496,8 @@ async function handleLogin() {
             // Load friends list
             await loadFriendsList();
             
-            // Load notifications
-            await loadNotifications();
+            // Load notifications (don't mark as read yet)
+            await loadNotifications(false);
             
             // Start notification polling
             startNotificationPolling();
@@ -4221,8 +4221,8 @@ async function autoLogin() {
                 // Load friends list
                 await loadFriendsList();
                 
-                // Load notifications
-                await loadNotifications();
+                // Load notifications (don't mark as read yet)
+                await loadNotifications(false);
                 
                 // Start notification polling
                 startNotificationPolling();
@@ -5400,13 +5400,13 @@ function toggleNotifications() {
             notificationsContent.classList.remove('hidden');
         }
         
-        // Load notifications
-        loadNotifications();
+        // Load notifications and mark as read (user is viewing them)
+        loadNotifications(true);
     }
 }
 
 // Load notifications
-async function loadNotifications() {
+async function loadNotifications(markAsRead = false) {
     if (!currentUserId) return;
     
     try {
@@ -5415,8 +5415,8 @@ async function loadNotifications() {
         console.log('Notifications loaded:', notificationsList.length);
         updateSidebarNotificationsList();
         
-        // Mark all notifications as read
-        if (notificationsList.length > 0 && notificationsList.some(n => !n.is_read)) {
+        // Only mark as read if explicitly requested (when user opens notification panel)
+        if (markAsRead && notificationsList.length > 0 && notificationsList.some(n => !n.is_read)) {
             try {
                 await axios.post('/api/notifications/mark-read', {
                     userId: currentUserId
@@ -5428,17 +5428,14 @@ async function loadNotifications() {
                     is_read: true
                 }));
                 
-                // Update notification badge (hide red dot)
-                updateNotificationBadge();
-                
                 console.log('All notifications marked as read');
             } catch (error) {
                 console.error('Failed to mark notifications as read:', error);
             }
-        } else {
-            // Even if no unread, still update badge
-            updateNotificationBadge();
         }
+        
+        // Always update badge to reflect current state
+        updateNotificationBadge();
     } catch (error) {
         console.error('Failed to load notifications:', error);
         notificationsList = [];
@@ -5725,8 +5722,8 @@ async function acceptFriendRequest(requestId, fromUserName) {
         
         showToast(response.data.message, 'success');
         
-        // Reload notifications and friends list
-        await loadNotifications();
+        // Reload notifications and friends list (don't mark as read)
+        await loadNotifications(false);
         await loadFriendsList();
     } catch (error) {
         console.error('Failed to accept friend request:', error);
@@ -5743,8 +5740,8 @@ async function rejectFriendRequest(requestId) {
         
         showToast(response.data.message, 'success');
         
-        // Reload notifications
-        await loadNotifications();
+        // Reload notifications (don't mark as read)
+        await loadNotifications(false);
     } catch (error) {
         console.error('Failed to reject friend request:', error);
         showToast('친구 제안 거절에 실패했습니다', 'error');

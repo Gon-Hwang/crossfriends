@@ -4641,7 +4641,7 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-1.5 sm:px-4 py-2 sm:py-6">
+        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-6">
                 <!-- Left Sidebar -->
                 <div class="lg:col-span-1">
@@ -4656,7 +4656,7 @@ app.get('/', (c) => {
                                     🎁 기본 리워드
                                 </span>
                             </div>
-                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1 sm:pl-3 py-0.5 sm:py-1.5 mb-2 sm:mb-3">
+                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1 sm:pl-3 py-0.5 sm:py-1.5 mb-3 sm:mb-4">
                                 <p class="font-bold text-blue-600 mb-0.5 sm:mb-1.5 text-sm sm:text-sm" id="verseReference">시편 23:1</p>
                                 <p id="verseText" class="text-gray-800 leading-snug text-sm sm:text-sm" style="transition: opacity 0.5s ease-in-out;">
                                     여호와는 나의 목자시니 내게 부족함이 없으리로다
@@ -4668,7 +4668,7 @@ app.get('/', (c) => {
                                 <button 
                                     id="typingToggleBtn"
                                     onclick="toggleTypingArea()"
-                                    class="w-full mt-2 sm:mt-3 py-3 sm:py-4 px-2 sm:px-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-1.5 text-blue-800 font-semibold text-[10px] sm:text-sm">
+                                    class="w-full mt-3 sm:mt-4 py-3 sm:py-4 px-2 sm:px-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-1.5 text-blue-800 font-semibold text-[10px] sm:text-sm">
                                     <i class="fas fa-keyboard text-blue-600 text-[10px] sm:text-sm"></i>
                                     <span>말씀 타이핑</span>
                                     <i id="typingToggleIcon" class="fas fa-chevron-down text-[8px] sm:text-[10px]"></i>

@@ -5234,33 +5234,33 @@ app.get('/', (c) => {
         </div>
 
         <!-- Signup Modal -->
-        <div id="signupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-            <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 md:p-8 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-4 sm:mb-6 sticky top-0 bg-white z-10 pb-3 sm:pb-4">
-                    <h2 class="text-xl sm:text-2xl font-bold text-gray-800">
-                        <i class="fas fa-user-plus text-blue-600 mr-1 sm:mr-2"></i>회원가입
+        <div id="signupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3">
+            <div class="bg-white rounded-lg shadow-xl p-4 w-full max-w-[92vw] sm:max-w-md max-h-[92vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-3 sticky top-0 bg-white z-10 pb-2">
+                    <h2 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-user-plus text-blue-600 mr-2"></i>회원가입
                     </h2>
                     <button onclick="hideSignupModal()" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
                 
-                <div class="space-y-3 sm:space-y-4">
+                <div class="space-y-2.5">
                     <div>
-                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">이름 <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">이름 <span class="text-red-500">*</span></label>
                         <input 
                             id="signupName"
                             type="text"
                             placeholder="홍길동"
-                            class="w-full p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
                     <div>
-                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">성별 <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">성별 <span class="text-red-500">*</span></label>
                         <select 
                             id="signupGender"
-                            class="w-full p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            class="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
                             <option value="남성">남성</option>
                             <option value="여성">여성</option>
@@ -5268,22 +5268,22 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">이메일 <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">이메일 <span class="text-red-500">*</span></label>
                         <input 
                             id="signupEmail"
                             type="email"
                             placeholder="email@example.com"
                             list="emailHistory"
                             autocomplete="email"
-                            class="w-full p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
                     <div>
-                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">프로필 사진 <span class="text-red-500">*</span></label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">프로필 사진 <span class="text-red-500">*</span></label>
                         <div class="flex items-center space-x-4">
-                            <div id="avatarPreview" class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                                <i class="fas fa-user text-gray-400 text-2xl"></i>
+                            <div id="avatarPreview" class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                <i class="fas fa-user text-gray-400 text-xl"></i>
                             </div>
                             <div class="flex-1">
                                 <input 
@@ -5835,26 +5835,26 @@ app.get('/', (c) => {
 
         <!-- Login Modal -->
         <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-lg shadow-xl p-4 sm:p-6 md:p-8 w-full max-w-md">
-                <div class="flex justify-between items-center mb-4 sm:mb-6">
-                    <h2 class="text-xl sm:text-2xl font-bold text-gray-800">
-                        <i class="fas fa-sign-in-alt text-blue-600 mr-1 sm:mr-2"></i>로그인
+            <div class="bg-white rounded-lg shadow-xl p-5 w-full max-w-[90vw] sm:max-w-sm sm:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg sm:text-xl font-bold text-gray-800">
+                        <i class="fas fa-sign-in-alt text-blue-600 mr-2"></i>로그인
                     </h2>
                     <button onclick="hideLoginModal()" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
                 
-                <div class="space-y-3 sm:space-y-4">
+                <div class="space-y-3">
                     <div>
-                        <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1 sm:mb-2">이메일</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">이메일</label>
                         <input 
                             id="loginEmail"
                             type="email"
                             placeholder="email@example.com"
                             list="emailHistory"
                             autocomplete="email"
-                            class="w-full p-2 sm:p-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                         <datalist id="emailHistory">
                             <!-- Email suggestions will be loaded here -->
@@ -5864,7 +5864,7 @@ app.get('/', (c) => {
                 
                 <button 
                     onclick="handleLogin()"
-                    class="w-full mt-4 sm:mt-6 bg-blue-600 text-white py-2.5 sm:py-3 rounded-lg hover:bg-blue-700 transition font-semibold text-sm sm:text-base">
+                    class="w-full mt-4 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-semibold text-sm">
                     로그인
                 </button>
                 

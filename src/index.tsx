@@ -4586,19 +4586,13 @@ app.get('/', (c) => {
                 background: #9CA3AF;
             }
             
-            /* Mobile posts carousel styles */
+            /* Mobile posts carousel styles - Removed for vertical scroll */
             .hide-scrollbar::-webkit-scrollbar {
                 display: none;
             }
             .hide-scrollbar {
                 -ms-overflow-style: none;
                 scrollbar-width: none;
-            }
-            @media (max-width: 1024px) {
-                #postsFeed > * {
-                    min-width: calc(100vw - 32px);
-                    scroll-snap-align: start;
-                }
             }
         </style>
     </head>
@@ -4666,7 +4660,7 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6 pb-20 sm:pb-12" style="min-height: calc(100vh - 80px);">
+        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6 pb-20 sm:pb-12">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-6">
                 <!-- Left Sidebar -->
                 <div class="lg:col-span-1">
@@ -5106,30 +5100,9 @@ app.get('/', (c) => {
 
                     <!-- Posts Feed -->
                     <div class="relative">
-                        <!-- Mobile: Carousel Navigation -->
-                        <button 
-                            id="prevPostBtn" 
-                            onclick="scrollPosts('prev')"
-                            class="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
-                            style="margin-left: -12px;">
-                            <i class="fas fa-chevron-left text-blue-600 text-lg"></i>
-                        </button>
-                        <button 
-                            id="nextPostBtn" 
-                            onclick="scrollPosts('next')"
-                            class="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
-                            style="margin-right: -12px;">
-                            <i class="fas fa-chevron-right text-blue-600 text-lg"></i>
-                        </button>
-                        
                         <!-- Posts Container -->
-                        <div id="postsFeed" class="space-y-4 lg:space-y-4 overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory lg:snap-none flex lg:flex-col gap-4 lg:gap-0 pb-4 lg:pb-0 scroll-smooth hide-scrollbar">
+                        <div id="postsFeed" class="space-y-4 flex flex-col gap-4 lg:gap-0 pb-4 lg:pb-0">
                             <!-- Posts will be loaded here -->
-                        </div>
-                        
-                        <!-- Carousel Indicators (Mobile only) -->
-                        <div id="postIndicators" class="lg:hidden flex justify-center gap-2 mt-3">
-                            <!-- Indicators will be added by JavaScript -->
                         </div>
                     </div>
                 </div>

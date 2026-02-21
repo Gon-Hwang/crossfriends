@@ -4565,12 +4565,13 @@ app.get('/', (c) => {
     <body class="bg-gray-50">
         <!-- Header -->
         <nav class="bg-white shadow-md sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="max-w-7xl mx-auto px-3 py-2">
                 <div class="flex justify-between items-center">
+                    <!-- Logo - Responsive -->
                     <div class="flex flex-col cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
-                        <h1 class="text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
+                        <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
                             <span>CROSS</span>
-                            <div class="cross-icon mx-3">
+                            <div class="cross-icon mx-1.5 sm:mx-2 md:mx-3 scale-75 sm:scale-90 md:scale-100">
                                 <div class="cross-dot top"></div>
                                 <div class="cross-dot bottom"></div>
                                 <div class="cross-dot left"></div>
@@ -4578,41 +4579,44 @@ app.get('/', (c) => {
                             </div>
                             <span>friends</span>
                         </h1>
-                        <p class="text-xs text-gray-500 mt-1 ml-1" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                        <p class="hidden sm:block text-xs text-gray-500 mt-1 ml-1" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
                             기독교인들을 위한 행복하고 재미있는 소셜 미디어
                         </p>
                     </div>
-                    <div class="flex items-center gap-3" id="authButtons">
-                        <button onclick="showHowToUse()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-                            <i class="fas fa-question-circle mr-1"></i>사용법
+                    
+                    <!-- Auth Buttons - Responsive -->
+                    <div class="flex items-center gap-1 sm:gap-2 md:gap-3" id="authButtons">
+                        <button onclick="showHowToUse()" class="text-gray-800 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base">
+                            <i class="fas fa-question-circle mr-0.5 sm:mr-1"></i><span class="hidden sm:inline">사용법</span>
                         </button>
-                        <button onclick="showLoginModal()" class="text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
-                            로그인
+                        <button onclick="showLoginModal()" class="text-gray-800 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base">
+                            <span class="hidden sm:inline">로그인</span><span class="sm:hidden">로그인</span>
                         </button>
-                        <button onclick="showSignupModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                            회원가입
+                        <button onclick="showSignupModal()" class="bg-blue-600 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-blue-700 transition text-sm sm:text-base">
+                            <span class="hidden sm:inline">회원가입</span><span class="sm:hidden">가입</span>
                         </button>
                     </div>
-                    <div class="flex items-center space-x-4 hidden" id="userMenu">
-                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-3 py-2 rounded-lg hover:bg-red-50 transition" title="관리자 패널">
-                            <i class="fas fa-shield-alt mr-1"></i>
-                            <span class="hidden md:inline">관리자 모드</span>
+                    
+                    <!-- User Menu - Responsive -->
+                    <div class="flex items-center space-x-2 sm:space-x-3 md:space-x-4 hidden" id="userMenu">
+                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg hover:bg-red-50 transition text-sm sm:text-base" title="관리자 패널">
+                            <i class="fas fa-shield-alt mr-0.5 sm:mr-1"></i>
+                            <span class="hidden lg:inline">관리자 모드</span>
                         </button>
                         <div class="relative">
-                            <div class="flex items-center space-x-3 bg-gray-100 px-4 py-2 rounded-lg">
+                            <div class="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 bg-gray-100 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg">
                                 <div class="admin-badge-container">
-                                    <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
+                                    <div id="userAvatarContainer" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs sm:text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
                                         <i class="fas fa-user"></i>
                                     </div>
-                                    <!-- Admin/Moderator badge will be added here dynamically -->
                                 </div>
-                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
+                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition text-xs sm:text-sm md:text-base max-w-[80px] sm:max-w-[120px] md:max-w-none truncate" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
                                 <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-600 hover:text-blue-600 transition cursor-pointer" title="알림">
-                                    <i class="fas fa-bell text-lg"></i>
-                                    <span id="notificationDot" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                                    <i class="fas fa-bell text-base sm:text-lg"></i>
+                                    <span id="notificationDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full border-2 border-white"></span>
                                 </button>
                                 <button onclick="logout()" class="text-gray-600 hover:text-gray-800 transition cursor-pointer" title="로그아웃">
-                                    <i class="fas fa-sign-out-alt text-lg"></i>
+                                    <i class="fas fa-sign-out-alt text-base sm:text-lg"></i>
                                 </button>
                             </div>
                         </div>

@@ -4579,7 +4579,7 @@ app.get('/', (c) => {
                             </div>
                             <span>friends</span>
                         </h1>
-                        <p class="hidden sm:block text-xs text-gray-500 mt-1 ml-1" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                        <p class="text-[9px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 ml-0.5 sm:ml-1" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
                             기독교인들을 위한 행복하고 재미있는 소셜 미디어
                         </p>
                     </div>
@@ -4632,7 +4632,7 @@ app.get('/', (c) => {
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-2 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-2 sm:p-6 transition-all duration-300">
+                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-2 sm:p-6 transition-all duration-300 min-h-[200px] sm:min-h-0">
                             <div class="flex items-center justify-between mb-1.5 sm:mb-4">
                                 <h3 class="text-xs sm:text-base font-bold text-blue-800">
                                     <i class="fas fa-book-open text-blue-600 mr-0.5 sm:mr-2 text-[10px] sm:text-base"></i>오늘의 성경 구절

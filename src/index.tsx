@@ -4865,10 +4865,10 @@ app.get('/', (c) => {
                     </div>
 
                     <!-- New Post Card -->
-                    <div id="newPostCard" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
-                        <div class="flex items-start space-x-4">
+                    <div id="newPostCard" class="bg-white rounded-lg sm:rounded-xl shadow-md border-2 border-gray-300 p-3 sm:p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
+                        <div class="flex items-start space-x-2 sm:space-x-4">
                             <div class="admin-badge-container">
-                                <div id="newPostAvatar" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
+                                <div id="newPostAvatar" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs sm:text-base flex-shrink-0 cursor-pointer hover:ring-2 sm:hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
                                     <i class="fas fa-user"></i>
                                 </div>
                                 <!-- Badge will be added here dynamically -->
@@ -4877,82 +4877,82 @@ app.get('/', (c) => {
                                 <textarea 
                                     id="newPostContent"
                                     placeholder="무엇을 나누고 싶으신가요?"
-                                    class="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
+                                    class="w-full p-2 sm:p-3 border rounded text-sm sm:text-base resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                                     rows="3"
                                 ></textarea>
                                 
                                 <!-- Background Color Selector -->
-                                <div class="mt-3">
-                                    <div class="flex items-center justify-end mb-2">
+                                <div class="mt-2 sm:mt-3">
+                                    <div class="flex items-center justify-end mb-1 sm:mb-2">
                                         <button 
                                             onclick="resetBackgroundColor()" 
-                                            class="text-xs text-gray-500 hover:text-gray-700 underline"
+                                            class="text-[10px] sm:text-xs text-gray-500 hover:text-gray-700 underline"
                                             title="초기화">
-                                            <i class="fas fa-undo mr-1"></i>초기화
+                                            <i class="fas fa-undo mr-0.5 sm:mr-1 text-[10px] sm:text-xs"></i>초기화
                                         </button>
                                     </div>
-                                    <div class="flex items-start space-x-3">
-                                        <div class="flex flex-col items-center space-y-1">
+                                    <div class="flex items-start space-x-2 sm:space-x-3">
+                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#F87171', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #F87171;"
                                                 title="중보">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">중보</span>
+                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">중보</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-1">
+                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#F5D4B3', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #FED7B0;"
                                                 title="일상">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">일상</span>
+                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">일상</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-1">
+                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#F5E398', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #FEF08A;"
                                                 title="말씀">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">말씀</span>
+                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">말씀</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-1">
+                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#B3EDD8', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #BBF7D0;"
                                                 title="사역">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">사역</span>
+                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">사역</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-1">
+                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#C4E5F8', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #BAE6FD;"
                                                 title="찬양">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">찬양</span>
+                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">찬양</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-1">
+                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#E2DBFB', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #DDD6FE;"
                                                 title="교회">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">교회</span>
+                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">교회</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-1">
+                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#FFFFFF', this)" 
-                                                class="color-selector-btn w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="자유">
                                             </button>
-                                            <span class="text-xs font-medium text-gray-600">자유</span>
+                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">자유</span>
                                         </div>
                                     </div>
                                 </div>

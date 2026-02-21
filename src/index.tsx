@@ -4647,8 +4647,8 @@ app.get('/', (c) => {
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-2 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-2 sm:p-6 transition-all duration-300 min-h-[280px] sm:min-h-0">
-                            <div class="flex items-center justify-between mb-1.5 sm:mb-4">
+                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-1.5 sm:p-6 transition-all duration-300 min-h-[220px] sm:min-h-0">
+                            <div class="flex items-center justify-between mb-1 sm:mb-4">
                                 <h3 class="text-xs sm:text-base font-bold text-blue-800">
                                     <i class="fas fa-book-open text-blue-600 mr-0.5 sm:mr-2 text-[10px] sm:text-base"></i>오늘의 성경 구절
                                 </h3>
@@ -4656,9 +4656,9 @@ app.get('/', (c) => {
                                     🎁 리워드
                                 </span>
                             </div>
-                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1.5 sm:pl-4 py-1.5 sm:py-2 mb-2 sm:mb-4">
-                                <p class="font-bold text-blue-600 mb-1 sm:mb-2 text-[20px] sm:text-xl" id="verseReference">시편 23:1</p>
-                                <p id="verseText" class="text-gray-800 leading-relaxed text-[20px] sm:text-xl" style="transition: opacity 0.5s ease-in-out;">
+                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1.5 sm:pl-4 py-1 sm:py-2 mb-1.5 sm:mb-4">
+                                <p class="font-bold text-blue-600 mb-0.5 sm:mb-2 text-sm sm:text-xl" id="verseReference">시편 23:1</p>
+                                <p id="verseText" class="text-gray-800 leading-snug text-sm sm:text-xl" style="transition: opacity 0.5s ease-in-out;">
                                     여호와는 나의 목자시니 내게 부족함이 없으리로다
                                 </p>
                             </div>
@@ -4668,7 +4668,7 @@ app.get('/', (c) => {
                                 <button 
                                     id="typingToggleBtn"
                                     onclick="toggleTypingArea()"
-                                    class="w-full mt-1.5 sm:mt-2 py-1 sm:py-2 px-2 sm:px-4 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-2 text-blue-800 font-semibold text-[10px] sm:text-base">
+                                    class="w-full mt-1 sm:mt-2 py-1 sm:py-2 px-2 sm:px-4 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-2 text-blue-800 font-semibold text-[10px] sm:text-base">
                                     <i class="fas fa-keyboard text-blue-600 text-[10px] sm:text-base"></i>
                                     <span>말씀 타이핑</span>
                                     <i id="typingToggleIcon" class="fas fa-chevron-down text-[8px] sm:text-xs"></i>

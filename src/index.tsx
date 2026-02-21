@@ -5283,7 +5283,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- Signup Modal -->
-        <div id="signupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div id="signupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-[10vh] sm:pt-[15vh]">
             <div class="bg-white rounded-lg shadow-xl p-3 w-[88vw] max-w-[330px] sm:max-w-md max-h-[88vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-2.5 sticky top-0 bg-white z-10 pb-2">
                     <h2 class="text-base font-bold text-gray-800">
@@ -5883,7 +5883,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- Login Modal -->
-        <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-[10vh] sm:pt-[15vh]">
             <div class="bg-white rounded-lg shadow-xl p-4 w-[85vw] max-w-[320px] sm:max-w-sm sm:p-6">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-base font-bold text-gray-800">

@@ -332,27 +332,27 @@ app.get('/users/:id', async (c) => {
                             <i class="fas fa-chart-line mr-2"></i>점수
                         </h2>
                         
-                        <!-- All Scores in Grid -->
-                        <div class="grid grid-cols-4 gap-4">
-                            <div class="bg-yellow-50 p-4 rounded-lg text-center border-2 border-yellow-200">
-                                <i class="fas fa-book-bible text-yellow-600 text-2xl mb-2"></i>
-                                <div class="text-2xl font-bold text-yellow-600">${ user.scripture_score || 0}</div>
-                                <div class="text-sm text-gray-600">성경 점수</div>
+                        <!-- All Scores in Compact Grid -->
+                        <div class="grid grid-cols-4 gap-2">
+                            <div class="bg-yellow-50 p-2 rounded text-center border border-yellow-200">
+                                <i class="fas fa-book-bible text-yellow-600 text-sm mb-1"></i>
+                                <div class="text-base font-semibold text-yellow-600">${ user.scripture_score || 0}</div>
+                                <div class="text-xs text-gray-500">성경</div>
                             </div>
-                            <div class="bg-blue-50 p-4 rounded-lg text-center border-2 border-blue-200">
-                                <i class="fas fa-praying-hands text-blue-600 text-2xl mb-2"></i>
-                                <div class="text-2xl font-bold text-blue-600">${ user.prayer_score || 0}</div>
-                                <div class="text-sm text-gray-600">기도 점수</div>
+                            <div class="bg-blue-50 p-2 rounded text-center border border-blue-200">
+                                <i class="fas fa-praying-hands text-blue-600 text-sm mb-1"></i>
+                                <div class="text-base font-semibold text-blue-600">${ user.prayer_score || 0}</div>
+                                <div class="text-xs text-gray-500">기도</div>
                             </div>
-                            <div class="bg-green-50 p-4 rounded-lg text-center border-2 border-green-200">
-                                <i class="fas fa-heart text-green-600 text-2xl mb-2"></i>
-                                <div class="text-2xl font-bold text-green-600">${ user.activity_score || 0}</div>
-                                <div class="text-sm text-gray-600">활동 점수</div>
+                            <div class="bg-green-50 p-2 rounded text-center border border-green-200">
+                                <i class="fas fa-heart text-green-600 text-sm mb-1"></i>
+                                <div class="text-base font-semibold text-green-600">${ user.activity_score || 0}</div>
+                                <div class="text-xs text-gray-500">활동</div>
                             </div>
-                            <div class="bg-purple-50 p-4 rounded-lg text-center border-2 border-purple-200">
-                                <i class="fas fa-trophy text-purple-600 text-2xl mb-2"></i>
-                                <div class="text-2xl font-bold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
-                                <div class="text-sm text-gray-600">종합점수</div>
+                            <div class="bg-purple-50 p-2 rounded text-center border border-purple-200">
+                                <i class="fas fa-trophy text-purple-600 text-sm mb-1"></i>
+                                <div class="text-base font-semibold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
+                                <div class="text-xs text-gray-500">종합</div>
                             </div>
                         </div>
                     </div>

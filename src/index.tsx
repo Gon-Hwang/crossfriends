@@ -4610,7 +4610,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <!-- Auth Buttons - Responsive -->
-                    <div class="flex items-center gap-0.5 sm:gap-2 md:gap-3" id="authButtons">
+                    <div class="flex items-center gap-1 sm:gap-2 md:gap-3" id="authButtons">
                         <button onclick="showHowToUse()" class="text-gray-800 px-1 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
                             <i class="fas fa-question-circle text-xs"></i><span class="hidden sm:inline ml-1">사용법</span>
                         </button>
@@ -5876,7 +5876,7 @@ app.get('/', (c) => {
                 
                 <div class="mt-6 text-center">
                     <button onclick="hideHowToUse(); showSignupModal();" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition font-semibold shadow-lg">
-                        <i class="fas fa-user-plus mr-2"></i>지금 가입하고 시작하기
+                        <i class="fas fa-user-plus mr-2"></i><span class="inline sm:inline">지금 가입하고<br class="sm:hidden">시작하기</span>
                     </button>
                 </div>
             </div>

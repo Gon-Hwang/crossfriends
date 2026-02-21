@@ -5796,3 +5796,73 @@ window.checkNotificationsInBackground = checkNotificationsInBackground;
 window.startNotificationPolling = startNotificationPolling;
 window.stopNotificationPolling = stopNotificationPolling;
 
+// Mobile posts carousel functionality
+let currentPostIndex = 0;
+let totalPosts = 0;
+
+function scrollPosts(direction) {
+    const postsFeed = document.getElementById('postsFeed');
+    if (!postsFeed) return;
+    
+    const posts = postsFeed.children;
+    totalPosts = posts.length;
+    
+    if (totalPosts === 0) return;
+    
+    if (direction === 'next') {
+        currentPostIndex = (currentPostIndex + 1) % totalPosts;
+    } else {
+        currentPostIndex = (currentPostIndex - 1 + totalPosts) % totalPosts;
+    }
+    
+    posts[currentPostIndex].scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'nearest', 
+        inline: 'start' 
+    });
+    
+    updatePostIndicators();
+}
+
+function updatePostIndicators() {
+    const indicatorsContainer = document.getElementById('postIndicators');
+    if (!indicatorsContainer) return;
+    
+    const postsFeed = document.getElementById('postsFeed');
+    if (!postsFeed) return;
+    
+    totalPosts = postsFeed.children.length;
+    
+    // Clear existing indicators
+    indicatorsContainer.innerHTML = '';
+    
+    // Create new indicators
+    for (let i = 0; i < totalPosts; i++) {
+        const indicator = document.createElement('div');
+        indicator.className = `w-2 h-2 rounded-full transition-all ${i === currentPostIndex ? 'bg-blue-600 w-6' : 'bg-gray-300'}`;
+        indicator.onclick = () => {
+            currentPostIndex = i;
+            const posts = postsFeed.children;
+            posts[i].scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'nearest', 
+                inline: 'start' 
+            });
+            updatePostIndicators();
+        };
+        indicatorsContainer.appendChild(indicator);
+    }
+}
+
+// Update indicators when posts are loaded
+const originalLoadPosts = loadPosts;
+loadPosts = async function() {
+    await originalLoadPosts();
+    setTimeout(() => {
+        updatePostIndicators();
+    }, 100);
+};
+
+window.scrollPosts = scrollPosts;
+window.updatePostIndicators = updatePostIndicators;
+

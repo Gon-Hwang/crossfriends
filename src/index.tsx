@@ -4560,6 +4560,21 @@ app.get('/', (c) => {
             .sidebar-scroll::-webkit-scrollbar-thumb:hover {
                 background: #9CA3AF;
             }
+            
+            /* Mobile posts carousel styles */
+            .hide-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .hide-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            @media (max-width: 1024px) {
+                #postsFeed > * {
+                    min-width: calc(100vw - 32px);
+                    scroll-snap-align: start;
+                }
+            }
         </style>
     </head>
     <body class="bg-gray-50">
@@ -4632,7 +4647,7 @@ app.get('/', (c) => {
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-2 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-2 sm:p-6 transition-all duration-300 min-h-[200px] sm:min-h-0">
+                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-2 sm:p-6 transition-all duration-300 min-h-[280px] sm:min-h-0">
                             <div class="flex items-center justify-between mb-1.5 sm:mb-4">
                                 <h3 class="text-xs sm:text-base font-bold text-blue-800">
                                     <i class="fas fa-book-open text-blue-600 mr-0.5 sm:mr-2 text-[10px] sm:text-base"></i>오늘의 성경 구절
@@ -4641,9 +4656,9 @@ app.get('/', (c) => {
                                     🎁 리워드
                                 </span>
                             </div>
-                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1.5 sm:pl-4 py-1 sm:py-2 mb-1.5 sm:mb-4">
-                                <p class="font-bold text-blue-600 mb-0.5 sm:mb-2 text-[10px] sm:text-base" id="verseReference">시편 23:1</p>
-                                <p id="verseText" class="text-gray-800 leading-relaxed text-[10px] sm:text-base" style="transition: opacity 0.5s ease-in-out;">
+                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1.5 sm:pl-4 py-1.5 sm:py-2 mb-2 sm:mb-4">
+                                <p class="font-bold text-blue-600 mb-1 sm:mb-2 text-[20px] sm:text-xl" id="verseReference">시편 23:1</p>
+                                <p id="verseText" class="text-gray-800 leading-relaxed text-[20px] sm:text-xl" style="transition: opacity 0.5s ease-in-out;">
                                     여호와는 나의 목자시니 내게 부족함이 없으리로다
                                 </p>
                             </div>
@@ -5065,8 +5080,32 @@ app.get('/', (c) => {
                     </div>
 
                     <!-- Posts Feed -->
-                    <div id="postsFeed" class="space-y-4">
-                        <!-- Posts will be loaded here -->
+                    <div class="relative">
+                        <!-- Mobile: Carousel Navigation -->
+                        <button 
+                            id="prevPostBtn" 
+                            onclick="scrollPosts('prev')"
+                            class="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
+                            style="margin-left: -12px;">
+                            <i class="fas fa-chevron-left text-blue-600 text-lg"></i>
+                        </button>
+                        <button 
+                            id="nextPostBtn" 
+                            onclick="scrollPosts('next')"
+                            class="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
+                            style="margin-right: -12px;">
+                            <i class="fas fa-chevron-right text-blue-600 text-lg"></i>
+                        </button>
+                        
+                        <!-- Posts Container -->
+                        <div id="postsFeed" class="space-y-4 lg:space-y-4 overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory lg:snap-none flex lg:flex-col gap-4 lg:gap-0 pb-4 lg:pb-0 scroll-smooth hide-scrollbar">
+                            <!-- Posts will be loaded here -->
+                        </div>
+                        
+                        <!-- Carousel Indicators (Mobile only) -->
+                        <div id="postIndicators" class="lg:hidden flex justify-center gap-2 mt-3">
+                            <!-- Indicators will be added by JavaScript -->
+                        </div>
                     </div>
                 </div>
 

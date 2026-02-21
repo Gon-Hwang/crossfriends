@@ -948,7 +948,32 @@ app.delete('/api/posts/:id', async (c) => {
     }
   }
   
+  // Delete related records first to avoid FOREIGN KEY constraint errors
+  
+  // 0. Remove shared_post_id references from other posts that share this post
+  await DB.prepare('UPDATE posts SET shared_post_id = NULL WHERE shared_post_id = ?').bind(id).run()
+  
+  // 1. Delete comment likes for all comments on this post
+  await DB.prepare(`
+    DELETE FROM comment_likes 
+    WHERE comment_id IN (SELECT id FROM comments WHERE post_id = ?)
+  `).bind(id).run()
+  
+  // 2. Delete comments
+  await DB.prepare('DELETE FROM comments WHERE post_id = ?').bind(id).run()
+  
+  // 3. Delete likes
+  await DB.prepare('DELETE FROM likes WHERE post_id = ?').bind(id).run()
+  
+  // 4. Delete prayer clicks
+  await DB.prepare('DELETE FROM prayer_clicks WHERE post_id = ?').bind(id).run()
+  
+  // 5. Delete notifications related to this post
+  await DB.prepare('DELETE FROM notifications WHERE post_id = ?').bind(id).run()
+  
+  // 6. Finally, delete the post
   await DB.prepare('DELETE FROM posts WHERE id = ?').bind(id).run()
+  
   return c.json({ success: true })
 })
 

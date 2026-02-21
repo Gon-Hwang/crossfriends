@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crossfriends 디버그</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 { color: #4EC9B0; }
+        h2 { color: #DCDCAA; margin-top: 30px; }
+        .section {
+            background-color: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        .status.ok { background-color: #4EC9B0; color: black; }
+        .status.error { background-color: #F48771; color: black; }
+        .status.warning { background-color: #DCDCAA; color: black; }
+        button {
+            background-color: #0E639C;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover { background-color: #1177BB; }
+        pre {
+            background-color: #1e1e1e;
+            border: 1px solid #3e3e42;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+        .log {
+            font-size: 12px;
+            padding: 5px;
+            border-bottom: 1px solid #3e3e42;
+        }
+        .log.success { color: #4EC9B0; }
+        .log.error { color: #F48771; }
+        .log.info { color: #569CD6; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Crossfriends 디버그 콘솔</h1>
+
+    <div class="section">
+        <h2>1️⃣ 스크립트 로드 상태</h2>
+        <div id="scriptStatus">확인 중...</div>
+    </div>
+
+    <div class="section">
+        <h2>2️⃣ 전역 변수 상태</h2>
+        <pre id="globalVars">확인 중...</pre>
+    </div>
+
+    <div class="section">
+        <h2>3️⃣ 필수 함수 체크</h2>
+        <pre id="functionCheck">확인 중...</pre>
+    </div>
+
+    <div class="section">
+        <h2>4️⃣ 알림 API 테스트</h2>
+        <button onclick="testNotificationAPI()">알림 API 호출</button>
+        <pre id="apiResult"></pre>
+    </div>
+
+    <div class="section">
+        <h2>5️⃣ 빨간점 테스트</h2>
+        <div style="display: inline-block; position: relative; font-size: 32px;">
+            🔔
+            <span id="testDot" class="red-dot" style="display: none; position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; background-color: red; border-radius: 50%;"></span>
+        </div>
+        <br><br>
+        <button onclick="manualShowDot()">빨간점 표시</button>
+        <button onclick="manualHideDot()">빨간점 숨김</button>
+        <button onclick="callUpdateBadge()">updateNotificationBadge() 호출</button>
+    </div>
+
+    <div class="section">
+        <h2>6️⃣ 게시물 삭제 테스트</h2>
+        <button onclick="testDeletePost()">deletePost 함수 확인</button>
+        <pre id="deleteResult"></pre>
+    </div>
+
+    <div class="section">
+        <h2>📋 실시간 로그</h2>
+        <div id="logs" style="max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="/static/app.js"></script>
+    <script>
+        const logs = [];
+        
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            logs.push({ time, message, type });
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = `[${time}] ${message}`;
+            logsDiv.insertBefore(logEntry, logsDiv.firstChild);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function checkStatus(condition, name) {
+            if (condition) {
+                return `<span class="status ok">✓ ${name}</span>`;
+            } else {
+                return `<span class="status error">✗ ${name}</span>`;
+            }
+        }
+
+        // 1. 스크립트 로드 상태
+        function checkScripts() {
+            const axios = typeof window.axios !== 'undefined';
+            const appjs = typeof window.currentUserId !== 'undefined';
+            
+            document.getElementById('scriptStatus').innerHTML = `
+                ${checkStatus(axios, 'Axios')}
+                ${checkStatus(appjs, 'app.js')}
+            `;
+            
+            log(`Axios 로드: ${axios}`, axios ? 'success' : 'error');
+            log(`app.js 로드: ${appjs}`, appjs ? 'success' : 'error');
+        }
+
+        // 2. 전역 변수
+        function checkGlobalVars() {
+            const vars = {
+                currentUserId: window.currentUserId,
+                currentUser: window.currentUser,
+                notificationsList: window.notificationsList,
+                filterUserId: window.filterUserId,
+                selectedBackgroundColor: window.selectedBackgroundColor
+            };
+            
+            document.getElementById('globalVars').textContent = JSON.stringify(vars, null, 2);
+            log(`전역 변수 확인: currentUserId=${vars.currentUserId}`);
+        }
+
+        // 3. 함수 체크
+        function checkFunctions() {
+            const functions = [
+                'loadNotifications',
+                'updateNotificationBadge',
+                'checkNotificationsInBackground',
+                'startNotificationPolling',
+                'stopNotificationPolling',
+                'deletePost',
+                'createPost',
+                'handleLogin',
+                'logout'
+            ];
+            
+            let result = '';
+            functions.forEach(fn => {
+                const exists = typeof window[fn] === 'function';
+                result += `${exists ? '✓' : '✗'} ${fn}\n`;
+                if (!exists) {
+                    log(`함수 누락: ${fn}`, 'error');
+                }
+            });
+            
+            document.getElementById('functionCheck').textContent = result;
+            log('필수 함수 체크 완료');
+        }
+
+        // 4. 알림 API 테스트
+        async function testNotificationAPI() {
+            const userId = window.currentUserId || 1;
+            log(`알림 API 호출: /api/notifications/${userId}`);
+            
+            try {
+                const response = await axios.get(`/api/notifications/${userId}`);
+                const result = {
+                    status: response.status,
+                    total: response.data.notifications.length,
+                    unread: response.data.notifications.filter(n => !n.is_read).length,
+                    notifications: response.data.notifications
+                };
+                
+                document.getElementById('apiResult').textContent = JSON.stringify(result, null, 2);
+                log(`알림 API 성공: 전체 ${result.total}개, 읽지 않음 ${result.unread}개`, 'success');
+                
+                // notificationsList에 저장
+                window.notificationsList = response.data.notifications;
+                checkGlobalVars();
+                
+            } catch (error) {
+                document.getElementById('apiResult').textContent = `오류: ${error.message}`;
+                log(`알림 API 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 5. 빨간점 테스트
+        function manualShowDot() {
+            document.getElementById('testDot').style.display = 'block';
+            log('빨간점 수동 표시', 'success');
+        }
+
+        function manualHideDot() {
+            document.getElementById('testDot').style.display = 'none';
+            log('빨간점 수동 숨김', 'info');
+        }
+
+        function callUpdateBadge() {
+            if (typeof window.updateNotificationBadge === 'function') {
+                window.updateNotificationBadge();
+                log('updateNotificationBadge() 호출 완료', 'success');
+            } else {
+                log('updateNotificationBadge() 함수를 찾을 수 없음', 'error');
+            }
+        }
+
+        // 6. 게시물 삭제 테스트
+        function testDeletePost() {
+            const result = {
+                functionExists: typeof window.deletePost === 'function',
+                currentUserId: window.currentUserId,
+                canDelete: window.currentUserId !== null
+            };
+            
+            document.getElementById('deleteResult').textContent = JSON.stringify(result, null, 2);
+            
+            if (result.functionExists && result.canDelete) {
+                log('deletePost 함수 사용 가능', 'success');
+            } else if (!result.functionExists) {
+                log('deletePost 함수를 찾을 수 없음', 'error');
+            } else {
+                log('로그인 필요: currentUserId가 null', 'warning');
+            }
+        }
+
+        // 초기 실행
+        window.addEventListener('load', () => {
+            log('페이지 로드 완료');
+            setTimeout(() => {
+                checkScripts();
+                checkGlobalVars();
+                checkFunctions();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

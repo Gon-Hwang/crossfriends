@@ -4441,9 +4441,12 @@ app.get('/', (c) => {
                 overflow-x: hidden;
                 max-width: 100vw;
                 position: relative;
+                height: 100%;
+                min-height: 100vh;
             }
             body {
                 -webkit-overflow-scrolling: touch;
+                overflow-y: auto;
             }
             
             /* CROSSfriends Color System - 7 Colors */
@@ -4599,7 +4602,7 @@ app.get('/', (c) => {
             }
         </style>
     </head>
-    <body class="bg-gray-50 overflow-x-hidden">
+    <body class="bg-gray-50 overflow-x-hidden" style="min-height: 100vh; overflow-y: auto;">
         <!-- Header -->
         <nav class="bg-white shadow-md sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-1.5 sm:px-2 py-1.5 sm:py-2">
@@ -4663,7 +4666,7 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6 pb-20 sm:pb-12">
+        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6 pb-20 sm:pb-12" style="min-height: calc(100vh - 80px);">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-6">
                 <!-- Left Sidebar -->
                 <div class="lg:col-span-1">

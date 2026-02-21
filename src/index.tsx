@@ -4649,10 +4649,10 @@ app.get('/', (c) => {
                         <!-- Today's Bible Verse -->
                         <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-3 sm:p-4 transition-all duration-300">
                             <div class="flex items-center justify-between mb-0.5 sm:mb-2">
-                                <h3 class="text-xs sm:text-base font-bold text-blue-800">
-                                    <i class="fas fa-book-open text-blue-600 mr-0.5 sm:mr-2 text-[10px] sm:text-base"></i>오늘의 성경 구절
+                                <h3 class="text-sm sm:text-base font-bold text-blue-800">
+                                    <i class="fas fa-book-open text-blue-600 mr-1 sm:mr-2 text-sm sm:text-base"></i>오늘의 성경 구절
                                 </h3>
-                                <span class="text-[9px] sm:text-xs font-bold text-blue-800 whitespace-nowrap">
+                                <span class="text-[10px] sm:text-xs font-bold text-blue-800 whitespace-nowrap">
                                     🎁 기본 리워드
                                 </span>
                             </div>

@@ -4421,39 +4421,22 @@ async function showUserProfileModal(userId) {
                 <!-- Details Section -->
                 <div class="md:col-span-2 space-y-4">
                     ${showScores && (isOwnProfile || user.prayer_score !== null || user.scripture_score !== null || user.activity_score !== null) ? `
-                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
-                        <h4 class="font-semibold text-purple-800 mb-3">
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-3 rounded">
+                        <h4 class="font-semibold text-purple-800 mb-2 text-sm">
                             <i class="fas fa-trophy mr-2"></i>${isOwnProfile ? '나의 점수' : '점수 정보'}
                         </h4>
-                        <div class="grid grid-cols-4 gap-3">
-                            <div class="text-center bg-yellow-50 p-3 rounded-lg border-2 border-yellow-200">
-                                <div class="flex flex-col items-center">
-                                    <i class="fas fa-book-bible text-yellow-600 text-2xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">성경 점수</span>
-                                    <span class="text-2xl font-bold text-yellow-600">${user.scripture_score ?? 0}</span>
-                                </div>
-                            </div>
-                            <div class="text-center bg-blue-50 p-3 rounded-lg border-2 border-blue-200">
-                                <div class="flex flex-col items-center">
-                                    <i class="fas fa-praying-hands text-blue-600 text-2xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">기도 점수</span>
-                                    <span class="text-2xl font-bold text-blue-600">${user.prayer_score ?? 0}</span>
-                                </div>
-                            </div>
-                            <div class="text-center bg-green-50 p-3 rounded-lg border-2 border-green-200">
-                                <div class="flex flex-col items-center">
-                                    <i class="fas fa-heart text-green-600 text-2xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">활동 점수</span>
-                                    <span class="text-2xl font-bold text-green-600">${user.activity_score ?? 0}</span>
-                                </div>
-                            </div>
-                            <div class="text-center bg-purple-50 p-3 rounded-lg border-2 border-purple-200">
-                                <div class="flex flex-col items-center">
-                                    <i class="fas fa-trophy text-purple-600 text-2xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">종합점수</span>
-                                    <span class="text-2xl font-bold text-purple-600">${(user.scripture_score ?? 0) + (user.prayer_score ?? 0) + (user.activity_score ?? 0)}</span>
-                                </div>
-                            </div>
+                        <div class="flex items-center justify-center space-x-3 text-xs">
+                            <i class="fas fa-book-bible text-yellow-600"></i>
+                            <span class="font-semibold text-yellow-600">${user.scripture_score ?? 0}</span>
+                            <span class="text-gray-300">|</span>
+                            <i class="fas fa-praying-hands text-blue-600"></i>
+                            <span class="font-semibold text-blue-600">${user.prayer_score ?? 0}</span>
+                            <span class="text-gray-300">|</span>
+                            <i class="fas fa-heart text-green-600"></i>
+                            <span class="font-semibold text-green-600">${user.activity_score ?? 0}</span>
+                            <span class="text-gray-300">|</span>
+                            <i class="fas fa-trophy text-purple-600"></i>
+                            <span class="font-semibold text-purple-600">${(user.scripture_score ?? 0) + (user.prayer_score ?? 0) + (user.activity_score ?? 0)}</span>
                         </div>
                     </div>
                     ` : ''}

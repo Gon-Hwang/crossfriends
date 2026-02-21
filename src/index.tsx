@@ -4565,13 +4565,13 @@ app.get('/', (c) => {
     <body class="bg-gray-50">
         <!-- Header -->
         <nav class="bg-white shadow-md sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-3 py-2">
+            <div class="max-w-7xl mx-auto px-2 py-2">
                 <div class="flex justify-between items-center">
                     <!-- Logo - Responsive -->
                     <div class="flex flex-col cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
-                        <h1 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
+                        <h1 class="text-base sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
                             <span>CROSS</span>
-                            <div class="cross-icon mx-1.5 sm:mx-2 md:mx-3 scale-75 sm:scale-90 md:scale-100">
+                            <div class="cross-icon mx-1 sm:mx-2 md:mx-3 scale-[0.6] sm:scale-90 md:scale-100">
                                 <div class="cross-dot top"></div>
                                 <div class="cross-dot bottom"></div>
                                 <div class="cross-dot left"></div>
@@ -4586,37 +4586,37 @@ app.get('/', (c) => {
                     
                     <!-- Auth Buttons - Responsive -->
                     <div class="flex items-center gap-1 sm:gap-2 md:gap-3" id="authButtons">
-                        <button onclick="showHowToUse()" class="text-gray-800 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base">
-                            <i class="fas fa-question-circle mr-0.5 sm:mr-1"></i><span class="hidden sm:inline">사용법</span>
+                        <button onclick="showHowToUse()" class="text-gray-800 px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
+                            <i class="fas fa-question-circle"></i><span class="hidden sm:inline ml-1">사용법</span>
                         </button>
-                        <button onclick="showLoginModal()" class="text-gray-800 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-100 transition text-sm sm:text-base">
-                            <span class="hidden sm:inline">로그인</span><span class="sm:hidden">로그인</span>
+                        <button onclick="showLoginModal()" class="text-gray-800 px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
+                            로그인
                         </button>
-                        <button onclick="showSignupModal()" class="bg-blue-600 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-blue-700 transition text-sm sm:text-base">
-                            <span class="hidden sm:inline">회원가입</span><span class="sm:hidden">가입</span>
+                        <button onclick="showSignupModal()" class="bg-blue-600 text-white px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-blue-700 transition text-xs sm:text-base">
+                            가입
                         </button>
                     </div>
                     
                     <!-- User Menu - Responsive -->
-                    <div class="flex items-center space-x-2 sm:space-x-3 md:space-x-4 hidden" id="userMenu">
-                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg hover:bg-red-50 transition text-sm sm:text-base" title="관리자 패널">
+                    <div class="flex items-center space-x-1 sm:space-x-3 md:space-x-4 hidden" id="userMenu">
+                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-1.5 sm:px-3 py-1 sm:py-2 rounded hover:bg-red-50 transition text-xs sm:text-base" title="관리자 패널">
                             <i class="fas fa-shield-alt mr-0.5 sm:mr-1"></i>
                             <span class="hidden lg:inline">관리자 모드</span>
                         </button>
                         <div class="relative">
-                            <div class="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 bg-gray-100 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg">
+                            <div class="flex items-center space-x-1 sm:space-x-2 md:space-x-3 bg-gray-100 px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded">
                                 <div class="admin-badge-container">
-                                    <div id="userAvatarContainer" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs sm:text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
+                                    <div id="userAvatarContainer" class="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
                                         <i class="fas fa-user"></i>
                                     </div>
                                 </div>
-                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition text-xs sm:text-sm md:text-base max-w-[80px] sm:max-w-[120px] md:max-w-none truncate" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
+                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition text-xs sm:text-sm md:text-base max-w-[60px] sm:max-w-[120px] md:max-w-none truncate" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
                                 <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-600 hover:text-blue-600 transition cursor-pointer" title="알림">
-                                    <i class="fas fa-bell text-base sm:text-lg"></i>
-                                    <span id="notificationDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                                    <i class="fas fa-bell text-sm sm:text-lg"></i>
+                                    <span id="notificationDot" class="hidden absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full border border-white"></span>
                                 </button>
                                 <button onclick="logout()" class="text-gray-600 hover:text-gray-800 transition cursor-pointer" title="로그아웃">
-                                    <i class="fas fa-sign-out-alt text-base sm:text-lg"></i>
+                                    <i class="fas fa-sign-out-alt text-sm sm:text-lg"></i>
                                 </button>
                             </div>
                         </div>
@@ -4626,7 +4626,7 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <!-- Left Sidebar -->
                 <div class="lg:col-span-1">
@@ -4653,10 +4653,10 @@ app.get('/', (c) => {
                                 <button 
                                     id="typingToggleBtn"
                                     onclick="toggleTypingArea()"
-                                    class="w-full mt-2 py-2 px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-blue-800 font-semibold">
-                                    <i class="fas fa-keyboard text-blue-600"></i>
+                                    class="w-full mt-2 py-1.5 sm:py-2 px-3 sm:px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded transition-all flex items-center justify-center space-x-1 sm:space-x-2 text-blue-800 font-semibold text-xs sm:text-base">
+                                    <i class="fas fa-keyboard text-blue-600 text-xs sm:text-base"></i>
                                     <span>말씀 타이핑</span>
-                                    <i id="typingToggleIcon" class="fas fa-chevron-down text-sm"></i>
+                                    <i id="typingToggleIcon" class="fas fa-chevron-down text-xs"></i>
                                 </button>
                                 
                                 <!-- Typing Input Area (Initially Hidden) -->

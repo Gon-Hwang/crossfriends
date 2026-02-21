@@ -4610,7 +4610,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <!-- Auth Buttons - Responsive -->
-                    <div class="flex items-center gap-1 sm:gap-2 md:gap-3" id="authButtons">
+                    <div class="flex items-center gap-2 sm:gap-2 md:gap-3" id="authButtons">
                         <button onclick="showHowToUse()" class="text-gray-800 px-1 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
                             <i class="fas fa-question-circle text-xs"></i><span class="hidden sm:inline ml-1">사용법</span>
                         </button>
@@ -5681,7 +5681,7 @@ app.get('/', (c) => {
 
         <!-- How To Use Modal -->
         <div id="howToUseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl max-h-[85vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-3xl font-bold text-gray-800 flex items-center">
                         <div class="cross-icon mr-3" style="width: 28px; height: 28px;">

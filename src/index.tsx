@@ -4647,7 +4647,7 @@ app.get('/', (c) => {
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-2 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-0 sm:p-4 transition-all duration-300">
+                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-3 sm:p-4 transition-all duration-300">
                             <div class="flex items-center justify-between mb-0.5 sm:mb-2">
                                 <h3 class="text-xs sm:text-sm font-bold text-blue-800">
                                     <i class="fas fa-book-open text-blue-600 mr-0.5 sm:mr-1.5 text-[10px] sm:text-sm"></i>오늘의 성경 구절

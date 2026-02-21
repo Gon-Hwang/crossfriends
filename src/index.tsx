@@ -4668,7 +4668,7 @@ app.get('/', (c) => {
                                 <button 
                                     id="typingToggleBtn"
                                     onclick="toggleTypingArea()"
-                                    class="w-full mt-0.5 sm:mt-1.5 py-1 sm:py-1.5 px-2 sm:px-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-1.5 text-blue-800 font-semibold text-[10px] sm:text-sm">
+                                    class="w-full mt-0.5 sm:mt-1.5 py-3 sm:py-4 px-2 sm:px-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-1.5 text-blue-800 font-semibold text-[10px] sm:text-sm">
                                     <i class="fas fa-keyboard text-blue-600 text-[10px] sm:text-sm"></i>
                                     <span>말씀 타이핑</span>
                                     <i id="typingToggleIcon" class="fas fa-chevron-down text-[8px] sm:text-[10px]"></i>
@@ -6245,6 +6245,73 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="/static/app.js?v=${Date.now()}"></script>
         <script>
+            // Toggle Typing Area
+            window.toggleTypingArea = function() {
+                const typingArea = document.getElementById('typingArea');
+                const toggleIcon = document.getElementById('typingToggleIcon');
+                
+                if (typingArea && toggleIcon) {
+                    const isHidden = typingArea.classList.contains('hidden');
+                    
+                    if (isHidden) {
+                        // Show typing area
+                        typingArea.classList.remove('hidden');
+                        toggleIcon.classList.remove('fa-chevron-down');
+                        toggleIcon.classList.add('fa-chevron-up');
+                    } else {
+                        // Hide typing area
+                        typingArea.classList.add('hidden');
+                        toggleIcon.classList.remove('fa-chevron-up');
+                        toggleIcon.classList.add('fa-chevron-down');
+                    }
+                }
+            };
+            
+            // Handle Typing Enter
+            window.handleTypingEnter = async function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    
+                    const input = document.getElementById('typingInput');
+                    const result = document.getElementById('typingResult');
+                    const verseText = document.getElementById('verseText');
+                    
+                    if (!input || !result || !verseText) return;
+                    
+                    const userInput = input.value.trim();
+                    const correctVerse = verseText.textContent.trim();
+                    
+                    if (!userInput) {
+                        result.classList.remove('hidden');
+                        result.className = 'mt-2 text-sm text-yellow-600';
+                        result.textContent = '⚠️ 구절을 입력해주세요.';
+                        return;
+                    }
+                    
+                    // Simple comparison
+                    const isCorrect = userInput === correctVerse;
+                    
+                    if (isCorrect) {
+                        result.classList.remove('hidden');
+                        result.className = 'mt-2 text-sm text-green-600 font-bold';
+                        result.textContent = '✅ 정확합니다! 말씀을 마음에 새기셨습니다.';
+                        
+                        // Clear input after success
+                        setTimeout(() => {
+                            input.value = '';
+                            result.classList.add('hidden');
+                        }, 3000);
+                        
+                        // TODO: Award points if needed
+                        console.log('말씀 타이핑 성공!');
+                    } else {
+                        result.classList.remove('hidden');
+                        result.className = 'mt-2 text-sm text-red-600';
+                        result.textContent = '❌ 다시 한 번 확인해보세요.';
+                    }
+                }
+            };
+            
             // Auto-login on page load
             (async function() {
                 const storedUserId = localStorage.getItem('currentUserId');

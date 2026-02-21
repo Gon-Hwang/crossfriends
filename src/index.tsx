@@ -4651,7 +4651,7 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6 pb-32 sm:pb-12">
+        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6 pb-8 sm:pb-12">
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-6">
                 <!-- Left Sidebar -->
                 <div class="lg:col-span-1">

@@ -4648,15 +4648,15 @@ app.get('/', (c) => {
                     <div class="sticky top-20 space-y-2 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
                         <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-3 sm:p-4 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-0.5 sm:mb-2">
-                                <h3 class="text-sm sm:text-base font-bold text-blue-800">
-                                    <i class="fas fa-book-open text-blue-600 mr-1 sm:mr-2 text-sm sm:text-base"></i>오늘의 성경 구절
+                            <div class="flex items-center justify-between mb-2 sm:mb-3">
+                                <h3 class="text-base font-bold text-blue-800">
+                                    <i class="fas fa-book-open text-blue-600 mr-2 text-base"></i>오늘의 성경 구절
                                 </h3>
                                 <span class="text-[10px] sm:text-xs font-bold text-blue-800 whitespace-nowrap">
                                     🎁 기본 리워드
                                 </span>
                             </div>
-                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1 sm:pl-3 py-0.5 sm:py-1.5 mb-1 sm:mb-2">
+                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1 sm:pl-3 py-0.5 sm:py-1.5 mb-2 sm:mb-3">
                                 <p class="font-bold text-blue-600 mb-0.5 sm:mb-1.5 text-sm sm:text-sm" id="verseReference">시편 23:1</p>
                                 <p id="verseText" class="text-gray-800 leading-snug text-sm sm:text-sm" style="transition: opacity 0.5s ease-in-out;">
                                     여호와는 나의 목자시니 내게 부족함이 없으리로다
@@ -4668,7 +4668,7 @@ app.get('/', (c) => {
                                 <button 
                                     id="typingToggleBtn"
                                     onclick="toggleTypingArea()"
-                                    class="w-full mt-0.5 sm:mt-1.5 py-3 sm:py-4 px-2 sm:px-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-1.5 text-blue-800 font-semibold text-[10px] sm:text-sm">
+                                    class="w-full mt-2 sm:mt-3 py-3 sm:py-4 px-2 sm:px-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-1.5 text-blue-800 font-semibold text-[10px] sm:text-sm">
                                     <i class="fas fa-keyboard text-blue-600 text-[10px] sm:text-sm"></i>
                                     <span>말씀 타이핑</span>
                                     <i id="typingToggleIcon" class="fas fa-chevron-down text-[8px] sm:text-[10px]"></i>

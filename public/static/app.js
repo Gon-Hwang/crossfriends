@@ -4582,7 +4582,7 @@ async function showUserProfileModal(userId) {
                         return `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
                         <h4 class="font-semibold text-purple-800 mb-3">
-                            <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                            <i class="fas fa-briefcase mr-2"></i>직업 정보
                         </h4>
                         <div class="space-y-3 text-sm text-gray-700">
                             <div>
@@ -4703,7 +4703,7 @@ async function showUserProfileModal(userId) {
                         return `
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
                         <h4 class="font-semibold text-orange-800 mb-3">
-                            <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                            <i class="fas fa-graduation-cap mr-2"></i>학교 정보
                         </h4>
                         <div class="space-y-3 text-sm text-gray-700">
                             ${educationItems}

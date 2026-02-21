@@ -4647,7 +4647,7 @@ app.get('/', (c) => {
                 <div class="lg:col-span-1">
                     <div class="sticky top-20 space-y-2 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-0 sm:p-4 transition-all duration-300 min-h-[200px] sm:min-h-0">
+                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-0 sm:p-4 transition-all duration-300">
                             <div class="flex items-center justify-between mb-0.5 sm:mb-2">
                                 <h3 class="text-xs sm:text-sm font-bold text-blue-800">
                                     <i class="fas fa-book-open text-blue-600 mr-0.5 sm:mr-1.5 text-[10px] sm:text-sm"></i>오늘의 성경 구절
@@ -4675,7 +4675,7 @@ app.get('/', (c) => {
                                 </button>
                                 
                                 <!-- Typing Input Area (Initially Hidden) -->
-                                <div id="typingArea" class="mt-4 pt-4 border-t-2 border-gray-200 hidden">
+                                <div id="typingArea" class="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200 hidden">
                                     <div class="mb-2">
                                         <label class="text-sm font-semibold text-gray-700">
                                             <i class="fas fa-keyboard text-blue-600 mr-1"></i>말씀 타이핑

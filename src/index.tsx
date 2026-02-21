@@ -332,27 +332,26 @@ app.get('/users/:id', async (c) => {
                             <i class="fas fa-chart-line mr-2"></i>점수
                         </h2>
                         
-                        <!-- All Scores in Compact Grid -->
-                        <div class="grid grid-cols-4 gap-2">
-                            <div class="bg-yellow-50 p-2 rounded text-center border border-yellow-200">
-                                <i class="fas fa-book-bible text-yellow-600 text-sm mb-1"></i>
-                                <div class="text-base font-semibold text-yellow-600">${ user.scripture_score || 0}</div>
-                                <div class="text-xs text-gray-500">성경</div>
+                        <!-- All Scores in Compact Single Line -->
+                        <div class="flex items-center justify-center space-x-4 text-xs">
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-book-bible text-yellow-600 text-xs"></i>
+                                <span class="font-semibold text-yellow-600">${ user.scripture_score || 0}</span>
                             </div>
-                            <div class="bg-blue-50 p-2 rounded text-center border border-blue-200">
-                                <i class="fas fa-praying-hands text-blue-600 text-sm mb-1"></i>
-                                <div class="text-base font-semibold text-blue-600">${ user.prayer_score || 0}</div>
-                                <div class="text-xs text-gray-500">기도</div>
+                            <span class="text-gray-300">|</span>
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-praying-hands text-blue-600 text-xs"></i>
+                                <span class="font-semibold text-blue-600">${ user.prayer_score || 0}</span>
                             </div>
-                            <div class="bg-green-50 p-2 rounded text-center border border-green-200">
-                                <i class="fas fa-heart text-green-600 text-sm mb-1"></i>
-                                <div class="text-base font-semibold text-green-600">${ user.activity_score || 0}</div>
-                                <div class="text-xs text-gray-500">활동</div>
+                            <span class="text-gray-300">|</span>
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-heart text-green-600 text-xs"></i>
+                                <span class="font-semibold text-green-600">${ user.activity_score || 0}</span>
                             </div>
-                            <div class="bg-purple-50 p-2 rounded text-center border border-purple-200">
-                                <i class="fas fa-trophy text-purple-600 text-sm mb-1"></i>
-                                <div class="text-base font-semibold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</div>
-                                <div class="text-xs text-gray-500">종합</div>
+                            <span class="text-gray-300">|</span>
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-trophy text-purple-600 text-xs"></i>
+                                <span class="font-semibold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</span>
                             </div>
                         </div>
                     </div>
@@ -4846,26 +4845,16 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                                 
-                                <!-- Scores (if not private) -->
-                                <div id="profileCoverScores" class="flex items-center space-x-4 pt-3 border-t border-gray-200">
-                                    <div class="flex items-center space-x-2">
-                                        <i class="fas fa-book-open text-blue-600"></i>
-                                        <span class="text-sm text-gray-700">
-                                            성경: <span id="profileCoverScriptureScore" class="font-bold text-blue-600">0</span>
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center space-x-2">
-                                        <i class="fas fa-praying-hands text-purple-600"></i>
-                                        <span class="text-sm text-gray-700">
-                                            기도: <span id="profileCoverPrayerScore" class="font-bold text-purple-600">0</span>
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center space-x-2">
-                                        <i class="fas fa-heart text-red-600"></i>
-                                        <span class="text-sm text-gray-700">
-                                            활동: <span id="profileCoverActivityScore" class="font-bold text-red-600">0</span>
-                                        </span>
-                                    </div>
+                                <!-- Scores (if not private) - Compact inline display -->
+                                <div id="profileCoverScores" class="flex items-center space-x-3 pt-2 text-xs text-gray-600">
+                                    <i class="fas fa-book-open text-blue-500 text-xs"></i>
+                                    <span id="profileCoverScriptureScore" class="font-semibold text-blue-600">0</span>
+                                    <span class="text-gray-400">·</span>
+                                    <i class="fas fa-praying-hands text-purple-500 text-xs"></i>
+                                    <span id="profileCoverPrayerScore" class="font-semibold text-purple-600">0</span>
+                                    <span class="text-gray-400">·</span>
+                                    <i class="fas fa-heart text-red-500 text-xs"></i>
+                                    <span id="profileCoverActivityScore" class="font-semibold text-red-600">0</span>
                                 </div>
                             </div>
                         </div>

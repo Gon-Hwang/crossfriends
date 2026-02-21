@@ -238,7 +238,7 @@ app.get('/users/:id', async (c) => {
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     </head>
-    <body class="bg-gray-50">
+    <body class="bg-gray-50 overflow-x-hidden">
         <div class="max-w-4xl mx-auto p-6">
             <div class="bg-white rounded-lg shadow-lg p-8">
                 <!-- Header -->
@@ -3018,7 +3018,7 @@ app.get('/admin', (c) => {
             window.closeGraphModal = function() { console.log('Function will be replaced after DOM loads'); };
         </script>
     </head>
-    <body class="bg-gray-50">
+    <body class="bg-gray-50 overflow-x-hidden">
         <nav class="bg-red-600 text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
@@ -4424,6 +4424,16 @@ app.get('/', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
         <style>
+            /* Prevent horizontal scroll on mobile */
+            html, body {
+                overflow-x: hidden;
+                max-width: 100vw;
+                position: relative;
+            }
+            body {
+                -webkit-overflow-scrolling: touch;
+            }
+            
             /* CROSSfriends Color System - 7 Colors */
             :root {
                 --color-primary: #3B82F6;
@@ -4577,7 +4587,7 @@ app.get('/', (c) => {
             }
         </style>
     </head>
-    <body class="bg-gray-50">
+    <body class="bg-gray-50 overflow-x-hidden">
         <!-- Header -->
         <nav class="bg-white shadow-md sticky top-0 z-50">
             <div class="max-w-7xl mx-auto px-1.5 sm:px-2 py-1.5 sm:py-2">

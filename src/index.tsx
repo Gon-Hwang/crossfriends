@@ -4565,13 +4565,13 @@ app.get('/', (c) => {
     <body class="bg-gray-50">
         <!-- Header -->
         <nav class="bg-white shadow-md sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-2 py-2">
+            <div class="max-w-7xl mx-auto px-1.5 sm:px-2 py-1.5 sm:py-2">
                 <div class="flex justify-between items-center">
                     <!-- Logo - Responsive -->
                     <div class="flex flex-col cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
-                        <h1 class="text-base sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
+                        <h1 class="text-sm sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
                             <span>CROSS</span>
-                            <div class="cross-icon mx-1 sm:mx-2 md:mx-3 scale-[0.6] sm:scale-90 md:scale-100">
+                            <div class="cross-icon mx-0.5 sm:mx-2 md:mx-3 scale-[0.55] sm:scale-90 md:scale-100">
                                 <div class="cross-dot top"></div>
                                 <div class="cross-dot bottom"></div>
                                 <div class="cross-dot left"></div>
@@ -4585,38 +4585,38 @@ app.get('/', (c) => {
                     </div>
                     
                     <!-- Auth Buttons - Responsive -->
-                    <div class="flex items-center gap-1 sm:gap-2 md:gap-3" id="authButtons">
-                        <button onclick="showHowToUse()" class="text-gray-800 px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
-                            <i class="fas fa-question-circle"></i><span class="hidden sm:inline ml-1">사용법</span>
+                    <div class="flex items-center gap-0.5 sm:gap-2 md:gap-3" id="authButtons">
+                        <button onclick="showHowToUse()" class="text-gray-800 px-1 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
+                            <i class="fas fa-question-circle text-xs"></i><span class="hidden sm:inline ml-1">사용법</span>
                         </button>
-                        <button onclick="showLoginModal()" class="text-gray-800 px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
+                        <button onclick="showLoginModal()" class="text-gray-800 px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
                             로그인
                         </button>
-                        <button onclick="showSignupModal()" class="bg-blue-600 text-white px-2 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-blue-700 transition text-xs sm:text-base">
+                        <button onclick="showSignupModal()" class="bg-blue-600 text-white px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-blue-700 transition text-xs sm:text-base">
                             가입
                         </button>
                     </div>
                     
                     <!-- User Menu - Responsive -->
-                    <div class="flex items-center space-x-1 sm:space-x-3 md:space-x-4 hidden" id="userMenu">
-                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-1.5 sm:px-3 py-1 sm:py-2 rounded hover:bg-red-50 transition text-xs sm:text-base" title="관리자 패널">
+                    <div class="flex items-center space-x-0.5 sm:space-x-3 md:space-x-4 hidden" id="userMenu">
+                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-1 sm:px-3 py-1 sm:py-2 rounded hover:bg-red-50 transition text-xs sm:text-base" title="관리자 패널">
                             <i class="fas fa-shield-alt mr-0.5 sm:mr-1"></i>
                             <span class="hidden lg:inline">관리자 모드</span>
                         </button>
                         <div class="relative">
-                            <div class="flex items-center space-x-1 sm:space-x-2 md:space-x-3 bg-gray-100 px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded">
+                            <div class="flex items-center space-x-0.5 sm:space-x-2 md:space-x-3 bg-gray-100 px-1 sm:px-3 md:px-4 py-1 sm:py-2 rounded">
                                 <div class="admin-badge-container">
-                                    <div id="userAvatarContainer" class="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
+                                    <div id="userAvatarContainer" class="w-5 h-5 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-[10px] sm:text-xs flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
                                         <i class="fas fa-user"></i>
                                     </div>
                                 </div>
-                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition text-xs sm:text-sm md:text-base max-w-[60px] sm:max-w-[120px] md:max-w-none truncate" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
+                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition text-[10px] sm:text-sm md:text-base max-w-[55px] sm:max-w-[120px] md:max-w-none truncate" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
                                 <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-600 hover:text-blue-600 transition cursor-pointer" title="알림">
-                                    <i class="fas fa-bell text-sm sm:text-lg"></i>
-                                    <span id="notificationDot" class="hidden absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full border border-white"></span>
+                                    <i class="fas fa-bell text-xs sm:text-lg"></i>
+                                    <span id="notificationDot" class="hidden absolute -top-0.5 -right-0.5 w-1.5 h-1.5 sm:w-3 sm:h-3 bg-red-500 rounded-full border border-white"></span>
                                 </button>
                                 <button onclick="logout()" class="text-gray-600 hover:text-gray-800 transition cursor-pointer" title="로그아웃">
-                                    <i class="fas fa-sign-out-alt text-sm sm:text-lg"></i>
+                                    <i class="fas fa-sign-out-alt text-xs sm:text-lg"></i>
                                 </button>
                             </div>
                         </div>
@@ -4626,24 +4626,24 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="max-w-7xl mx-auto px-1.5 sm:px-4 py-2.5 sm:py-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-2.5 sm:gap-6">
                 <!-- Left Sidebar -->
                 <div class="lg:col-span-1">
-                    <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
+                    <div class="sticky top-20 space-y-2.5 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-1 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="bg-white rounded-xl shadow-lg border-2 border-blue-300 p-6 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-base font-bold text-blue-800">
-                                    <i class="fas fa-book-open text-blue-600 mr-2"></i>오늘의 성경 구절
+                        <div class="bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-2.5 sm:p-6 transition-all duration-300">
+                            <div class="flex items-center justify-between mb-2 sm:mb-4">
+                                <h3 class="text-sm sm:text-base font-bold text-blue-800">
+                                    <i class="fas fa-book-open text-blue-600 mr-1 sm:mr-2 text-xs sm:text-base"></i>오늘의 성경 구절
                                 </h3>
-                                <span class="text-xs font-bold text-blue-800 whitespace-nowrap">
+                                <span class="text-[10px] sm:text-xs font-bold text-blue-800 whitespace-nowrap">
                                     🎁 기본 리워드
                                 </span>
                             </div>
-                            <div class="border-l-4 border-blue-600 pl-4 py-2 mb-4">
-                                <p class="font-bold text-blue-600 mb-2" id="verseReference">시편 23:1</p>
-                                <p id="verseText" class="text-gray-800 leading-relaxed" style="transition: opacity 0.5s ease-in-out;">
+                            <div class="border-l-2 sm:border-l-4 border-blue-600 pl-2 sm:pl-4 py-1.5 sm:py-2 mb-2 sm:mb-4">
+                                <p class="font-bold text-blue-600 mb-1 sm:mb-2 text-xs sm:text-base" id="verseReference">시편 23:1</p>
+                                <p id="verseText" class="text-gray-800 leading-relaxed text-xs sm:text-base" style="transition: opacity 0.5s ease-in-out;">
                                     여호와는 나의 목자시니 내게 부족함이 없으리로다
                                 </p>
                             </div>

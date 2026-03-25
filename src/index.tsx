@@ -4427,7 +4427,10 @@ app.get('/', (c) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>CROSSfriends - 기독교인 소셜 네트워크</title>
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+        <link rel="manifest" href="/static/manifest.json">
+        <link rel="icon" type="image/png" href="/static/icon-192.png">
+        <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+        <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             // Suppress Tailwind CDN warnings
@@ -4501,6 +4504,10 @@ app.get('/', (c) => {
             .cross-dot.bottom { bottom: -2.5px; left: 50%; transform: translateX(-50%); }
             .cross-dot.left { left: -2.5px; top: 50%; transform: translateY(-50%); }
             .cross-dot.right { right: -2.5px; top: 50%; transform: translateY(-50%); }
+
+            .logo-cross-img {
+                filter: saturate(1.35) contrast(1.05) brightness(0.95);
+            }
             
             /* Admin Badge Styles */
             .admin-badge-container {
@@ -4605,16 +4612,11 @@ app.get('/', (c) => {
                     <div class="flex flex-col cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
                         <h1 class="text-sm sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
                             <span>CROSS</span>
-                            <div class="cross-icon mx-0.5 sm:mx-2 md:mx-3 scale-[0.55] sm:scale-90 md:scale-100">
-                                <div class="cross-dot top"></div>
-                                <div class="cross-dot bottom"></div>
-                                <div class="cross-dot left"></div>
-                                <div class="cross-dot right"></div>
-                            </div>
+                            <img src="/static/logo-cross.png" alt="" class="logo-cross-img mx-0.5 sm:mx-2 md:mx-3 scale-[0.55] sm:scale-90 md:scale-100 w-[1.4rem] h-[1.4rem] sm:w-[2.2rem] sm:h-[2.2rem] object-contain" />
                             <span>friends</span>
                         </h1>
                         <p class="text-[9px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 ml-0.5 sm:ml-1" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
-                            기독교인들을 위한 행복하고 재미있는 소셜 미디어
+                            <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
                         </p>
                     </div>
                     
@@ -6241,7 +6243,13 @@ app.get('/', (c) => {
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
         <script src="/static/app.js?v=${Date.now()}"></script>
+        <script>
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js?v=2', { scope: '/' }).catch(() => {});
+            }
+        </script>
         <script>
             // Toggle Typing Area
             window.toggleTypingArea = function() {

@@ -4426,6 +4426,8 @@ app.get('/', (c) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="theme-color" content="#A55148">
+        <meta name="color-scheme" content="light only">
         <title>CROSSfriends - 기독교인 소셜 네트워크</title>
         <link rel="manifest" href="/static/manifest.json">
         <link rel="icon" type="image/png" href="/static/icon-192.png">
@@ -4437,6 +4439,7 @@ app.get('/', (c) => {
             tailwind.config = { corePlugins: { preflight: true } }
         </script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
         <style>
             /* Prevent horizontal scroll on mobile */
@@ -4446,6 +4449,9 @@ app.get('/', (c) => {
                 position: relative;
                 height: 100%;
                 min-height: 100vh;
+                background-color: #f9fafb;
+                color: #111827;
+                color-scheme: light;
             }
             body {
                 -webkit-overflow-scrolling: touch;
@@ -4504,9 +4510,104 @@ app.get('/', (c) => {
             .cross-dot.bottom { bottom: -2.5px; left: 50%; transform: translateX(-50%); }
             .cross-dot.left { left: -2.5px; top: 50%; transform: translateY(-50%); }
             .cross-dot.right { right: -2.5px; top: 50%; transform: translateY(-50%); }
-
             .logo-cross-img {
+                /* Match brand-red feel of original cross icon */
                 filter: saturate(1.35) contrast(1.05) brightness(0.95);
+            }
+            /* Unified typography scale (mobile + desktop) */
+            .font-size-title { font-size: 1.15rem; }
+            .font-size-base { font-size: 1.03rem; }
+            .font-size-desc { font-size: 0.88rem; }
+            .font-size-mini1 { font-size: 0.78rem; }
+            .basic-reward-badge,
+            .reward-one-badge,
+            .reward-two-badge,
+            .reward-three-badge {
+                display: inline-flex;
+                align-items: center;
+                white-space: nowrap;
+            }
+            .reward-card-collapsible {
+                cursor: pointer;
+            }
+            .reward-card-header-line {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.55rem;
+                margin-bottom: 0.65rem;
+            }
+            .reward-card-header-title {
+                display: inline-flex;
+                align-items: center;
+                min-width: 0;
+                font-size: 1rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .reward-card-header-right {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.35rem;
+                color: #1d4ed8;
+                flex-shrink: 0;
+            }
+            .reward-card-chevron {
+                font-size: 0.88rem;
+                transition: transform 0.2s ease;
+            }
+            .reward-card-collapsed .reward-card-chevron {
+                transform: rotate(180deg);
+            }
+            .reward-card-content {
+                display: block;
+            }
+            .reward-card-collapsed .reward-card-content {
+                display: none;
+            }
+            .reward-card-collapsible.reward-card-collapsed {
+                /* slightly tighter collapsed height */
+                padding-top: 12px !important;
+                padding-bottom: 12px !important;
+                display: flex;
+                align-items: center;
+            }
+            .reward-card-collapsed .reward-card-header-line {
+                margin-bottom: 0;
+                width: 100%;
+            }
+            @media (min-width: 1024px) {
+                /* Keep left sidebar width identical pre/post login (fixed scrollbar lane) */
+                #leftSidebar {
+                    overflow-y: scroll !important;
+                    overflow-x: hidden !important;
+                    scrollbar-gutter: stable both-edges;
+                }
+                #leftSidebar .sidebar-scroll {
+                    overflow-y: visible !important;
+                    padding-left: 0 !important;
+                    margin-left: 0 !important;
+                }
+                /* Lock reward cards to same X-position pre/post login */
+                #verseRewardSection,
+                #sermonRewardSection,
+                #qtWorshipRewardSection,
+                #qtAlarmRewardSection {
+                    margin-left: 0 !important;
+                    transform: none !important;
+                }
+                .pc-logo-hover:hover .pc-logo-cross-spin {
+                    animation: logoCrossGlow 1.4s ease-in-out infinite;
+                }
+            }
+            @keyframes logoCrossGlow {
+                0%, 100% {
+                    filter: saturate(1.35) contrast(1.05) brightness(0.95) drop-shadow(0 0 0px rgba(220,38,38,0));
+                }
+                50% {
+                    filter: saturate(1.6) contrast(1.1) brightness(1.15) drop-shadow(0 0 8px rgba(220,38,38,0.85)) drop-shadow(0 0 16px rgba(220,38,38,0.45));
+                }
             }
             
             /* Admin Badge Styles */
@@ -4592,6 +4693,134 @@ app.get('/', (c) => {
             .sidebar-scroll::-webkit-scrollbar-thumb:hover {
                 background: #9CA3AF;
             }
+            .sidebar-scroll {
+                /* Keep content width stable when scrollbar appears/disappears */
+                scrollbar-gutter: stable;
+            }
+            :root {
+                --panel-scrollbar-gap: 8px; /* 좌/중/우 패널 스크롤바-콘텐츠 공통 간격 */
+            }
+            /* Right sidebar: unify spacing between content and vertical scrollbar */
+            #sidebarFriendsList,
+            #sidebarNotificationsList,
+            #sidebarReactorsList {
+                box-sizing: border-box;
+                padding-right: var(--panel-scrollbar-gap);
+                scrollbar-gutter: stable;
+            }
+            /* Mobile: full-screen overlay for friends/notifications - same width as posting panel (px-3) */
+            #rightSidebar.mobile-fullscreen-overlay {
+                position: fixed !important;
+                left: 50% !important;
+                right: auto !important;
+                width: min(480px, calc(100vw - 24px)) !important;
+                transform: translateX(-50%);
+                bottom: 0 !important;
+                z-index: 50;
+                background: white;
+                overflow: hidden;
+                touch-action: pan-y;
+                overscroll-behavior: contain;
+            }
+            #rightSidebar.mobile-fullscreen-overlay #rightSidebarInner {
+                padding-right: 0 !important;
+            }
+            #rightSidebar.mobile-fullscreen-overlay > div {
+                height: 100% !important;
+                max-height: 100% !important;
+            }
+            #rightSidebar.mobile-fullscreen-overlay #friendsTabContent,
+            #rightSidebar.mobile-fullscreen-overlay #notificationsTabContent,
+            #rightSidebar.mobile-fullscreen-overlay #reactorsTabContent {
+                padding-bottom: calc(1.25rem + 10px) !important; /* p-5 + 10px extra */
+            }
+            /* Mobile: friends/notifications panel body must scroll inside fixed overlay */
+            #rightSidebar.mobile-fullscreen-overlay #friendsTabContent:not(.hidden),
+            #rightSidebar.mobile-fullscreen-overlay #notificationsTabContent:not(.hidden) {
+                height: 100% !important;
+                max-height: 100% !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-y;
+                overscroll-behavior: contain;
+            }
+            #rightSidebar.mobile-fullscreen-overlay #friendsTabContent.hidden,
+            #rightSidebar.mobile-fullscreen-overlay #notificationsTabContent.hidden {
+                display: none !important;
+            }
+            #rightSidebar.mobile-fullscreen-overlay #sidebarFriendsList,
+            #rightSidebar.mobile-fullscreen-overlay #sidebarNotificationsList {
+                flex: 1 1 auto !important;
+                min-height: 0 !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                padding-right: 8px !important;
+                padding-bottom: 10px;
+            }
+            /* 반응/댓글/공유 패널: 모바일 - 헤더 아래 간격, 웹 배경 노출 */
+            #rightSidebar.mobile-fullscreen-overlay.reactors-only {
+                left: 12px !important;
+                right: 12px !important;
+                width: auto !important;
+                transform: none !important;
+                bottom: auto !important;
+                height: auto !important;
+                background: transparent !important;
+                display: flex !important;
+                align-items: flex-start !important;
+                justify-content: center !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+            #rightSidebar.mobile-fullscreen-overlay.reactors-only > div {
+                width: 100% !important;
+                max-width: 400px !important;
+                height: auto !important;
+                max-height: min(70vh, 450px) !important;
+                flex: 0 0 auto !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                background: transparent !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                padding-right: 0 !important;
+            }
+            #rightSidebar.reactors-only #friendsTabContent,
+            #rightSidebar.reactors-only #notificationsTabContent,
+            #rightSidebar.mobile-fullscreen-overlay.reactors-only #friendsTabContent,
+            #rightSidebar.mobile-fullscreen-overlay.reactors-only #notificationsTabContent {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                position: absolute !important;
+                left: -9999px !important;
+                width: 0 !important;
+                height: 0 !important;
+                overflow: hidden !important;
+            }
+            #rightSidebar.reactors-only #reactorsTabContent,
+            #rightSidebar.mobile-fullscreen-overlay.reactors-only #reactorsTabContent {
+                display: flex !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+                max-height: 75vh !important;
+            }
+            
+            /* Friends & Notifications panels: compact height when empty - same shape and size */
+            #friendsTabContent.friends-empty,
+            #notificationsTabContent.notifications-empty {
+                inset: auto;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 195px;
+                overflow: hidden;
+            }
             
             /* Mobile posts carousel styles - Removed for vertical scroll */
             .hide-scrollbar::-webkit-scrollbar {
@@ -4601,60 +4830,364 @@ app.get('/', (c) => {
                 -ms-overflow-style: none;
                 scrollbar-width: none;
             }
+            
+            /* PC: 좌/중앙/우 독립 스크롤 - 포스팅 스크롤해도 사이드바 고정 */
+            @media (min-width: 1024px) {
+                .main-content-wrapper {
+                    height: calc(100vh - 4rem);
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .main-content-grid {
+                    flex: 1;
+                    min-height: 0;
+                    align-items: stretch;
+                    grid-template-rows: minmax(0, 1fr);
+                }
+                .main-content-grid .scroll-independent {
+                    overflow-y: auto;
+                    min-height: 0;
+                    overscroll-behavior: contain;
+                }
+                /* 좌/중/우 스크롤 영역 간격을 오른쪽 기준으로 통일 */
+                #leftSidebar .sidebar-scroll,
+                #centerFeedColumn,
+                #rightSidebar {
+                    scrollbar-gutter: stable;
+                }
+                #leftSidebar .sidebar-scroll {
+                    padding-right: var(--panel-scrollbar-gap) !important;
+                    box-sizing: border-box;
+                }
+                #centerFeedColumn {
+                    padding-right: var(--panel-scrollbar-gap);
+                    box-sizing: border-box;
+                }
+                #rightSidebarInner {
+                    padding-right: var(--panel-scrollbar-gap) !important;
+                    box-sizing: border-box;
+                }
+                /* 왼쪽 사이드바 리워드 영역 = 오른쪽 사이드바와 동일 높이 */
+                #leftSidebar .sidebar-scroll {
+                    min-height: 100%;
+                    max-height: none;
+                }
+                /* Desktop messenger composer: compact like mobile */
+                #friendMessengerComposerWrap {
+                    padding: 0.5rem 0.75rem 0.5rem 0.75rem !important;
+                }
+                #friendMessengerModal,
+                #friendMessengerMessages,
+                #friendMessengerComposerWrap {
+                    overflow-x: hidden !important;
+                }
+                #friendMessengerComposerRow {
+                    gap: 0.2rem !important;
+                    min-width: 0 !important;
+                }
+                #friendMessengerInput {
+                    height: 2.2rem !important;
+                    min-height: 2.2rem !important;
+                    padding-top: 0.25rem !important;
+                    padding-bottom: 0.25rem !important;
+                    font-size: 0.95rem !important;
+                }
+                #friendMessengerImageBtn,
+                #friendMessengerVideoBtn,
+                #friendMessengerSendBtn {
+                    height: 2.2rem !important;
+                }
+                #friendMessengerImageBtn { width: 2.15rem !important; }
+                #friendMessengerVideoBtn { width: 1.95rem !important; margin-left: -2px !important; }
+                #friendMessengerSendBtn { width: 2.3rem !important; min-width: 2.3rem !important; }
+            }
+            
+            /* Mobile: center column uses display:contents so post card & posts keep original order */
+            @media (max-width: 1023px) {
+                .center-feed-mobile-contents { display: contents; }
+            }
+            
+            /* Mobile (390x844) optimizations - PC unaffected */
+            @media (max-width: 1023px) {
+                .safe-area-top { padding-top: env(safe-area-inset-top, 0); }
+                .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+                /* Mobile: comment composer right-edge alignment */
+                .comment-compose-row {
+                    width: calc(100% + 8px) !important;
+                    max-width: calc(100% + 8px) !important;
+                    margin-right: -8px !important;
+                    gap: 4px !important;
+                    box-sizing: border-box !important;
+                }
+                .comment-compose-input {
+                    flex: 1 1 auto !important;
+                    min-width: 0 !important;
+                    padding-right: 0 !important;
+                }
+                .comment-compose-submit {
+                    margin-left: auto !important;
+                    width: 2.5rem !important;
+                    height: 2.5rem !important;
+                    padding: 0 !important;
+                }
+                /* Messenger compose row: force compact height (mobile) */
+                #friendMessengerComposerWrap {
+                    padding-top: 0.35rem !important;
+                    padding-bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+                    overflow-x: hidden !important;
+                }
+                #friendMessengerComposerRow {
+                    gap: 0.15rem !important;
+                    min-width: 0 !important;
+                }
+                #friendMessengerInput {
+                    height: 2.15rem !important;
+                    min-height: 2.15rem !important;
+                    padding-top: 0.2rem !important;
+                    padding-bottom: 0.2rem !important;
+                    font-size: 0.94rem !important;
+                }
+                #friendMessengerImageBtn,
+                #friendMessengerVideoBtn,
+                #friendMessengerSendBtn {
+                    height: 2.15rem !important;
+                }
+                #friendMessengerImageBtn { width: 2.05rem !important; }
+                #friendMessengerVideoBtn { width: 1.85rem !important; margin-left: -2px !important; }
+                #friendMessengerSendBtn { width: 2.2rem !important; min-width: 2.2rem !important; }
+                /* Shared post frame parity (compose preview === posted card) */
+                .shared-post-frame {
+                    width: 100% !important;
+                    box-sizing: border-box !important;
+                }
+                .shared-post-frame .shared-post-card {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin-left: 0 !important;
+                    margin-right: 0 !important;
+                    box-sizing: border-box !important;
+                }
+                .shared-post-frame-compose {
+                    /* Compose preview width baseline */
+                    width: calc(100% + 42px) !important;
+                    margin-left: -40px !important;
+                    margin-right: -2px !important;
+                }
+                .shared-post-frame-feed {
+                    margin-top: calc(1.15rem + 20px) !important;
+                    width: calc(100% + 78.5px) !important;
+                    margin-left: -70px !important;
+                    margin-right: -8.5px !important;
+                }
+                .shared-post-frame-feed .shared-post-card-feed {
+                    padding-top: calc(1rem + 5px) !important;
+                    padding-right: calc(1rem + 5px) !important;
+                    padding-left: calc(1rem + 5px) !important;
+                    padding-bottom: calc(1rem + 9px) !important;
+                }
+                /* Min 44px touch targets for mobile */
+                .min-touch { min-height: 44px; min-width: 44px; }
+                /* Post action icon buttons: force perfect circles on mobile */
+                .post-action-icon-btn {
+                    width: 2.25rem !important;
+                    height: 2.25rem !important;
+                    min-width: 2.25rem !important;
+                    min-height: 2.25rem !important;
+                    max-width: 2.25rem !important;
+                    max-height: 2.25rem !important;
+                    flex: 0 0 2.25rem !important;
+                    padding: 0 !important;
+                    border-radius: 9999px !important;
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    overflow: hidden !important;
+                    box-sizing: border-box !important;
+                    line-height: 1 !important;
+                    -webkit-appearance: none;
+                    appearance: none;
+                    -webkit-tap-highlight-color: transparent;
+                }
+                .post-action-slot {
+                    position: relative;
+                    width: 2.25rem;
+                    min-width: 2.25rem;
+                    justify-content: center;
+                }
+                .post-action-count-trigger,
+                .post-action-count-placeholder {
+                    position: absolute !important;
+                    left: 100%;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    margin: 0 !important;
+                }
+                /* New-post 7 color circles: mobile one-row centered */
+                .new-post-color-row {
+                    width: 100%;
+                }
+                /* Mobile only: extend color row to full post-card width (including avatar column) */
+                .new-post-color-row {
+                    margin-left: -2.5rem;
+                    width: calc(100% + 2.5rem);
+                    max-width: calc(100% + 2.5rem);
+                }
+                .new-post-color-item {
+                    min-width: 0;
+                }
+                .new-post-color-item .color-selector-btn {
+                    flex-shrink: 0;
+                }
+                .new-post-color-item span {
+                    white-space: nowrap;
+                    font-size: clamp(11px, 3.2vw, 13px) !important;
+                    line-height: 1.2 !important;
+                    margin-top: 2px;
+                }
+                .new-post-color-row {
+                    display: grid !important;
+                    grid-template-columns: repeat(7, minmax(0, 1fr));
+                    justify-items: center;
+                    align-items: start;
+                    column-gap: 0;
+                    row-gap: 0;
+                    padding-left: clamp(2px, 1vw, 8px);
+                    padding-right: clamp(2px, 1vw, 8px);
+                    box-sizing: border-box;
+                    /* exact: each pair gap +5% of one slot width */
+                    --mobile-color-gap-expand-step: calc((100% / 7) * 0.12);
+                }
+                /* Mobile only: keep 1(중보) fixed, expand 1-2...6-7 gaps by ~5% */
+                .new-post-color-row .new-post-color-item:nth-child(2) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 1)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(3) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 2)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(4) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 3)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(5) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 4)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(6) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 5)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(7) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 6)) !important; }
+                /* Friends/Notifications: fixed header + scrollable body (mobile) */
+                #friendsPanelHeader,
+                #notificationsPanelHeader {
+                    position: sticky;
+                    top: 0;
+                    z-index: 5;
+                    background: #fff;
+                }
+                /* Reward panels: no scroll on mobile */
+                #leftSidebar .sidebar-scroll {
+                    overflow-y: visible !important;
+                    max-height: none !important;
+                }
+            }
         </style>
     </head>
     <body class="bg-gray-50 overflow-x-hidden" style="min-height: 100vh; overflow-y: auto;">
         <!-- Header -->
-        <nav class="bg-white shadow-md sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-1.5 sm:px-2 py-1.5 sm:py-2">
-                <div class="flex justify-between items-center">
-                    <!-- Logo - Responsive -->
-                    <div class="flex flex-col cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
-                        <h1 class="text-sm sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center cursor-pointer hover:opacity-80 transition" onclick="clearUserFilter()" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
-                            <span>CROSS</span>
-                            <img src="/static/logo-cross.png" alt="" class="logo-cross-img mx-0.5 sm:mx-2 md:mx-3 scale-[0.55] sm:scale-90 md:scale-100 w-[1.4rem] h-[1.4rem] sm:w-[2.2rem] sm:h-[2.2rem] object-contain" />
-                            <span>friends</span>
-                        </h1>
-                        <p class="text-[9px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 ml-0.5 sm:ml-1" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
-                            <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
-                        </p>
-                    </div>
-                    
-                    <!-- Auth Buttons - Responsive -->
-                    <div class="flex items-center gap-2 sm:gap-2 md:gap-3" id="authButtons">
-                        <button onclick="showHowToUse()" class="text-gray-800 px-1 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
-                            <i class="fas fa-question-circle text-xs"></i><span class="hidden sm:inline ml-1">사용법</span>
-                        </button>
-                        <button onclick="showLoginModal()" class="text-gray-800 px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-gray-100 transition text-xs sm:text-base">
-                            로그인
-                        </button>
-                        <button onclick="showSignupModal()" class="bg-blue-600 text-white px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded hover:bg-blue-700 transition text-xs sm:text-base">
-                            가입
+        <nav id="mainHeader" class="bg-white shadow-md sticky top-0 z-50 safe-area-top overflow-x-hidden">
+            <div class="max-w-7xl lg:max-w-[92rem] mx-auto px-3 sm:px-4 pt-1 pb-2">
+                <!-- Mobile: 2 rows - Logo top, buttons bottom -->
+                <div class="flex flex-col gap-2 lg:hidden">
+                    <div id="mobileLogoRow" class="relative flex items-center justify-center overflow-visible">
+                        <div id="mobileLogoBlock" class="flex flex-col cursor-pointer hover:opacity-80 transition flex-shrink-0" onclick="goToHome()" style="font-size: 150%; transform: scale(1.26); transform-origin: center;">
+                            <h1 class="mt-2 text-base sm:text-2xl font-bold text-gray-800 flex items-center justify-center" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px; transform: scale(1.2); transform-origin: center;">
+                                <span>CROSS</span>
+                                <img src="/static/logo-cross.png" alt="" class="logo-cross-img mx-0 sm:mx-0.5 scale-[0.6] sm:scale-90 w-[2.646rem] h-[2.646rem] object-contain rounded-full border border-red-300 p-0.5" />
+                                <span>friends</span>
+                            </h1>
+                            <p class="text-[10px] sm:text-sm text-gray-600 -mt-1 sm:mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                                <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
+                            </p>
+                        </div>
+                        <button id="installAppBtnMobile" type="button" onclick="triggerAppInstall()" class="hidden absolute top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600 w-10 h-10 rounded-full hover:bg-blue-50 transition flex items-center justify-center" title="앱처럼 설치">
+                            <i class="fas fa-download text-lg"></i>
                         </button>
                     </div>
-                    
-                    <!-- User Menu - Responsive -->
-                    <div class="flex items-center space-x-0.5 sm:space-x-3 md:space-x-4 hidden" id="userMenu">
-                        <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 px-1 sm:px-3 py-1 sm:py-2 rounded hover:bg-red-50 transition text-xs sm:text-base" title="관리자 패널">
-                            <i class="fas fa-shield-alt mr-0.5 sm:mr-1"></i>
-                            <span class="hidden lg:inline">관리자 모드</span>
-                        </button>
-                        <div class="relative">
-                            <div class="flex items-center space-x-0.5 sm:space-x-2 md:space-x-3 bg-gray-100 px-1 sm:px-3 md:px-4 py-1 sm:py-2 rounded">
-                                <div class="admin-badge-container">
-                                    <div id="userAvatarContainer" class="w-5 h-5 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-[10px] sm:text-xs flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                </div>
-                                <span id="userName" class="text-gray-800 font-medium whitespace-nowrap cursor-pointer hover:text-blue-600 transition text-[10px] sm:text-sm md:text-base max-w-[55px] sm:max-w-[120px] md:max-w-none truncate" onclick="filterMyPosts()" title="내 포스팅만 보기"></span>
-                                <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-600 hover:text-blue-600 transition cursor-pointer" title="알림">
-                                    <i class="fas fa-bell text-xs sm:text-lg"></i>
-                                    <span id="notificationDot" class="hidden absolute -top-0.5 -right-0.5 w-1.5 h-1.5 sm:w-3 sm:h-3 bg-red-500 rounded-full border border-white"></span>
-                                </button>
-                                <button onclick="logout()" class="text-gray-600 hover:text-gray-800 transition cursor-pointer" title="로그아웃">
-                                    <i class="fas fa-sign-out-alt text-xs sm:text-lg"></i>
-                                </button>
+                    <div class="w-full flex justify-center">
+                        <div class="inline-flex items-center justify-center mx-auto w-fit gap-2" id="authButtons">
+                            <button onclick="showHowToUse()" class="text-gray-500 hover:text-gray-800 px-2 py-2 rounded-full hover:bg-gray-100 transition text-xs flex items-center gap-1" title="사용법">
+                                <i class="fas fa-question-circle text-[2.25rem] leading-none"></i>
+                            </button>
+                            <div class="flex items-center gap-0">
+                                <button onclick="showLoginModal()" class="text-gray-700 hover:text-blue-600 border border-gray-300 px-[0.95rem] py-[0.48rem] rounded-full transition text-[0.97rem] font-medium">로그인</button>
+                                <button onclick="showSignupModal()" class="ml-2 bg-blue-600 text-white px-[1.1rem] py-[0.48rem] rounded-full hover:bg-blue-700 transition text-[0.97rem] font-semibold">가입</button>
                             </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 sm:gap-1.5 hidden" id="userMenuMobile">
+                            <button id="qtBtnMobile" onclick="toggleQtPanel()" class="text-gray-500 w-9 h-9 flex items-center justify-center rounded-full border-2 border-gray-500 bg-transparent font-bold text-sm transition hover:border-red-600 hover:text-red-600" title="QT">
+                                QT
+                            </button>
+                            <button id="friendsListBtnMobile" onclick="toggleFriendsList()" class="text-gray-500 hover:text-blue-600 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200" title="친구 목록">
+                                <i class="fas fa-user-friends text-lg"></i>
+                            </button>
+                            <button id="notificationBtnMobile" onclick="toggleNotifications()" class="relative text-gray-500 hover:text-blue-600 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200" title="알림">
+                                <i class="fas fa-bell text-lg"></i>
+                                <span id="notificationDotMobile" class="hidden absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
+                            </button>
+                            <button onclick="goToAdmin()" id="adminPanelBtnMobile" class="hidden text-red-600 hover:text-red-800 w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center" title="관리자 패널">
+                                <i class="fas fa-shield-alt text-lg"></i>
+                            </button>
+                            <div id="userAvatarContainerMobile" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs cursor-pointer hover:ring-2 hover:ring-blue-300" onclick="showMyProfile()">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span id="userNameMobile" class="text-gray-800 text-base font-semibold cursor-default truncate max-w-[80px]"></span>
+                            <button id="feedbackBtnMobile" onclick="showFeedbackModal()" class="text-gray-500 hover:text-amber-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-amber-50 transition" title="피드백 요청">
+                                <i class="fas fa-lightbulb text-base"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- PC: single row - Logo left, Friends+Notification center, Admin+Name right -->
+                <div class="hidden lg:grid lg:grid-cols-[1fr_1.1115fr_1.1115fr_1fr] lg:items-center lg:gap-x-[2%]">
+                    <div class="lg:col-start-1 flex justify-start">
+                        <div class="pc-logo-hover flex flex-col items-center cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
+                            <h1 class="text-xl md:text-2xl font-bold text-gray-800 flex items-center" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
+                                <span>CROSS</span>
+                                <img src="/static/logo-cross.png" alt="" class="logo-cross-img pc-logo-cross-spin mx-0.5 md:mx-1.5 scale-90 md:scale-100 w-[2.646rem] h-[2.646rem] object-contain" />
+                                <span>friends</span>
+                            </h1>
+                            <p class="w-full text-[10px] text-gray-600 mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                                <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="lg:col-start-2 lg:col-span-2 flex items-center justify-center gap-2">
+                        <div class="flex flex-nowrap items-center gap-2 md:gap-3" id="authButtonsPC">
+                            <button onclick="showHowToUse()" class="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-full hover:bg-gray-100 transition flex items-center justify-center" title="사용법">
+                                <i class="fas fa-question-circle text-[2rem] leading-none"></i>
+                            </button>
+                            <button onclick="showLoginModal()" class="text-gray-700 hover:text-blue-600 border border-gray-300 hover:border-blue-400 px-5 py-2 rounded-full transition text-base font-medium">로그인</button>
+                            <button onclick="showSignupModal()" class="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition text-base font-semibold shadow-sm">가입</button>
+                        </div>
+                        <div class="flex items-center gap-2 hidden" id="userMenuCenterPC">
+                            <button id="qtBtn" onclick="toggleQtPanel()" class="text-gray-500 w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-500 bg-transparent transition font-bold text-sm hover:border-red-600 hover:text-red-600" title="QT">
+                                QT
+                            </button>
+                            <button id="friendsListBtn" onclick="toggleFriendsList()" class="text-gray-500 hover:text-blue-600 w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-200 transition" title="친구 목록">
+                                <i class="fas fa-user-friends text-xl"></i>
+                            </button>
+                            <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-500 hover:text-blue-600 w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-200 transition" title="알림">
+                                <i class="fas fa-bell text-xl"></i>
+                                <span id="notificationDot" class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border border-white"></span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lg:col-start-4 flex items-center justify-end gap-2">
+                        <div class="flex items-center gap-2 hidden" id="userMenuRightPC">
+                            <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 w-11 h-11 rounded-full hover:bg-red-50 transition flex items-center justify-center" title="관리자 패널">
+                                <i class="fas fa-shield-alt text-xl"></i>
+                            </button>
+                            <div class="admin-badge-container flex-shrink-0">
+                                <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs cursor-pointer hover:ring-2 hover:ring-blue-300 transition" onclick="showMyProfile()">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            </div>
+                            <span id="userName" class="text-gray-800 text-base font-semibold whitespace-nowrap cursor-default"></span>
+                            <button id="feedbackBtn" onclick="showFeedbackModal()" class="text-gray-500 hover:text-amber-600 w-9 h-9 flex items-center justify-center rounded-full hover:bg-amber-50 transition" title="피드백 요청">
+                                <i class="fas fa-lightbulb text-lg"></i>
+                            </button>
+                            <button id="installAppBtn" type="button" onclick="triggerAppInstall()" class="hidden text-gray-500 hover:text-blue-600 w-10 h-10 rounded-full hover:bg-blue-50 transition flex items-center justify-center" title="앱처럼 설치">
+                                <i class="fas fa-download text-lg"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -4662,24 +5195,26 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl mx-auto px-1 sm:px-4 py-2 sm:py-6 pb-20 sm:pb-12">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-6">
-                <!-- Left Sidebar -->
-                <div class="lg:col-span-1">
-                    <div class="sticky top-20 space-y-2 sm:space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
+        <div class="max-w-7xl lg:max-w-[92rem] mx-auto px-3 sm:px-4 py-3 sm:py-6 pb-10 sm:pb-12 safe-area-bottom main-content-wrapper">
+            <div class="flex flex-col gap-3 sm:gap-6 lg:grid lg:grid-cols-[1.188fr_1.0715fr_1.0715fr_1fr] lg:gap-x-[2%] main-content-grid">
+                <!-- Left Sidebar - order-first on mobile: reward content at top -->
+                <div id="leftSidebar" class="lg:col-span-1 order-first lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2 scroll-independent">
+                        <div class="sticky top-20 space-y-2 sm:space-y-3 lg:min-h-full max-h-[calc(100vh-6rem)] lg:max-h-none overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div class="relative bg-white rounded-lg sm:rounded-xl shadow-lg border-2 border-blue-300 p-3 sm:p-4 transition-all duration-300">
-                            <div class="flex items-center justify-between mb-2 sm:mb-3">
-                                <h3 class="text-base font-bold text-blue-800">
-                                    <i class="fas fa-book-open text-blue-600 mr-2 text-base"></i>오늘의 성경 구절
+                        <div id="verseRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="basic" data-reward-key="basic" data-reward-target="verseRewardContent">
+                            <div class="reward-card-header-line">
+                                <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
+                                    <i class="fas fa-book-open font-size-title text-blue-600 mr-2"></i>오늘의 성경 구절
                                 </h3>
-                                <span class="text-[10px] sm:text-xs font-bold text-blue-800 whitespace-nowrap">
-                                    🎁 기본 리워드
-                                </span>
+                                <div class="reward-card-header-right">
+                                    <span class="basic-reward-badge font-size-mini1 font-bold text-blue-800">🎁 기본 리워드</span>
+                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
+                                </div>
                             </div>
+                            <div id="verseRewardContent" class="reward-card-content">
                             <div class="border-l-2 sm:border-l-4 border-blue-600 pl-1 sm:pl-3 py-0.5 sm:py-1.5 mb-3 sm:mb-4">
-                                <p class="font-bold text-blue-600 mb-0.5 sm:mb-1.5 text-sm sm:text-sm" id="verseReference">시편 23:1</p>
-                                <p id="verseText" class="text-gray-800 leading-snug text-sm sm:text-sm" style="transition: opacity 0.5s ease-in-out;">
+                                <p class="font-size-base font-bold text-blue-600 mb-0.5 sm:mb-1.5" id="verseReference">시편 23:1</p>
+                                <p id="verseText" class="font-size-base text-gray-800 leading-snug" style="transition: opacity 0.5s ease-in-out;">
                                     여호와는 나의 목자시니 내게 부족함이 없으리로다
                                 </p>
                             </div>
@@ -4689,34 +5224,42 @@ app.get('/', (c) => {
                                 <button 
                                     id="typingToggleBtn"
                                     onclick="toggleTypingArea()"
-                                    class="w-full mt-3 sm:mt-4 py-3 sm:py-4 px-2 sm:px-3 bg-blue-50 hover:bg-blue-100 border border-blue-300 sm:border-2 rounded transition-all flex items-center justify-center space-x-0.5 sm:space-x-1.5 text-blue-800 font-semibold text-[10px] sm:text-sm">
-                                    <i class="fas fa-keyboard text-blue-600 text-[10px] sm:text-sm"></i>
-                                    <span>말씀 타이핑</span>
-                                    <i id="typingToggleIcon" class="fas fa-chevron-down text-[8px] sm:text-[10px]"></i>
+                                    class="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-blue-800 font-bold text-base">
+                                    <i class="fas fa-keyboard text-lg"></i>
+                                    <span class="font-size-desc">말씀 타이핑</span>
+                                    <i id="typingToggleIcon" class="fas fa-chevron-down text-sm ml-1 transition-transform duration-300"></i>
                                 </button>
                                 
                                 <!-- Typing Input Area (Initially Hidden) -->
-                                <div id="typingArea" class="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200 hidden">
-                                    <div class="mb-2">
-                                        <label class="text-sm font-semibold text-gray-700">
-                                            <i class="fas fa-keyboard text-blue-600 mr-1"></i>말씀 타이핑
+                                <div id="typingArea" class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-blue-100 hidden">
+                                    <div class="mb-3">
+                                        <label class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-1.5">
+                                            <i class="fas fa-keyboard text-blue-600 text-base"></i>말씀 타이핑
                                         </label>
                                     </div>
-                                    <textarea 
-                                        id="typingInput"
-                                        placeholder="위 성경구절을 입력하고 Enter를 누르세요..."
-                                        class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-sm"
-                                        rows="3"
-                                        onkeydown="handleTypingEnter(event)"
-                                    ></textarea>
-                                    <div id="typingResult" class="mt-2 text-sm hidden"></div>
+                                    <div class="flex gap-2 items-stretch">
+                                        <textarea
+                                            id="typingInput"
+                                            placeholder="성경구절을 입력하세요..."
+                                            class="flex-1 p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none font-size-base"
+                                            rows="3"
+                                            onkeydown="handleTypingEnter(event)"
+                                        ></textarea>
+                                        <button
+                                            onclick="checkTyping()"
+                                            title="제출"
+                                            class="flex-shrink-0 w-12 sm:w-14 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm touch-manipulation">
+                                            <i class="fas fa-paper-plane text-lg sm:text-xl"></i>
+                                        </button>
+                                    </div>
+                                    <div id="typingResult" class="mt-2 font-size-base hidden"></div>
                                 </div>
                                 
-                                <!-- Login Required Overlay (Same style as 500 point unlock) -->
+                                <!-- Login Required Overlay (Same style as 200pt unlock) -->
                                 <div id="typingLoginOverlay" class="hidden absolute top-0 left-0 w-full h-full bg-white bg-opacity-95 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
                                     <button 
                                         disabled
-                                        class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold text-base cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
+                                        class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
                                         <i class="fas fa-lock text-lg"></i>
                                         <span>로그인 후 이용 가능</span>
                                     </button>
@@ -4737,26 +5280,31 @@ app.get('/', (c) => {
                                     }
                                 })();
                             </script>
+                            </div>
                         </div>
                     
                         <!-- Reward1: Today's Sermon Section -->
-                        <div id="sermonRewardSection" class="bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300">
-                            <!-- Locked State (< 500 points) -->
-                            <div id="sermonLocked">
-                                <div class="flex items-center justify-between mb-3">
-                                    <h3 class="text-base font-bold text-blue-800">
-                                        <i class="fas fa-video text-blue-600 mr-2"></i>오늘의 설교 말씀
-                                    </h3>
-                                    <span class="text-xs font-bold text-blue-800 whitespace-nowrap">
-                                        🎁 리워드1
-                                    </span>
+                        <div id="sermonRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="reward1" data-reward-key="reward1" data-reward-target="sermonRewardContent">
+                            <div class="reward-card-header-line">
+                                <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
+                                    <i class="fas fa-video font-size-title text-blue-600 mr-2"></i>오늘의 설교 말씀
+                                </h3>
+                                <div class="reward-card-header-right">
+                                    <span class="reward-one-badge font-size-mini1 font-bold text-blue-800">🎁 리워드1</span>
+                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
                                 </div>
-                                
+                            </div>
+                            <div id="sermonRewardContent" class="reward-card-content">
+                            <p id="sermonQueueNotice" class="hidden mt-1 mb-2 text-[11px] sm:text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                                준비된 하용조 목사 설교 목록이 모두 소진되었습니다. 새 링크를 보내주세요.
+                            </p>
+                            <!-- Locked State (< 200 points) -->
+                            <div id="sermonLocked">
                                 <!-- Current Score Display -->
                                 <div class="bg-blue-50 rounded-lg p-3 mb-3">
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm font-semibold text-gray-700">현재 종합점수</span>
-                                        <span id="rewardTotalScore" class="text-xl font-bold text-blue-600">0</span>
+                                        <span class="font-size-base font-semibold text-gray-700">현재 종합점수</span>
+                                        <span id="rewardTotalScore" class="font-size-base font-bold text-blue-600">0</span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
                                         <div id="rewardProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
@@ -4767,34 +5315,23 @@ app.get('/', (c) => {
                                 <button 
                                     id="unlockSermonBtn"
                                     disabled
-                                    class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold text-base cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
+                                    class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
                                     <i class="fas fa-lock text-lg"></i>
-                                    <span>500점 달성 후 언락 가능</span>
+                                    <span>200μ 달성 후 공개 가능</span>
                                 </button>
                             </div>
                             
-                            <!-- Unlocked State (≥ 500 points) -->
+                            <!-- Unlocked State (≥ 200 points) -->
                             <div id="sermonUnlocked" class="hidden">
-                                <div id="unlockBanner" class="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg p-3 mb-3 border-2 border-yellow-400">
-                                    <div class="flex items-center justify-center space-x-2">
-                                        <i class="fas fa-trophy text-yellow-600 text-xl"></i>
-                                        <h3 class="text-lg font-bold text-yellow-800">🎉 리워드1 언락 완료!</h3>
-                                        <i class="fas fa-trophy text-yellow-600 text-xl"></i>
-                                    </div>
-                                </div>
-                                
-                                <h3 class="text-base font-bold mb-3 text-gray-800">
-                                    <i class="fas fa-video text-red-600 mr-2"></i>오늘의 설교 말씀
-                                </h3>
                                 <div class="border-l-4 border-red-600 pl-3 py-2 mb-3">
-                                    <p class="font-bold text-red-600 text-sm mb-1">
-                                        낙망하고 불안해하지 말라
+                                    <p id="sermonTitleText" class="font-size-base font-bold text-red-600 mb-1">
+                                        나의 사랑 안에 거하라
                                     </p>
-                                    <p class="text-gray-700 text-xs mb-1">
-                                        시편 42:5
+                                    <p id="sermonReferenceText" class="font-size-base text-gray-700 mb-1">
+                                        요한복음 15:9-15
                                     </p>
-                                    <p class="text-xs text-gray-500">
-                                        <i class="fas fa-user-tie mr-1"></i>조용기 목사 (여의도순복음교회)
+                                    <p id="sermonPreacherText" class="font-size-desc text-gray-500">
+                                        <i class="fas fa-user-tie mr-1"></i>하용조 목사 (온누리교회)
                                     </p>
                                 </div>
                                 
@@ -4815,19 +5352,124 @@ app.get('/', (c) => {
                                         <div id="videoProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
                                     </div>
                                     <p class="text-xs text-blue-700 mt-2">
-                                        <i class="fas fa-info-circle mr-1"></i>영상을 90% 이상 시청하면 100점을 받습니다!
+                                        <i class="fas fa-info-circle mr-1"></i>영상을 90% 이상 시청하면 40μ을 받습니다!
                                     </p>
                                 </div>
                                 
                                 <!-- Video Completion Result -->
                                 <div id="videoCompletionResult" class="mt-3 hidden"></div>
                             </div>
+                            </div>
+                        </div>
+
+                        <!-- Reward2: QT Worship Unlock Section -->
+                        <div id="qtWorshipRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="reward2" data-reward-key="reward2" data-reward-target="qtWorshipRewardContent">
+                            <div class="reward-card-header-line">
+                                <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
+                                    <i class="fas fa-music font-size-title text-blue-600 mr-2"></i>QT 찬양
+                                </h3>
+                                <div class="reward-card-header-right">
+                                    <span class="reward-two-badge font-size-mini1 font-bold text-blue-800">🎁 리워드2</span>
+                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
+                                </div>
+                            </div>
+                            <div id="qtWorshipRewardContent" class="reward-card-content">
+
+                            <div id="qtWorshipLocked">
+                                <p class="font-size-desc text-gray-600 mb-3">
+                                    왼쪽 사이드바 안내: 총점 <span class="font-bold text-blue-700">1000μ</span> 달성 시 QT 찬양 기능이 공개됩니다.
+                                </p>
+
+                                <div class="bg-blue-50 rounded-lg p-3 mb-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-size-base font-semibold text-gray-700">현재 종합점수</span>
+                                        <span id="reward2TotalScore" class="font-size-base font-bold text-blue-600">0</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div id="reward2ProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    id="unlockQtWorshipBtn"
+                                    disabled
+                                    class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
+                                    <i class="fas fa-lock text-lg"></i>
+                                    <span>1000μ 달성 후 공개 가능</span>
+                                </button>
+                            </div>
+
+                            <div id="qtWorshipUnlocked" class="hidden">
+                                <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i class="fas fa-gift text-green-600"></i>
+                                        <p class="font-size-base font-bold text-green-700">1000μ 달성 축하합니다!</p>
+                                    </div>
+                                    <p class="font-size-desc text-gray-700">
+                                        점수 획득 축하 카드와 함께 QT 패널 상단의 <span class="font-bold text-red-600">찬양 버튼</span>이 공개되었습니다.
+                                    </p>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- Reward3: QT Alarm Unlock Section -->
+                        <div id="qtAlarmRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="reward3" data-reward-key="reward3" data-reward-target="qtAlarmRewardContent">
+                            <div class="reward-card-header-line">
+                                <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
+                                    <i class="fas fa-bell font-size-title text-blue-600 mr-2"></i>QT 예약
+                                </h3>
+                                <div class="reward-card-header-right">
+                                    <span class="reward-three-badge font-size-mini1 font-bold text-blue-800">🎁 리워드3</span>
+                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
+                                </div>
+                            </div>
+                            <div id="qtAlarmRewardContent" class="reward-card-content">
+
+                            <div id="qtAlarmLocked">
+                                <p class="font-size-desc text-gray-600 mb-3">
+                                    총점 <span class="font-bold text-blue-700">1400μ</span> 달성 시 QT 예약(알람) 기능이 공개됩니다.
+                                </p>
+
+                                <div class="bg-blue-50 rounded-lg p-3 mb-3">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-size-base font-semibold text-gray-700">현재 종합점수</span>
+                                        <span id="reward3TotalScore" class="font-size-base font-bold text-blue-600">0</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div id="reward3ProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    id="unlockQtAlarmBtn"
+                                    disabled
+                                    class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
+                                    <i class="fas fa-lock text-lg"></i>
+                                    <span>1400μ 달성 후 공개 가능</span>
+                                </button>
+                            </div>
+
+                            <div id="qtAlarmUnlocked" class="hidden">
+                                <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <i class="fas fa-gift text-green-600"></i>
+                                        <p class="font-size-base font-bold text-green-700">1400μ 달성 축하합니다!</p>
+                                    </div>
+                                    <p class="font-size-desc text-gray-700">
+                                        QT 패널 상단의 <span class="font-bold text-red-600">알람 버튼</span>이 공개되었습니다.
+                                    </p>
+                                </div>
+                            </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Main Feed -->
-                <div class="lg:col-span-2 space-y-4">
+                <!-- Center Column: Post Card + Posts (scroll together on PC) -->
+                <div id="centerFeedColumn" class="lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col scroll-independent mx-auto w-full max-w-[480px] lg:max-w-none space-y-4 center-feed-mobile-contents">
+                <!-- Main Feed Part 1: Post Card - order-2 on mobile (after reward) -->
+                <div id="mainFeedPart1" class="space-y-4 order-2 lg:order-none">
                     <!-- User Profile Cover Card (Hidden by default, shown when filtering by user) -->
                     <div id="userProfileCover" class="hidden bg-white rounded-xl shadow-lg border-2 border-gray-300 overflow-hidden">
                         <!-- Cover Photo -->
@@ -4835,7 +5477,7 @@ app.get('/', (c) => {
                         </div>
                         
                         <!-- Profile Info -->
-                        <div class="relative px-6 pb-6">
+                        <div class="relative px-4 pb-4 sm:px-6 sm:pb-6">
                             <!-- Profile Picture (Overlapping cover) -->
                             <div class="-mt-16 mb-4">
                                 <div class="relative inline-block">
@@ -4886,25 +5528,34 @@ app.get('/', (c) => {
                                 </div>
                                 
                                 <!-- Scores (if not private) - Compact inline display -->
-                                <div id="profileCoverScores" class="flex items-center space-x-3 pt-2 text-xs text-gray-600">
-                                    <i class="fas fa-book-open text-blue-500 text-xs"></i>
-                                    <span id="profileCoverScriptureScore" class="font-semibold text-blue-600">0</span>
-                                    <span class="text-gray-400">·</span>
-                                    <i class="fas fa-praying-hands text-purple-500 text-xs"></i>
-                                    <span id="profileCoverPrayerScore" class="font-semibold text-purple-600">0</span>
-                                    <span class="text-gray-400">·</span>
-                                    <i class="fas fa-heart text-red-500 text-xs"></i>
-                                    <span id="profileCoverActivityScore" class="font-semibold text-red-600">0</span>
+                                <div id="profileCoverScores" class="flex items-center gap-3 sm:gap-4 pt-2 text-xs text-gray-600">
+                                    <div class="flex items-center gap-1">
+                                        <i class="fas fa-book-open text-blue-500"></i>
+                                        <span class="text-gray-500">성경</span>
+                                        <span id="profileCoverScriptureScore" class="font-bold text-blue-600">0</span>
+                                    </div>
+                                    <span class="text-gray-300">|</span>
+                                    <div class="flex items-center gap-1">
+                                        <i class="fas fa-praying-hands text-purple-500"></i>
+                                        <span class="text-gray-500">기도</span>
+                                        <span id="profileCoverPrayerScore" class="font-bold text-purple-600">0</span>
+                                    </div>
+                                    <span class="text-gray-300">|</span>
+                                    <div class="flex items-center gap-1">
+                                        <i class="fas fa-heart text-red-500"></i>
+                                        <span class="text-gray-500">활동</span>
+                                        <span id="profileCoverActivityScore" class="font-bold text-red-600">0</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- New Post Card -->
-                    <div id="newPostCard" class="bg-white rounded-lg sm:rounded-xl shadow-md border-2 border-gray-300 p-3 sm:p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
+                    <div id="newPostCard" class="bg-white rounded-xl sm:rounded-xl shadow-md border-2 border-gray-300 p-4 sm:p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
                         <div class="flex items-start space-x-2 sm:space-x-4">
                             <div class="admin-badge-container">
-                                <div id="newPostAvatar" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs sm:text-base flex-shrink-0 cursor-pointer hover:ring-2 sm:hover:ring-4 hover:ring-blue-300 transition" onclick="showViewProfileModal()">
+                                <div id="newPostAvatar" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs sm:text-base flex-shrink-0 cursor-pointer hover:ring-2 sm:hover:ring-4 hover:ring-blue-300 transition" onclick="showMyProfile()">
                                     <i class="fas fa-user"></i>
                                 </div>
                                 <!-- Badge will be added here dynamically -->
@@ -4913,79 +5564,71 @@ app.get('/', (c) => {
                                 <textarea 
                                     id="newPostContent"
                                     placeholder="무엇을 나누고 싶으신가요?"
-                                    class="w-full p-2 sm:p-3 border rounded text-sm sm:text-base resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
+                                    class="w-full p-2 sm:p-3 border rounded font-size-base resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                                     rows="3"
                                 ></textarea>
                                 
                                 <!-- Background Color Selector -->
                                 <div class="mt-2 sm:mt-3">
-                                    <div class="flex items-center justify-end mb-1 sm:mb-2">
-                                        <button 
-                                            onclick="resetBackgroundColor()" 
-                                            class="text-[10px] sm:text-xs text-gray-500 hover:text-gray-700 underline"
-                                            title="초기화">
-                                            <i class="fas fa-undo mr-0.5 sm:mr-1 text-[10px] sm:text-xs"></i>초기화
-                                        </button>
-                                    </div>
-                                    <div class="flex items-start space-x-2 sm:space-x-3">
-                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                                    <div class="new-post-color-row flex flex-nowrap justify-between items-start w-full">
+                                        <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#F87171', this)" 
-                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #F87171;"
                                                 title="중보">
                                             </button>
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">중보</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                                        <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#F5D4B3', this)" 
-                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #FED7B0;"
                                                 title="일상">
                                             </button>
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">일상</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                                        <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#F5E398', this)" 
-                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #FEF08A;"
                                                 title="말씀">
                                             </button>
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">말씀</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                                        <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#B3EDD8', this)" 
-                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #BBF7D0;"
                                                 title="사역">
                                             </button>
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">사역</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                                        <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#C4E5F8', this)" 
-                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #BAE6FD;"
                                                 title="찬양">
                                             </button>
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">찬양</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                                        <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#E2DBFB', this)" 
-                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #DDD6FE;"
                                                 title="교회">
                                             </button>
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">교회</span>
                                         </div>
-                                        <div class="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                                        <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button 
                                                 onclick="selectBackgroundColor('#FFFFFF', this)" 
-                                                class="color-selector-btn w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
+                                                class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="자유">
                                             </button>
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">자유</span>
@@ -4993,15 +5636,24 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                                 
-                                <!-- Image Preview -->
+                                <!-- Image Preview (최대 4장) -->
                                 <div id="postImagePreviewContainer" class="hidden mt-3">
-                                    <div class="relative inline-block">
-                                        <img id="postImagePreview" src="" alt="Preview" class="max-h-48 rounded-lg border">
-                                        <button 
-                                            onclick="removePostImage()"
-                                            class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
-                                            <i class="fas fa-times text-xs"></i>
-                                        </button>
+                                    <div class="rounded-2xl border border-gray-200/90 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 shadow-md ring-1 ring-gray-100/80">
+                                        <div class="mb-2 flex items-center justify-between gap-2">
+                                            <div class="flex min-w-0 items-center gap-2">
+                                                <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md">
+                                                    <i class="fas fa-images text-sm"></i>
+                                                </span>
+                                                <div class="min-w-0 leading-tight">
+                                                    <div class="text-xs font-bold text-gray-800">첨부 사진</div>
+                                                    <div id="postImagePreviewCount" class="text-[10px] font-semibold text-blue-600">0/4</div>
+                                                </div>
+                                            </div>
+                                            <button type="button" onclick="removePostImage()" class="flex-shrink-0 rounded-lg px-2 py-1 text-[10px] font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-600" title="모든 사진 제거">
+                                                전체 삭제
+                                            </button>
+                                        </div>
+                                        <div id="postImagePreviewList"></div>
                                     </div>
                                 </div>
                                 
@@ -5040,19 +5692,20 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                                 
-                                <div class="mt-3 flex justify-between items-center">
-                                    <div class="flex space-x-2">
+                                <div class="mt-3 flex w-full items-end justify-between">
+                                    <div class="flex items-center gap-2">
                                         <input 
                                             id="postImageFile"
                                             type="file"
                                             accept="image/*"
+                                            multiple
                                             onchange="previewPostImage(event)"
                                             class="hidden"
                                         />
                                         <label 
                                             for="postImageFile"
-                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                                            title="사진 첨부">
+                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-touch lg:min-h-0 lg:min-w-0"
+                                            title="사진 첨부 (최대 4장)">
                                             <i class="fas fa-image"></i>
                                         </label>
                                         
@@ -5065,34 +5718,44 @@ app.get('/', (c) => {
                                         />
                                         <label 
                                             for="postVideoFile"
-                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                                            class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-touch lg:min-h-0 lg:min-w-0"
                                             title="동영상 첨부">
                                             <i class="fas fa-video"></i>
                                         </label>
                                     </div>
                                     <div class="flex items-center space-x-3">
-                                        <button 
-                                            id="createPostBtn"
-                                            onclick="createPost()"
-                                            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-                                            <i class="fas fa-paper-plane mr-2"></i>게시하기
-                                        </button>
+                                        <div class="flex flex-col items-end w-[108px] sm:w-[126px]">
+                                            <select id="newPostVisibility" class="w-full h-7 px-2 border border-gray-300 rounded-md text-[10px] sm:text-xs font-medium text-gray-600 leading-none bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                                <option value="public">전체 공개</option>
+                                                <option value="friends">친구에게만</option>
+                                            </select>
+                                            <button 
+                                                id="createPostBtn"
+                                                onclick="createPost()"
+                                                class="mt-2 w-full h-7 sm:h-8 bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-xs sm:text-sm whitespace-nowrap leading-none">
+                                                <i class="fas fa-paper-plane mr-2"></i>게시하기
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Profile View (Hidden by default) -->
-                    <div id="profileView" class="hidden space-y-4">
-                        <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6">
+                    <!-- Profile View (Hidden by default) - unfolds below cover as info section -->
+                    <div id="profileView" class="hidden">
+                        <div class="bg-white border-t-2 border-gray-200 rounded-b-xl shadow-sm p-5 sm:p-6">
                             <div class="flex items-center justify-between mb-6">
                                 <h2 class="text-2xl font-bold text-gray-800">
                                     <i class="fas fa-user-circle text-blue-600 mr-2"></i>프로필
                                 </h2>
-                                <button onclick="hideProfile()" class="text-gray-500 hover:text-gray-700 transition">
-                                    <i class="fas fa-times text-xl"></i>
-                                </button>
+                                <div class="flex items-center gap-1.5">
+                                    <div id="profileEditBtnContainer"></div>
+                                    <button onclick="logout()" class="text-gray-500 hover:text-red-500 transition px-3 py-1.5 rounded-lg hover:bg-red-50 flex items-center gap-1.5 text-sm" title="로그아웃">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        <span class="hidden sm:inline">로그아웃</span>
+                                    </button>
+                                </div>
                             </div>
                             <div id="profileViewContent">
                                 <!-- Profile content will be loaded here -->
@@ -5100,49 +5763,153 @@ app.get('/', (c) => {
                         </div>
                     </div>
 
+                </div>
+
+                <!-- Main Feed Part 2: Posts Feed & QT Panel - order-3 on mobile (after reward, post card) -->
+                <div id="postsFeedColumn" class="order-3 lg:order-none">
+                    <!-- QT Panel (hidden by default) -->
+                    <div id="qtPanel" class="hidden bg-white rounded-xl shadow-lg border-2 border-red-400 p-4 sm:p-6 mb-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
+                            <div class="flex items-center gap-2">
+                                <div class="text-sm text-gray-600" id="qtDate"></div>
+                                <button id="qtWorshipBtn" onclick="toggleQtWorship()" class="hidden px-2.5 py-1 rounded-lg text-xs font-medium transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="찬양 재생">
+                                    <i class="fas fa-music"></i>
+                                </button>
+                                <button id="qtAlarmBtn" onclick="showQtAlarmModal()" class="hidden px-2.5 py-1 rounded-lg text-xs font-medium transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                                <button onclick="showQtInviteModal()" class="px-2.5 py-1 rounded-lg text-xs font-medium transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="친구에게 QT 추천">
+                                    <i class="fas fa-envelope"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="border-l-4 border-red-600 pl-3 py-1 mb-4">
+                            <p class="font-bold text-red-600 text-sm" id="qtVerseRef"></p>
+                        </div>
+                        <div class="flex flex-nowrap gap-1 sm:gap-2 mb-4 overflow-x-auto">
+                            <button id="qtPrayerBtn" onclick="showQtSection('prayer')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200 whitespace-nowrap">
+                                시작기도
+                            </button>
+                            <button id="qtReadBtn" onclick="showQtSection('read')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                <span class="sm:hidden">읽기·묵상</span>
+                                <span class="hidden sm:inline">읽기와 묵상</span>
+                            </button>
+                            <button id="qtApplyBtn" onclick="showQtSection('apply')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                적용
+                            </button>
+                            <button id="qtPrayer2Btn" onclick="showQtSection('prayer2')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                마침기도
+                            </button>
+                        </div>
+                        <div id="qtPrayerSection" class="qt-section hidden p-4 bg-red-50 rounded-lg border border-red-200 mb-4">
+                            <p class="text-gray-800 text-sm leading-relaxed">오늘 당신을 위한 생명의 양식입니다. 먼저 기도하며 오늘의 말씀을 잘 깨닿고 하나님의 인도함과 보호하심을 구하는 기도를 먼저 하십시오.</p>
+                        </div>
+                        <div id="qtReadSection" class="qt-section hidden p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                            <div id="qtScriptureText" class="text-gray-800 text-sm leading-relaxed whitespace-pre-line"></div>
+                        </div>
+                        <div id="qtApplySection" class="qt-section hidden">
+                            <textarea id="qtApplyInput" rows="6" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"></textarea>
+                            <button onclick="saveQtApply()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium mb-4">저장</button>
+                        </div>
+                        <div id="qtPrayer2Section" class="qt-section hidden mt-6">
+                            <textarea id="qtPrayerInput" rows="4" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"></textarea>
+                            <button onclick="saveQtPrayer()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">저장</button>
+                        </div>
+                        <div id="qtWorshipPlayer" class="hidden mt-2 relative">
+                            <div class="flex items-center gap-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
+                                <button id="qtWorshipPlayBtn" onclick="toggleQtWorshipPlay()" class="w-12 h-12 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition flex-shrink-0">
+                                    <i id="qtWorshipPlayIcon" class="fas fa-play"></i>
+                                </button>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-medium text-gray-800 truncate">찬양</div>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <button id="qtWorshipMuteBtn" onclick="toggleQtWorshipMute()" class="text-gray-600 hover:text-gray-800 p-0.5 flex-shrink-0" title="음소거">
+                                            <i id="qtWorshipMuteIcon" class="fas fa-volume-up text-sm"></i>
+                                        </button>
+                                        <input type="range" id="qtWorshipVolumeBar" min="0" max="100" value="80" oninput="setQtWorshipVolume(this.value)" class="flex-1 h-2 accent-red-500 cursor-pointer">
+                                        <span class="text-xs text-gray-500 w-8" id="qtWorshipVolumeLabel">80%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="absolute -left-[9999px] w-1 h-1 overflow-hidden"><div id="qtWorshipYtAnchor"></div></div>
+                        </div>
+                    </div>
                     <!-- Posts Feed -->
-                    <div class="relative">
+                    <div class="relative" id="postsFeedWrapper">
                         <!-- Posts Container -->
-                        <div id="postsFeed" class="space-y-4 flex flex-col gap-4 lg:gap-0 pb-4 lg:pb-0">
+                        <div id="postsFeed" class="space-y-3 sm:space-y-4 flex flex-col gap-3 sm:gap-4 lg:gap-0 pb-4 lg:pb-0">
                             <!-- Posts will be loaded here -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Right Sidebar - Friend List & Notifications -->
-                <div class="lg:col-span-1 hidden lg:block">
-                    <div class="sticky top-20 space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto sidebar-scroll pr-2">
+                </div>
+                <!-- /Center Column -->
+
+                <!-- Right Sidebar - Friend List & Notifications (same position, toggle content) -->
+                <div id="rightSidebar" class="lg:col-span-1 hidden lg:block lg:order-4 lg:col-start-4 lg:row-start-1 lg:row-span-2 scroll-independent sidebar-scroll" onclick="if(this.classList.contains('reactors-only')&&event.target===this)closePostReactors()">
+                    <div id="rightSidebarInner" class="relative min-h-[200px] pr-0 lg:pr-2">
                         <!-- Friend List Card -->
-                        <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
+                        <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 friends-empty flex flex-col min-h-0">
                             <!-- Header -->
-                            <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
-                                <i class="fas fa-user-friends text-blue-600 text-xl mr-2"></i>
-                                <h3 class="text-base font-bold text-gray-800">친구 목록</h3>
+                            <div id="friendsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
+                                <div class="flex items-center">
+                                    <i class="fas fa-user-friends text-blue-600 text-xl mr-2"></i>
+                                    <h3 class="text-base font-bold text-gray-800">친구 목록</h3>
+                                </div>
+                                <button onclick="showFriendInviteModal()" class="text-sm px-2.5 py-1.5 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700 transition" title="지인 초대하기">
+                                    <i class="fas fa-envelope"></i>
+                                </button>
                             </div>
                             
                             <!-- Friends List Container -->
-                            <div id="sidebarFriendsList" class="space-y-3">
+                            <div id="sidebarFriendsList" class="space-y-3 flex-1 min-h-0 overflow-y-auto">
                                 <!-- Friends will be loaded here dynamically -->
-                                <div class="text-center py-8 text-gray-400">
-                                    <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
+                                <div class="text-center py-4 text-gray-400">
+                                    <i class="fas fa-user-friends text-3xl mb-2 opacity-40"></i>
                                     <p class="text-sm">친구가 없습니다</p>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Notifications Card -->
-                        <div id="notificationsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5">
+                        <!-- Reactors Panel (반응한 사람/댓글 단 사람/공유한 사람) -->
+                        <div id="reactorsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 flex flex-col relative">
+                            <button type="button" onclick="closePostReactors()" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 border border-gray-300 transition shrink-0" title="닫기">
+                                <i class="fas fa-times text-lg"></i>
+                            </button>
+                            <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200 shrink-0 pr-12">
+                                <div class="flex items-center">
+                                    <i id="reactorsPanelIcon" class="fas fa-users text-blue-600 text-xl mr-2"></i>
+                                    <h3 id="reactorsPanelTitle" class="text-base font-bold text-gray-800">반응한 사람</h3>
+                                </div>
+                            </div>
+                            <div id="sidebarReactorsList" class="space-y-3 flex-1 min-h-0 overflow-y-auto">
+                                <div class="text-center py-4 text-gray-400">
+                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p class="text-sm">불러오는 중...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Notifications Card (same position as friends, visibility toggle) -->
+                        <div id="notificationsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 notifications-empty flex flex-col min-h-0">
                             <!-- Header -->
-                            <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200">
-                                <i class="fas fa-bell text-blue-600 text-xl mr-2"></i>
-                                <h3 class="text-base font-bold text-gray-800">알림</h3>
+                            <div id="notificationsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
+                                <div class="flex items-center">
+                                    <i class="fas fa-bell text-blue-600 text-xl mr-2"></i>
+                                    <h3 class="text-base font-bold text-gray-800">알림</h3>
+                                </div>
+                                <button type="button" id="pushNotifyBtn" class="text-sm px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700 transition cursor-pointer" title="푸시 꺼짐 (클릭하여 켜기)">
+                                    <i class="fas fa-bell-slash"></i>
+                                </button>
                             </div>
                             
                             <!-- Notifications List Container -->
-                            <div id="sidebarNotificationsList" class="space-y-3">
+                            <div id="sidebarNotificationsList" class="space-y-3 flex-1 min-h-0 overflow-y-auto">
                                 <!-- Notifications will be loaded here dynamically -->
-                                <div class="text-center py-8 text-gray-400">
-                                    <i class="fas fa-bell text-4xl mb-3 opacity-40"></i>
+                                <div class="text-center py-4 text-gray-400">
+                                    <i class="fas fa-bell text-3xl mb-2 opacity-40"></i>
                                     <p class="text-sm">알림이 없습니다</p>
                                 </div>
                             </div>
@@ -5152,6 +5919,11 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- Post Focus Overlay -->
+        <div id="postFocusOverlay" class="hidden fixed inset-0 z-[60] bg-black bg-opacity-95 overflow-y-auto" style="top:0;padding-top:60px;" onclick="closePostFocus()">
+            <div class="w-full max-w-[100vw] sm:max-w-[95vw] lg:max-w-6xl mx-auto px-1 sm:px-4 py-4" id="postFocusContent" onclick="event.stopPropagation()">
+            </div>
+        </div>
         <!-- Edit Post Modal -->
         <div id="editPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -5165,6 +5937,7 @@ app.get('/', (c) => {
                 </div>
                 
                 <input type="hidden" id="editPostId" />
+                <input type="hidden" id="editPostBackgroundColor" value="#FFFFFF" />
                 
                 <div class="space-y-4">
                     <!-- Content -->

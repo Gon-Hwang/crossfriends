@@ -5,6 +5,68 @@ import type { Bindings, Post, Comment, User, PrayerRequest, PrayerResponse } fro
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+function bufToBase64(buf: ArrayBuffer) {
+  const bytes = new Uint8Array(buf)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+  return btoa(binary)
+}
+
+function base64ToBuf(b64: string) {
+  const binary = atob(b64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes.buffer
+}
+
+async function derivePasswordHash(password: string, saltB64: string) {
+  const enc = new TextEncoder()
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
+    'deriveBits'
+  ])
+  const salt = base64ToBuf(saltB64)
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt,
+      iterations: 150_000
+    },
+    keyMaterial,
+    256
+  )
+  return bufToBase64(bits)
+}
+
+function randomSaltB64(bytes = 16) {
+  const salt = new Uint8Array(bytes)
+  crypto.getRandomValues(salt)
+  return bufToBase64(salt.buffer)
+}
+
+async function verifyUserPassword(user: Record<string, unknown>, password: string): Promise<boolean> {
+  if (!password || typeof password !== 'string') return false
+  if (!user.password_salt) {
+    if (user.plain_password && String(user.plain_password) === String(password)) return true
+    return false
+  }
+  if (!user.password_hash) return false
+  const derived = await derivePasswordHash(String(password), String(user.password_salt))
+  return derived === String(user.password_hash)
+}
+
+/** 회원가입 폼과 동일한 비밀번호 규칙 */
+function validateNewPasswordRules(pw: string): string | null {
+  const p = String(pw || '')
+  if (p.length < 8) return '비밀번호는 8자 이상이어야 합니다.'
+  const lower = (p.match(/[a-z]/g) || []).length
+  const digit = (p.match(/[0-9]/g) || []).length
+  if (lower < 3) return '비밀번호는 영문 소문자 3개 이상 포함해야 합니다.'
+  if (digit < 3) return '비밀번호는 숫자 3개 이상 포함해야 합니다.'
+  if (/[A-Z]/.test(p) || /[^a-z0-9]/.test(p)) return '비밀번호는 대문자·특수문자를 사용할 수 없습니다.'
+  return null
+}
+
 // Enable CORS for API routes
 app.use('/api/*', cors())
 
@@ -18,49 +80,62 @@ app.use('/static/*', serveStatic({ root: './public' }))
 // Login endpoint
 app.post('/api/login', async (c) => {
   const { DB } = c.env
-  const { email } = await c.req.json()
-  
+  let body: Record<string, unknown> = {}
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: '요청 형식이 올바르지 않습니다.' }, 400)
+  }
+  const email = body.email
+  const password = body.password
+
+  if (!email || typeof email !== 'string' || !email.trim()) {
+    return c.json({ error: '이메일을 입력해주세요.' }, 400)
+  }
+
   // Normalize email (trim and lowercase)
   const normalizedEmail = email.trim().toLowerCase()
   
-  // Special handling for admin email - auto-create if doesn't exist
-  if (normalizedEmail === 'holofa518@gmail.com') {
-    // Check if admin account exists
-    let user = await DB.prepare('SELECT * FROM users WHERE LOWER(email) = ?').bind(normalizedEmail).first()
-    
-    if (!user) {
-      // Create admin account automatically
-      const result = await DB.prepare(
-        'INSERT INTO users (email, name, role) VALUES (?, ?, ?)'
-      ).bind('holofa518@gmail.com', '관리자', 'admin').run()
-      
-      // Fetch the newly created user
-      user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(result.meta.last_row_id).first()
-    } else {
-      // Ensure this user is admin
-      if (user.role !== 'admin') {
-        await DB.prepare('UPDATE users SET role = ? WHERE id = ?').bind('admin', user.id).run()
-        user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first()
-      }
-    }
-    
-    return c.json({ 
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        avatar_url: user.avatar_url,
-        church: user.church
-      }
-    })
-  }
-  
   // Regular login for other users
-  const user = await DB.prepare('SELECT * FROM users WHERE LOWER(email) = ?').bind(normalizedEmail).first()
+  const user = await DB.prepare('SELECT * FROM users WHERE LOWER(email) = ?')
+    .bind(normalizedEmail)
+    .first()
   
   if (!user) {
     return c.json({ error: '등록되지 않은 이메일입니다. 회원가입을 진행해주세요.' }, 404)
+  }
+
+  if (!password) {
+    return c.json({ error: '비밀번호를 입력해주세요.' }, 400)
+  }
+
+  // Legacy/local compatibility: if a plain_password exists, accept once then upgrade to salted hash.
+  if (!user.password_salt) {
+    if (user.plain_password && String(user.plain_password) === String(password)) {
+      const saltB64 = randomSaltB64()
+      const hashB64 = await derivePasswordHash(String(password), saltB64)
+      await DB.prepare(
+        'UPDATE users SET password_salt = ?, password_hash = ?, password_updated_at = CURRENT_TIMESTAMP, plain_password = NULL WHERE id = ?'
+      )
+        .bind(saltB64, hashB64, user.id)
+        .run()
+      user.password_salt = saltB64
+      user.password_hash = hashB64
+    } else {
+      return c.json(
+        { error: '이 계정은 비밀번호가 설정되어 있지 않습니다. 비밀번호 초기화를 진행해주세요.' },
+        400
+      )
+    }
+  }
+
+  if (!user.password_hash) {
+    return c.json({ error: '이 계정은 비밀번호가 설정되어 있지 않습니다. 비밀번호 초기화를 진행해주세요.' }, 400)
+  }
+
+  const derived = await derivePasswordHash(String(password), String(user.password_salt))
+  if (derived !== String(user.password_hash)) {
+    return c.json({ error: '비밀번호가 올바르지 않습니다.' }, 401)
   }
   
   return c.json({ 
@@ -73,6 +148,57 @@ app.post('/api/login', async (c) => {
       church: user.church
     }
   })
+})
+
+// 비밀번호 변경 (로그인한 본인 — 현재 비밀번호 확인 후 갱신)
+app.post('/api/users/:id/change-password', async (c) => {
+  const { DB } = c.env
+  const id = parseInt(c.req.param('id'), 10)
+  if (Number.isNaN(id)) {
+    return c.json({ error: '잘못된 요청입니다.' }, 400)
+  }
+  let body: Record<string, unknown> = {}
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: '요청 형식이 올바르지 않습니다.' }, 400)
+  }
+  const current_password = body.current_password
+  const new_password = body.new_password
+  if (typeof current_password !== 'string' || !current_password) {
+    return c.json({ error: '현재 비밀번호를 입력해주세요.' }, 400)
+  }
+  if (typeof new_password !== 'string' || !new_password.trim()) {
+    return c.json({ error: '새 비밀번호를 입력해주세요.' }, 400)
+  }
+
+  const user = await DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first()
+  if (!user) {
+    return c.json({ error: '사용자를 찾을 수 없습니다.' }, 404)
+  }
+
+  const ok = await verifyUserPassword(user, current_password)
+  if (!ok) {
+    return c.json({ error: '현재 비밀번호가 올바르지 않습니다.' }, 401)
+  }
+
+  const ruleErr = validateNewPasswordRules(String(new_password))
+  if (ruleErr) {
+    return c.json({ error: ruleErr }, 400)
+  }
+  if (String(current_password) === String(new_password)) {
+    return c.json({ error: '새 비밀번호는 현재 비밀번호와 달라야 합니다.' }, 400)
+  }
+
+  const saltB64 = randomSaltB64()
+  const hashB64 = await derivePasswordHash(String(new_password), saltB64)
+  await DB.prepare(
+    'UPDATE users SET password_salt = ?, password_hash = ?, password_updated_at = CURRENT_TIMESTAMP, plain_password = NULL WHERE id = ?'
+  )
+    .bind(saltB64, hashB64, id)
+    .run()
+
+  return c.json({ success: true, message: '비밀번호가 변경되었습니다.' })
 })
 
 // Get all users
@@ -385,16 +511,23 @@ app.get('/users/:id', async (c) => {
 // Create new user
 app.post('/api/users', async (c) => {
   const { DB } = c.env
-  const { email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, marital_status, address, phone } = await c.req.json()
+  const { email, name, password, bio, church, pastor, denomination, location, position, gender, faith_answers, marital_status, address, phone } = await c.req.json()
   
   // Check if this is the first user (will become admin)
   const userCountResult = await DB.prepare('SELECT COUNT(*) as count FROM users').first()
   const userCount = userCountResult?.count || 0
   const role = userCount === 0 ? 'admin' : 'user'
+
+  if (!password || typeof password !== 'string' || !password.trim()) {
+    return c.json({ error: '비밀번호는 필수입니다.' }, 400)
+  }
+
+  const saltB64 = randomSaltB64()
+  const hashB64 = await derivePasswordHash(password, saltB64)
   
   const result = await DB.prepare(
-    'INSERT INTO users (email, name, bio, church, pastor, denomination, location, position, gender, faith_answers, role, marital_status, address, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).bind(email, name, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role, marital_status || null, address || null, phone || null).run()
+    'INSERT INTO users (email, name, password_salt, password_hash, password_updated_at, bio, church, pastor, denomination, location, position, gender, faith_answers, role, marital_status, address, phone) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(email, name, saltB64, hashB64, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role, marital_status || null, address || null, phone || null).run()
   
   return c.json({ id: result.meta.last_row_id, email, name, role }, 201)
 })
@@ -1460,6 +1593,109 @@ app.post('/api/prayers/:id/responses', async (c) => {
   ).bind(prayerId, user_id, content).run()
   
   return c.json({ id: result.meta.last_row_id, prayer_request_id: prayerId, user_id, content }, 201)
+})
+
+// =====================
+// QT Bible Proxy (Duranno)
+// =====================
+app.get('/api/qt/bible', async (c) => {
+  const qtDateRaw = c.req.query('qtDate')
+  if (!qtDateRaw || typeof qtDateRaw !== 'string') {
+    return c.json({ error: 'qtDate is required' }, 400)
+  }
+
+  // Accept: YYYY-MM-DD or YYYYMMDD
+  let qtDate = qtDateRaw.trim()
+  if (/^\d{8}$/.test(qtDate)) {
+    qtDate = `${qtDate.slice(0, 4)}-${qtDate.slice(4, 6)}-${qtDate.slice(6, 8)}`
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(qtDate)) {
+    return c.json({ error: 'qtDate format must be YYYY-MM-DD' }, 400)
+  }
+
+  const url = `https://www.duranno.com/qt/view/bible.asp?qtDate=${encodeURIComponent(qtDate)}`
+
+  const resp = await fetch(url)
+  if (!resp.ok) {
+    return c.json({ error: 'Failed to fetch duranno bible', status: resp.status, qtDate }, 502)
+  }
+
+  const buf = await resp.arrayBuffer()
+  // Duranno uses EUC-KR
+  const decoded = new TextDecoder('euc-kr').decode(buf)
+
+  function decodeHtmlText(s: string) {
+    return String(s || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  // Page header passage reference (e.g. "마태복음 26 : 14~25") + title (optional)
+  // e.g. <div class="font-size"><h1><span>마태복음  26 : 14~25</span><em>...</em></h1>
+  const h1Match = decoded.match(/<div[^>]*class="font-size"[^>]*>[\s\S]*?<h1[^>]*>[\s\S]*?<span>([\s\S]*?)<\/span>\s*<em>([\s\S]*?)<\/em>[\s\S]*?<\/h1>/i)
+  const passageRef = h1Match ? decodeHtmlText(h1Match[1]) : ''
+  const passageTitle = h1Match ? decodeHtmlText(h1Match[2]) : ''
+
+  // Reference title (e.g. "예수님과 은 삼십 26:14~16")
+  const titleMatch = decoded.match(/<p class="title">([\s\S]*?)<\/p>/)
+  const reference = titleMatch ? decodeHtmlText(titleMatch[1]) : ''
+
+  // Extract only bible tables area
+  const bibleStart = decoded.indexOf('<div class="bible">')
+  if (bibleStart < 0) return c.json({ error: 'Bible block not found', qtDate }, 502)
+
+  const bibleEnd = decoded.indexOf('아멘하기', bibleStart)
+  const bibleHtml = decoded.slice(bibleStart, bibleEnd > bibleStart ? bibleEnd : undefined)
+
+  const tableRe =
+    /<table>\s*<tr>\s*<th>\s*([^<]+)\s*<\/th>\s*<td[^>]*>\s*([\s\S]*?)<\/td>\s*<\/tr>\s*<\/table>/g
+
+  const lines: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = tableRe.exec(bibleHtml)) && lines.length < 500) {
+    const verseNo = String(m[1] || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    let td = String(m[2] || '')
+    td = td.replace(/<[^>]+>/g, '') // strip tags inside td
+    td = td
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    if (verseNo && td) lines.push(`${verseNo} ${td}`)
+  }
+
+  // Fallback: if parsing failed, just strip tags from the extracted bible block
+  const scripture = lines.length
+    ? lines.join('\n')
+    : bibleHtml
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+  return c.json({ qtDate, passageRef, passageTitle, reference, scripture })
 })
 
 // =====================
@@ -4556,6 +4792,17 @@ app.get('/', (c) => {
             .reward-card-chevron {
                 font-size: 0.88rem;
                 transition: transform 0.2s ease;
+                display: none !important; /* 리워드바: 접기/펼치기 삼각형 숨김 (스크롤은 유지) */
+            }
+            #typingToggleIcon {
+                display: none !important; /* 말씀 타이핑 버튼 우측 삼각형 숨김 */
+            }
+            /* 혹시 아이콘이 다른 클래스로 렌더(FA svg 교체 등)되더라도 리워드바에서는 chevron 완전 제거 */
+            #leftSidebar .fa-chevron-up,
+            #leftSidebar .fa-chevron-down,
+            #leftSidebar .fa-caret-up,
+            #leftSidebar .fa-caret-down {
+                display: none !important;
             }
             .reward-card-collapsed .reward-card-chevron {
                 transform: rotate(180deg);
@@ -4658,6 +4905,225 @@ app.get('/', (c) => {
                 0%, 100% { transform: scale(1); }
                 50% { transform: scale(1.1); }
             }
+
+            /* 종합 μ 마일스톤 축하 모달 (200 / 1000 / 1400) */
+            #scoreMilestoneCelebrationModal .milestone-modal-card {
+                transform: scale(0.9) translateY(12px);
+                opacity: 0;
+                transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+            }
+            #scoreMilestoneCelebrationModal.milestone-modal-active .milestone-modal-card {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+            @keyframes milestoneJackpotGlow {
+                0% {
+                    opacity: 0;
+                    box-shadow: inset 0 0 0 0 rgba(99, 102, 241, 0);
+                }
+                40% {
+                    opacity: 1;
+                    box-shadow:
+                        inset 0 0 60px 20px rgba(99, 102, 241, 0.35),
+                        0 0 50px 18px rgba(139, 92, 246, 0.4),
+                        0 0 100px 36px rgba(59, 130, 246, 0.2);
+                }
+                100% {
+                    opacity: 0.55;
+                    box-shadow:
+                        inset 0 0 30px 10px rgba(99, 102, 241, 0.12),
+                        0 0 28px 10px rgba(139, 92, 246, 0.15);
+                }
+            }
+            .milestone-glow-burst {
+                animation: milestoneJackpotGlow 1.35s ease-out forwards;
+            }
+            @keyframes milestoneSparkFloat {
+                0% { transform: translateY(0) scale(0.6); opacity: 0; }
+                20% { opacity: 1; }
+                100% { transform: translateY(-48px) scale(1); opacity: 0; }
+            }
+            .milestone-spark {
+                position: absolute;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                animation: milestoneSparkFloat 1.4s ease-out forwards;
+            }
+            .milestone-spark-1 { left: 12%; bottom: 28%; background: #60a5fa; animation-delay: 0.05s; }
+            .milestone-spark-2 { left: 42%; bottom: 18%; background: #a78bfa; animation-delay: 0.15s; width: 6px; height: 6px; }
+            .milestone-spark-3 { right: 18%; bottom: 32%; background: #f472b6; animation-delay: 0.1s; }
+            .milestone-spark-4 { right: 38%; bottom: 22%; background: #34d399; animation-delay: 0.22s; width: 5px; height: 5px; }
+            .milestone-spark-5 { left: 72%; bottom: 40%; background: #fbbf24; animation-delay: 0.18s; }
+
+            /* 로그인 시 리워드·μ 축하 패널 (매 접속) */
+            #loginRewardCelebrationModal .login-reward-celeb-card {
+                transform: scale(0.88) translateY(20px);
+                opacity: 0;
+                transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
+            }
+            #loginRewardCelebrationModal.login-reward-celeb-active .login-reward-celeb-card {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+            @keyframes loginRewardSparkFloat {
+                0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 0; }
+                15% { opacity: 1; }
+                100% { transform: translateY(-56px) scale(1) rotate(180deg); opacity: 0; }
+            }
+            @keyframes loginRewardConfettiDrift {
+                0% { transform: translateY(0) rotate(0deg); opacity: 0.9; }
+                100% { transform: translateY(12px) rotate(360deg); opacity: 0.4; }
+            }
+            .login-reward-spark {
+                position: absolute;
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                animation: loginRewardSparkFloat 1.5s ease-out forwards;
+            }
+            .login-reward-spark.lr-s1 { left: 8%; bottom: 22%; background: #fbbf24; animation-delay: 0.02s; }
+            .login-reward-spark.lr-s2 { left: 28%; bottom: 12%; background: #60a5fa; animation-delay: 0.1s; width: 7px; height: 7px; }
+            .login-reward-spark.lr-s3 { left: 52%; bottom: 18%; background: #f472b6; animation-delay: 0.06s; }
+            .login-reward-spark.lr-s4 { right: 22%; bottom: 14%; background: #34d399; animation-delay: 0.14s; width: 6px; height: 6px; }
+            .login-reward-spark.lr-s5 { right: 10%; bottom: 28%; background: #a78bfa; animation-delay: 0.11s; }
+            .login-reward-spark.lr-s6 { left: 70%; bottom: 8%; background: #fb923c; animation-delay: 0.18s; width: 5px; height: 5px; }
+            .login-reward-confetti {
+                position: absolute;
+                width: 10px;
+                height: 6px;
+                border-radius: 1px;
+                opacity: 0.85;
+                animation: loginRewardConfettiDrift 2.5s ease-in-out infinite alternate;
+            }
+            .login-reward-confetti.c1 { top: 12%; left: 15%; background: #fde047; animation-delay: 0s; }
+            .login-reward-confetti.c2 { top: 18%; right: 20%; background: #93c5fd; width: 8px; height: 5px; animation-delay: 0.4s; }
+            .login-reward-confetti.c3 { top: 8%; left: 45%; background: #fda4af; animation-delay: 0.2s; }
+            @keyframes loginRewardFireworkBurst {
+                0% { transform: translate(-50%, -50%) scale(0.18); opacity: 0; }
+                24% { opacity: 1; }
+                100% { transform: translate(-50%, -50%) scale(1.18); opacity: 0; }
+            }
+            .login-reward-firework {
+                position: absolute;
+                width: 30px;
+                height: 30px;
+                border-radius: 9999px;
+                pointer-events: none;
+                opacity: 0;
+                background:
+                    radial-gradient(circle, rgba(255,255,255,0.98) 0 6%, rgba(255,255,255,0) 7%),
+                    repeating-conic-gradient(
+                        from 0deg,
+                        rgba(250,204,21,0.98) 0deg 8deg,
+                        rgba(96,165,250,0.98) 8deg 16deg,
+                        rgba(244,114,182,0.98) 16deg 24deg,
+                        rgba(52,211,153,0.98) 24deg 32deg,
+                        rgba(167,139,250,0.98) 32deg 40deg
+                    ),
+                    repeating-radial-gradient(
+                        circle,
+                        rgba(255,255,255,0.75) 0 2px,
+                        rgba(255,255,255,0) 2px 6px
+                    );
+                mix-blend-mode: screen;
+                filter: blur(0.2px) drop-shadow(0 0 16px rgba(167, 139, 250, 0.75));
+            }
+            .login-reward-firework.fw-left { left: 18%; top: 14%; animation-delay: 0.06s; }
+            .login-reward-firework.fw-right { right: 14%; top: 11%; animation-delay: 0.22s; }
+            .login-reward-firework.fw-mid { left: 50%; top: 6%; animation-delay: 0.34s; width: 34px; height: 34px; }
+            .login-reward-firework.fw-left2 { left: 34%; top: 10%; animation-delay: 0.14s; width: 32px; height: 32px; }
+            .login-reward-firework.fw-right2 { right: 30%; top: 9%; animation-delay: 0.28s; width: 32px; height: 32px; }
+            /* 고정 불꽃은 숨기고, JS로 랜덤 불꽃만 사용 */
+            #loginRewardCelebrationModal .login-reward-firework.fw-left,
+            #loginRewardCelebrationModal .login-reward-firework.fw-right,
+            #loginRewardCelebrationModal .login-reward-firework.fw-mid,
+            #loginRewardCelebrationModal .login-reward-firework.fw-left2,
+            #loginRewardCelebrationModal .login-reward-firework.fw-right2 {
+                display: none;
+            }
+            #loginRewardCelebrationModal.login-reward-celeb-active .login-reward-firework {
+                animation: loginRewardFireworkBurst 0.85s ease-out forwards;
+            }
+            @keyframes loginRewardConfettiFall {
+                0% { transform: translateY(-35px) rotate(0deg); opacity: 0; }
+                15% { opacity: 1; }
+                100% { transform: translateY(175px) rotate(360deg); opacity: 0; }
+            }
+            .login-reward-fall {
+                position: absolute;
+                top: 6%;
+                width: 7px;
+                height: 12px;
+                border-radius: 2px;
+                opacity: 0;
+                pointer-events: none;
+                --fall-duration: 1.95s;
+            }
+            #loginRewardCelebrationModal.login-reward-celeb-active .login-reward-fall {
+                animation: loginRewardConfettiFall var(--fall-duration) ease-out forwards;
+            }
+            /* 카드(낙하 컨페티)+작은 불꽃만 표시 */
+            #loginRewardCelebrationModal .login-reward-spark,
+            #loginRewardCelebrationModal .login-reward-fanfare,
+            #loginRewardCelebrationModal .login-reward-confetti {
+                display: none;
+            }
+            @keyframes loginRewardFanfareFloat {
+                0% { transform: translateY(8px) scale(0.88); opacity: 0; }
+                18% { opacity: 1; }
+                100% { transform: translateY(-34px) scale(1.08); opacity: 0; }
+            }
+            .login-reward-fanfare {
+                position: absolute;
+                pointer-events: none;
+                opacity: 0;
+                font-weight: 900;
+                text-shadow: 0 0 8px rgba(255,255,255,0.75), 0 0 14px rgba(99,102,241,0.4);
+                z-index: 40;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 3px 7px;
+                border-radius: 9999px;
+                border: 1px solid rgba(255,255,255,0.9);
+                background: rgba(255,255,255,0.95);
+                box-shadow: 0 6px 18px rgba(79, 70, 229, 0.25);
+            }
+            .login-reward-fanfare i { font-size: 14px; }
+            .login-reward-fanfare .hit { font-size: 10px; line-height: 1; font-weight: 800; letter-spacing: 0.2px; }
+            .login-reward-fanfare.t1 { left: 7%; top: 22%; color: #d97706; animation-delay: 0.1s; }
+            .login-reward-fanfare.t2 { right: 8%; top: 24%; color: #2563eb; animation-delay: 0.22s; }
+            .login-reward-fanfare.n1 { left: 16%; top: 17%; color: #7c3aed; animation-delay: 0.18s; }
+            .login-reward-fanfare.n2 { right: 17%; top: 16%; color: #db2777; animation-delay: 0.3s; }
+            #loginRewardCelebrationModal.login-reward-celeb-active .login-reward-fanfare {
+                animation: loginRewardFanfareFloat 1.2s ease-out forwards;
+            }
+            @keyframes loginRewardMuPulse {
+                0%, 100% { filter: drop-shadow(0 0 0 transparent); transform: scale(1); }
+                50% { filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.35)); transform: scale(1.02); }
+            }
+            #loginRewardCelebrationModal.login-reward-celeb-active #loginRewardCelebrationTotal {
+                animation: loginRewardMuPulse 2s ease-in-out 0.3s 2;
+            }
+            @keyframes loginRewardFanfarePop {
+                0% { transform: scale(0.82); opacity: 0; }
+                55% { transform: scale(1.08); opacity: 1; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+            @keyframes loginRewardFanfareGlow {
+                0%, 100% { filter: drop-shadow(0 0 0 rgba(99, 102, 241, 0)); }
+                45% { filter: drop-shadow(0 0 14px rgba(129, 140, 248, 0.45)); }
+            }
+            #loginRewardCelebrationModal.login-reward-celeb-active .login-reward-fanfare-title {
+                animation: loginRewardFanfarePop 0.72s cubic-bezier(0.2, 0.95, 0.2, 1) 0.08s both,
+                           loginRewardFanfareGlow 1.05s ease-out 0.12s both;
+            }
+            #loginRewardCelebrationModal.login-reward-celeb-active .login-reward-fanfare-btn {
+                animation: loginRewardFanfarePop 0.68s cubic-bezier(0.2, 0.95, 0.2, 1) 0.22s both,
+                           loginRewardFanfareGlow 1.1s ease-out 0.26s both;
+            }
+
             .moderator-badge {
                 position: absolute;
                 bottom: -2px;
@@ -4679,18 +5145,28 @@ app.get('/', (c) => {
             }
             
             /* Custom Scrollbar for Sidebar */
-            .sidebar-scroll::-webkit-scrollbar {
+            .sidebar-scroll::-webkit-scrollbar,
+            .panel-scroll::-webkit-scrollbar {
                 width: 8px;
             }
-            .sidebar-scroll::-webkit-scrollbar-track {
+            .sidebar-scroll::-webkit-scrollbar-button,
+            .panel-scroll::-webkit-scrollbar-button {
+                width: 0;
+                height: 0;
+                display: none;
+            }
+            .sidebar-scroll::-webkit-scrollbar-track,
+            .panel-scroll::-webkit-scrollbar-track {
                 background: #F3F4F6;
                 border-radius: 10px;
             }
-            .sidebar-scroll::-webkit-scrollbar-thumb {
+            .sidebar-scroll::-webkit-scrollbar-thumb,
+            .panel-scroll::-webkit-scrollbar-thumb {
                 background: #D1D5DB;
                 border-radius: 10px;
             }
-            .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            .sidebar-scroll::-webkit-scrollbar-thumb:hover,
+            .panel-scroll::-webkit-scrollbar-thumb:hover {
                 background: #9CA3AF;
             }
             .sidebar-scroll {
@@ -4698,7 +5174,7 @@ app.get('/', (c) => {
                 scrollbar-gutter: stable;
             }
             :root {
-                --panel-scrollbar-gap: 8px; /* 좌/중/우 패널 스크롤바-콘텐츠 공통 간격 */
+                --panel-scrollbar-gap: 10px; /* 좌/중/우 패널 스크롤바-콘텐츠 공통 간격 */
             }
             /* Right sidebar: unify spacing between content and vertical scrollbar */
             #sidebarFriendsList,
@@ -4757,6 +5233,27 @@ app.get('/', (c) => {
                 overscroll-behavior: contain !important;
                 padding-right: 8px !important;
                 padding-bottom: 10px;
+            }
+            /* 친구/알림 패널: (요청) 내용만큼 확장, 스크롤은 추후 */
+            #rightSidebar.mobile-fullscreen-overlay {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            #rightSidebar.mobile-fullscreen-overlay > div {
+                height: auto !important;
+                max-height: none !important;
+            }
+            #rightSidebar.mobile-fullscreen-overlay #friendsTabContent:not(.hidden),
+            #rightSidebar.mobile-fullscreen-overlay #notificationsTabContent:not(.hidden) {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            #rightSidebar.mobile-fullscreen-overlay #sidebarFriendsList,
+            #rightSidebar.mobile-fullscreen-overlay #sidebarNotificationsList {
+                overflow: visible !important;
+                max-height: none !important;
             }
             /* 반응/댓글/공유 패널: 모바일 - 헤더 아래 간격, 웹 배경 노출 */
             #rightSidebar.mobile-fullscreen-overlay.reactors-only {
@@ -4833,7 +5330,12 @@ app.get('/', (c) => {
             
             /* PC: 좌/중앙/우 독립 스크롤 - 포스팅 스크롤해도 사이드바 고정 */
             @media (min-width: 1024px) {
+                html, body {
+                    height: 100%;
+                    overflow: hidden !important; /* 맨 오른쪽(페이지) 스크롤 제거 */
+                }
                 .main-content-wrapper {
+                    /* 좌/중/우 BAR 각각 독립 스크롤 */
                     height: calc(100vh - 4rem);
                     overflow: hidden;
                     display: flex;
@@ -4850,23 +5352,33 @@ app.get('/', (c) => {
                     min-height: 0;
                     overscroll-behavior: contain;
                 }
+                /* 리워드 BAR: 바깥 스크롤 제거(삼각형 원인), 안쪽 sidebar-scroll만 스크롤 유지 */
+                #leftSidebar.scroll-independent {
+                    overflow: hidden !important;
+                }
+                #leftSidebar .sidebar-scroll {
+                    max-height: calc(100vh - 6rem) !important;
+                    overflow-y: auto !important;
+                }
+                /* 오른쪽 BAR(친구/알림): 패널 내부는 그대로, BAR가 스크롤 담당 */
+                #rightSidebarInner,
+                #friendsTabContent,
+                #notificationsTabContent,
+                #sidebarFriendsList,
+                #sidebarNotificationsList {
+                    overflow: visible;
+                    max-height: none;
+                }
                 /* 좌/중/우 스크롤 영역 간격을 오른쪽 기준으로 통일 */
                 #leftSidebar .sidebar-scroll,
                 #centerFeedColumn,
                 #rightSidebar {
                     scrollbar-gutter: stable;
                 }
-                #leftSidebar .sidebar-scroll {
+                .panel-scroll {
                     padding-right: var(--panel-scrollbar-gap) !important;
                     box-sizing: border-box;
-                }
-                #centerFeedColumn {
-                    padding-right: var(--panel-scrollbar-gap);
-                    box-sizing: border-box;
-                }
-                #rightSidebarInner {
-                    padding-right: var(--panel-scrollbar-gap) !important;
-                    box-sizing: border-box;
+                    scrollbar-gutter: stable;
                 }
                 /* 왼쪽 사이드바 리워드 영역 = 오른쪽 사이드바와 동일 높이 */
                 #leftSidebar .sidebar-scroll {
@@ -5199,7 +5711,7 @@ app.get('/', (c) => {
             <div class="flex flex-col gap-3 sm:gap-6 lg:grid lg:grid-cols-[1.188fr_1.0715fr_1.0715fr_1fr] lg:gap-x-[2%] main-content-grid">
                 <!-- Left Sidebar - order-first on mobile: reward content at top -->
                 <div id="leftSidebar" class="lg:col-span-1 order-first lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2 scroll-independent">
-                        <div class="sticky top-20 space-y-2 sm:space-y-3 lg:min-h-full max-h-[calc(100vh-6rem)] lg:max-h-none overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
+                        <div class="sticky top-20 space-y-2 sm:space-y-3 lg:min-h-full max-h-[calc(100vh-6rem)] lg:max-h-none overflow-y-auto sidebar-scroll panel-scroll">
                         <!-- Today's Bible Verse -->
                         <div id="verseRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="basic" data-reward-key="basic" data-reward-target="verseRewardContent">
                             <div class="reward-card-header-line">
@@ -5227,7 +5739,6 @@ app.get('/', (c) => {
                                     class="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-blue-800 font-bold text-base">
                                     <i class="fas fa-keyboard text-lg"></i>
                                     <span class="font-size-desc">말씀 타이핑</span>
-                                    <i id="typingToggleIcon" class="fas fa-chevron-down text-sm ml-1 transition-transform duration-300"></i>
                                 </button>
                                 
                                 <!-- Typing Input Area (Initially Hidden) -->
@@ -5284,39 +5795,38 @@ app.get('/', (c) => {
                         </div>
                     
                         <!-- Reward1: Today's Sermon Section -->
-                        <div id="sermonRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="reward1" data-reward-key="reward1" data-reward-target="sermonRewardContent">
+                        <div id="sermonRewardSection" class="relative bg-white rounded-2xl shadow-md border border-blue-200 p-4 sm:p-5 transition-all duration-300 reward-card-collapsible" data-reward-card="reward1" data-reward-key="reward1" data-reward-target="sermonRewardContent">
                             <div class="reward-card-header-line">
-                                <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
+                                <h3 class="font-size-title font-bold text-blue-700 reward-card-header-title">
                                     <i class="fas fa-video font-size-title text-blue-600 mr-2"></i>오늘의 설교 말씀
                                 </h3>
                                 <div class="reward-card-header-right">
-                                    <span class="reward-one-badge font-size-mini1 font-bold text-blue-800">🎁 리워드1</span>
-                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
+                                    <span class="reward-one-badge font-size-mini1 font-bold text-blue-700">🎁 리워드1</span>
+                                    <i class="fas fa-chevron-up text-xs text-blue-600 reward-card-chevron"></i>
                                 </div>
                             </div>
                             <div id="sermonRewardContent" class="reward-card-content">
                             <p id="sermonQueueNotice" class="hidden mt-1 mb-2 text-[11px] sm:text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                                 준비된 하용조 목사 설교 목록이 모두 소진되었습니다. 새 링크를 보내주세요.
                             </p>
-                            <!-- Locked State (< 200 points) -->
+                            <!-- Locked State (< 200 points) — 로그아웃 시에도 동일 UI -->
                             <div id="sermonLocked">
-                                <!-- Current Score Display -->
-                                <div class="bg-blue-50 rounded-lg p-3 mb-3">
+                                <div class="rounded-xl bg-blue-50/90 border border-blue-100 p-3 mb-3">
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="font-size-base font-semibold text-gray-700">현재 종합점수</span>
-                                        <span id="rewardTotalScore" class="font-size-base font-bold text-blue-600">0</span>
+                                        <span class="font-size-base font-semibold text-slate-700">현재 종합점수</span>
+                                        <span id="rewardTotalScore" class="font-size-base font-bold text-blue-600 tabular-nums">0</span>
                                     </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                                         <div id="rewardProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
                                     </div>
                                 </div>
-                                
-                                <!-- Unlock Button (Disabled) -->
-                                <button 
+
+                                <button
                                     id="unlockSermonBtn"
+                                    type="button"
                                     disabled
-                                    class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
-                                    <i class="fas fa-lock text-lg"></i>
+                                    class="w-full py-3 px-4 bg-gray-300 text-gray-600 rounded-xl font-bold font-size-desc cursor-not-allowed flex items-center justify-center gap-2 transition-all">
+                                    <i class="fas fa-lock text-base text-gray-500"></i>
                                     <span>200μ 달성 후 공개 가능</span>
                                 </button>
                             </div>
@@ -5467,7 +5977,7 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Center Column: Post Card + Posts (scroll together on PC) -->
-                <div id="centerFeedColumn" class="lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col scroll-independent mx-auto w-full max-w-[480px] lg:max-w-none space-y-4 center-feed-mobile-contents">
+                <div id="centerFeedColumn" class="lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col scroll-independent panel-scroll mx-auto w-full max-w-[480px] lg:max-w-none space-y-4 center-feed-mobile-contents">
                 <!-- Main Feed Part 1: Post Card - order-2 on mobile (after reward) -->
                 <div id="mainFeedPart1" class="space-y-4 order-2 lg:order-none">
                     <!-- User Profile Cover Card (Hidden by default, shown when filtering by user) -->
@@ -5547,6 +6057,27 @@ app.get('/', (c) => {
                                         <span id="profileCoverActivityScore" class="font-bold text-red-600">0</span>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile View (below cover when viewing a member) -->
+                    <div id="profileView" class="hidden">
+                        <div class="bg-white border-2 border-gray-300 rounded-xl shadow-sm p-5 sm:p-6 mt-4">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-2xl font-bold text-gray-800">
+                                    <i class="fas fa-user-circle text-blue-600 mr-2"></i>프로필
+                                </h2>
+                                <div class="flex items-center gap-1.5">
+                                    <div id="profileEditBtnContainer"></div>
+                                    <button id="profileViewLogoutBtn" type="button" onclick="logout()" class="text-gray-500 hover:text-red-500 transition px-3 py-1.5 rounded-lg hover:bg-red-50 flex items-center gap-1.5 text-sm" title="로그아웃">
+                                        <i class="fas fa-sign-out-alt"></i>
+                                        <span class="hidden sm:inline">로그아웃</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="profileViewContent">
+                                <!-- Profile content will be loaded here -->
                             </div>
                         </div>
                     </div>
@@ -5742,27 +6273,6 @@ app.get('/', (c) => {
                         </div>
                     </div>
 
-                    <!-- Profile View (Hidden by default) - unfolds below cover as info section -->
-                    <div id="profileView" class="hidden">
-                        <div class="bg-white border-t-2 border-gray-200 rounded-b-xl shadow-sm p-5 sm:p-6">
-                            <div class="flex items-center justify-between mb-6">
-                                <h2 class="text-2xl font-bold text-gray-800">
-                                    <i class="fas fa-user-circle text-blue-600 mr-2"></i>프로필
-                                </h2>
-                                <div class="flex items-center gap-1.5">
-                                    <div id="profileEditBtnContainer"></div>
-                                    <button onclick="logout()" class="text-gray-500 hover:text-red-500 transition px-3 py-1.5 rounded-lg hover:bg-red-50 flex items-center gap-1.5 text-sm" title="로그아웃">
-                                        <i class="fas fa-sign-out-alt"></i>
-                                        <span class="hidden sm:inline">로그아웃</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="profileViewContent">
-                                <!-- Profile content will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
 
                 <!-- Main Feed Part 2: Posts Feed & QT Panel - order-3 on mobile (after reward, post card) -->
@@ -5773,9 +6283,9 @@ app.get('/', (c) => {
                             <h2 class="text-xl font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
                             <div class="flex items-center gap-2">
                                 <div class="text-sm text-gray-600" id="qtDate"></div>
-                                <button id="qtWorshipBtn" onclick="toggleQtWorship()" class="hidden px-2.5 py-1 rounded-lg text-xs font-medium transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="찬양 재생">
-                                    <i class="fas fa-music"></i>
-                                </button>
+                                <div id="qtPassageBadge" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200" title="오늘 본문(시작 절)">
+                                    <span id="qtPassageShortRef">-</span>
+                                </div>
                                 <button id="qtAlarmBtn" onclick="showQtAlarmModal()" class="hidden px-2.5 py-1 rounded-lg text-xs font-medium transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">
                                     <i class="fas fa-bell"></i>
                                 </button>
@@ -5788,7 +6298,7 @@ app.get('/', (c) => {
                             <p class="font-bold text-red-600 text-sm" id="qtVerseRef"></p>
                         </div>
                         <div class="flex flex-nowrap gap-1 sm:gap-2 mb-4 overflow-x-auto">
-                            <button id="qtPrayerBtn" onclick="showQtSection('prayer')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-red-100 text-red-800 border-2 border-red-300 hover:bg-red-200 whitespace-nowrap">
+                            <button id="qtPrayerBtn" onclick="showQtSection('prayer')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
                                 시작기도
                             </button>
                             <button id="qtReadBtn" onclick="showQtSection('read')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
@@ -5809,12 +6319,40 @@ app.get('/', (c) => {
                             <div id="qtScriptureText" class="text-gray-800 text-sm leading-relaxed whitespace-pre-line"></div>
                         </div>
                         <div id="qtApplySection" class="qt-section hidden">
-                            <textarea id="qtApplyInput" rows="6" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"></textarea>
-                            <button onclick="saveQtApply()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium mb-4">저장</button>
+                            <div id="qtApplyComposer" class="flex items-end gap-3">
+                                <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
+                                    <textarea id="qtApplyInput" rows="1" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" oninput="qtAutoGrow(this)"></textarea>
+                                </div>
+                                <button type="button" onclick="sendQtApplyPost()" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div id="qtApplySavedView" class="hidden bg-white rounded-xl border-2 border-red-200 p-3">
+                                <p id="qtApplySavedText" class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></p>
+                                <div class="mt-2 flex justify-end">
+                                    <button type="button" onclick="editQtApply()" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 text-xs font-semibold transition">
+                                        수정
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div id="qtPrayer2Section" class="qt-section hidden mt-6">
-                            <textarea id="qtPrayerInput" rows="4" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 text-sm mb-2"></textarea>
-                            <button onclick="saveQtPrayer()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">저장</button>
+                        <div id="qtPrayer2Section" class="qt-section hidden mt-3">
+                            <div id="qtPrayerComposer" class="flex items-end gap-3">
+                                <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
+                                    <textarea id="qtPrayerInput" rows="1" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" oninput="qtAutoGrow(this)"></textarea>
+                                </div>
+                                <button type="button" onclick="sendQtPrayerPost()" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div id="qtPrayerSavedView" class="hidden bg-white rounded-xl border-2 border-red-200 p-3">
+                                <p id="qtPrayerSavedText" class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></p>
+                                <div class="mt-2 flex justify-end">
+                                    <button type="button" onclick="editQtPrayer()" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 text-xs font-semibold transition">
+                                        수정
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div id="qtWorshipPlayer" class="hidden mt-2 relative">
                             <div class="flex items-center gap-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
@@ -5848,10 +6386,10 @@ app.get('/', (c) => {
                 <!-- /Center Column -->
 
                 <!-- Right Sidebar - Friend List & Notifications (same position, toggle content) -->
-                <div id="rightSidebar" class="lg:col-span-1 hidden lg:block lg:order-4 lg:col-start-4 lg:row-start-1 lg:row-span-2 scroll-independent sidebar-scroll" onclick="if(this.classList.contains('reactors-only')&&event.target===this)closePostReactors()">
-                    <div id="rightSidebarInner" class="relative min-h-[200px] pr-0 lg:pr-2">
+                <div id="rightSidebar" class="lg:col-span-1 hidden lg:block lg:order-4 lg:col-start-4 lg:row-start-1 lg:row-span-2 panel-scroll scroll-independent" onclick="if(this.classList.contains('reactors-only')&&event.target===this)closePostReactors()">
+                    <div id="rightSidebarInner" class="relative min-h-[200px] pr-0">
                         <!-- Friend List Card -->
-                        <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 friends-empty flex flex-col min-h-0">
+                        <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 friends-empty">
                             <!-- Header -->
                             <div id="friendsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
                                 <div class="flex items-center">
@@ -5864,7 +6402,7 @@ app.get('/', (c) => {
                             </div>
                             
                             <!-- Friends List Container -->
-                            <div id="sidebarFriendsList" class="space-y-3 flex-1 min-h-0 overflow-y-auto">
+                            <div id="sidebarFriendsList" class="space-y-3">
                                 <!-- Friends will be loaded here dynamically -->
                                 <div class="text-center py-4 text-gray-400">
                                     <i class="fas fa-user-friends text-3xl mb-2 opacity-40"></i>
@@ -5893,7 +6431,7 @@ app.get('/', (c) => {
                         </div>
                         
                         <!-- Notifications Card (same position as friends, visibility toggle) -->
-                        <div id="notificationsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 notifications-empty flex flex-col min-h-0">
+                        <div id="notificationsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 notifications-empty">
                             <!-- Header -->
                             <div id="notificationsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
                                 <div class="flex items-center">
@@ -5906,7 +6444,7 @@ app.get('/', (c) => {
                             </div>
                             
                             <!-- Notifications List Container -->
-                            <div id="sidebarNotificationsList" class="space-y-3 flex-1 min-h-0 overflow-y-auto">
+                            <div id="sidebarNotificationsList" class="space-y-3">
                                 <!-- Notifications will be loaded here dynamically -->
                                 <div class="text-center py-4 text-gray-400">
                                     <i class="fas fa-bell text-3xl mb-2 opacity-40"></i>
@@ -6046,9 +6584,9 @@ app.get('/', (c) => {
         </div>
 
         <!-- Signup Modal -->
-        <div id="signupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-[10vh] sm:pt-[15vh]">
+        <div id="signupModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 pt-[4vh] sm:pt-[10vh]">
             <div class="bg-white rounded-lg shadow-xl p-3 w-[88vw] max-w-[330px] sm:max-w-md max-h-[88vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-2.5 sticky top-0 bg-white z-10 pb-2">
+                <div class="flex justify-between items-center mb-2 sticky top-0 bg-white z-10 pb-2 border-b border-gray-100">
                     <h2 class="text-base font-bold text-gray-800">
                         <i class="fas fa-user-plus text-blue-600 mr-1.5"></i>회원가입
                     </h2>
@@ -6057,6 +6595,15 @@ app.get('/', (c) => {
                     </button>
                 </div>
                 
+                <div id="signupFormContent">
+                <div id="signupEmailVerifyBanner" class="mb-3 p-2.5 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-800 flex items-start gap-2">
+                    <i class="fas fa-envelope-circle-check mt-0.5 flex-shrink-0"></i>
+                    <div>
+                        <span class="font-semibold">이메일 인증이 필요합니다.</span>
+                        <span class="block mt-0.5 text-blue-700">가입 완료 후 입력하신 이메일로 인증 링크가 발송됩니다. 링크를 클릭하면 가입이 완료됩니다.</span>
+                    </div>
+                </div>
+
                 <div class="space-y-2">
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">이름 <span class="text-red-500">*</span></label>
@@ -6090,9 +6637,53 @@ app.get('/', (c) => {
                             class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">전화번호 <span class="text-gray-400 text-xs font-normal">(선택)</span></label>
+                        <input
+                            id="signupPhone"
+                            type="tel"
+                            placeholder="예) 01012345678"
+                            autocomplete="off"
+                            readonly
+                            onfocus="this.removeAttribute('readonly')"
+                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">비밀번호 <span class="text-red-500">*</span></label>
+                        <input
+                            id="signupPassword"
+                            type="password"
+                            placeholder="영문 소문자 + 숫자 혼합 8자"
+                            autocomplete="new-password"
+                            oninput="validatePasswordRealtime()"
+                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                        <div id="passwordRules" class="mt-1.5 space-y-0.5 text-[11px] hidden">
+                            <div id="rule-length" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>8자 이상</div>
+                            <div id="rule-lower" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>영문 소문자 3개 이상</div>
+                            <div id="rule-digit" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>숫자 3개 이상</div>
+                            <div id="rule-noUpper" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>대문자·특수문자 사용 불가</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">비밀번호 확인 <span class="text-red-500">*</span></label>
+                        <input
+                            id="signupPasswordConfirm"
+                            type="password"
+                            placeholder="비밀번호 재입력"
+                            autocomplete="new-password"
+                            oninput="validatePasswordRealtime()"
+                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                        <div id="passwordMatchMsg" class="mt-1 text-[11px] hidden"></div>
+                    </div>
                     
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">프로필 사진 <span class="text-red-500">*</span></label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">프로필 사진 <span class="text-gray-400 text-xs font-normal">(선택)</span></label>
                         <div class="flex items-center space-x-3">
                             <div id="avatarPreview" class="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                                 <i class="fas fa-user text-gray-400 text-base"></i>
@@ -6426,24 +7017,25 @@ app.get('/', (c) => {
                                 </select>
                             </div>
                         </div>
-                    </div>
-                </div>
-                
+
                 <button 
                     onclick="handleSignup()"
                     class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold text-sm">
-                    회원가입 완료
+                    가입
                 </button>
                 
-                <p class="mt-3 text-center text-xs text-gray-600">
+                <p class="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-gray-600">
                     이미 계정이 있으신가요? 
                     <button onclick="hideSignupModal(); showLoginModal();" class="text-blue-600 hover:underline">로그인</button>
                 </p>
+                </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- How To Use Modal -->
-        <div id="howToUseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div id="howToUseModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 p-4">
             <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl max-h-[70vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-3xl font-bold text-gray-800 flex items-center">
@@ -6502,57 +7094,75 @@ app.get('/', (c) => {
                                 </thead>
                                 <tbody>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">포스팅 작성</td>
-                                        <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">10점</span>
-                                        </td>
-                                    </tr>
-                                    <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700">7종 포스팅 반응하기 (기도 제외)</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">1점</span>
-                                        </td>
-                                    </tr>
-                                    <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">기도 포스팅 반응하기 (중보)</td>
-                                        <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold">20점</span>
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">1μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700">7종 포스팅 반응받기</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">2점</span>
+                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">2μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700">댓글 작성</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5점</span>
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700">댓글 받기</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5점</span>
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700">다른 사람 포스팅 공유</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-bold">5점</span>
+                                            <span class="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-bold">5μ</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">포스팅 작성</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">10μ</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">기도 포스팅 반응하기 (중보)</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold">20μ</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">QT 친구 초대 이메일 발송</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold">20μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">오늘의 말씀 타이핑</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">100점</span>
+                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">40μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">오늘의 말씀 시청</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">100점</span>
+                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">40μ</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">초대한 친구가 회원가입</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold">40μ</span>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">QT 하루 달성</td>
+                                        <td class="border border-gray-300 px-4 py-3 text-center">
+                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold">60μ</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -6562,7 +7172,7 @@ app.get('/', (c) => {
                         <div class="mt-4 bg-yellow-50 rounded-lg p-4 border-2 border-yellow-300">
                             <p class="text-center text-gray-800 font-semibold">
                                 <i class="fas fa-trophy text-yellow-500 mr-2"></i>
-                                총 점수 500점 이상 달성 시 리워드1 언락
+                                총 점수 200μ 이상 달성 시 리워드1 공개
                             </p>
                         </div>
                     </div>
@@ -6583,7 +7193,7 @@ app.get('/', (c) => {
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">말씀 타이핑 <span class="font-semibold text-gray-800">(기본 리워드)</span></h4>
+                                    <h4 class="font-size-desc font-semibold text-gray-800">말씀 타이핑 <span class="font-semibold text-gray-800">(기본 리워드)</span></h4>
                                     <p class="text-sm text-gray-600">성경 말씀을 따라 쓰며 타이핑 연습을 하고 점수를 획득하세요.</p>
                                 </div>
                             </div>
@@ -6597,8 +7207,22 @@ app.get('/', (c) => {
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-red-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">사용자 필터</h4>
-                                    <p class="text-sm text-gray-600">사용자 이름을 클릭하면 해당 사용자의 포스팅만 모아볼 수 있습니다.</p>
+                                    <h4 class="font-semibold text-gray-800">나의 홈페이지</h4>
+                                    <p class="text-sm text-gray-600">헤더의 <strong>원형 프사</strong>를 클릭하면 커버, 프로필, 내 포스팅이 표시됩니다.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">메인으로 돌아가기</h4>
+                                    <p class="text-sm text-gray-600"><strong>로고</strong>를 누르면 QT, 친구 목록, 알림, 프로필 등이 모두 닫히고 전체 메인 화면으로 돌아갑니다.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-indigo-500 mt-1 mr-3"></i>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800">헤더 버튼 (QT, 친구, 알림, 관리자, 프사)</h4>
+                                    <p class="text-sm text-gray-600">첫 번째 클릭 시 해당 기능이 열립니다. 닫으려면 <strong>로고</strong>를 클릭하세요.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
@@ -6633,7 +7257,18 @@ app.get('/', (c) => {
                                 <i class="fas fa-arrow-right mr-2 mt-1 text-blue-600"></i>
                                 <span>프로필을 자세히 작성하면 더 깊은 교제가 가능해요!</span>
                             </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-lock mr-2 mt-1 text-gray-500"></i>
+                                <span>QT 내용(시작기도, 묵상, 적용, 마침기도)은 관리자도 열람하지 않는 개인정보입니다.</span>
+                            </li>
                         </ul>
+                    </div>
+
+                    <!-- μ 설명 -->
+                    <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 shadow-md">
+                        <p class="text-sm text-gray-700 leading-relaxed">
+                            <strong>μ</strong>는 뮤라고 발음하며, μισθός(미스토스)의 첫글자로 성경에 나오는 상급을 의미합니다. 100μ는 100뮤라고 하고, 말하자면 100점을 의미합니다.
+                        </p>
                     </div>
                 </div>
                 
@@ -6646,44 +7281,236 @@ app.get('/', (c) => {
         </div>
 
         <!-- Login Modal -->
-        <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 pt-[10vh] sm:pt-[15vh]">
-            <div class="bg-white rounded-lg shadow-xl p-4 w-[85vw] max-w-[320px] sm:max-w-sm sm:p-6">
+        <div id="forgotPasswordModal" class="hidden fixed inset-0 z-[110] bg-black bg-opacity-50 pt-[5vh] sm:pt-[15vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+            <div class="bg-white rounded-lg shadow-xl p-4 w-[85vw] max-w-[320px] sm:max-w-sm sm:p-6 my-auto sm:my-0 shrink-0">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-base font-bold text-gray-800">
-                        <i class="fas fa-sign-in-alt text-blue-600 mr-1.5"></i>로그인
+                        <i class="fas fa-unlock-keyhole text-blue-600 mr-1.5"></i>비밀번호 초기화
                     </h2>
-                    <button onclick="hideLoginModal()" class="text-gray-500 hover:text-gray-700">
+                    <button onclick="hideForgotPasswordModal()" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-lg"></i>
                     </button>
                 </div>
-                
+
                 <div class="space-y-2.5">
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1.5">이메일</label>
-                        <input 
-                            id="loginEmail"
+                        <input
+                            id="forgotPasswordEmail"
                             type="email"
+                            placeholder="이메일 주소"
+                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        />
+                    </div>
+                </div>
+                <button onclick="requestPasswordReset()" class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold text-sm">
+                    비밀번호 초기화 요청
+                </button>
+                <p class="mt-2 text-center text-xs text-gray-500">
+                    <button type="button" onclick="hideForgotPasswordModal(); showLoginModal();" class="text-blue-600 hover:underline">로그인으로 돌아가기</button>
+                </p>
+            </div>
+        </div>
+
+        <div id="loginModal" class="hidden fixed inset-0 z-[100] bg-black/50 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-[17.5rem] sm:max-w-[18.5rem] p-4 sm:p-5 shrink-0">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                            <i class="fas fa-right-to-bracket text-base"></i>
+                        </span>
+                        로그인
+                    </h2>
+                    <button type="button" onclick="hideLoginModal()" class="text-gray-400 hover:text-gray-600 p-1.5 -mr-1 rounded-lg hover:bg-gray-100 touch-manipulation" aria-label="닫기">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+
+                <form onsubmit="event.preventDefault(); handleLogin(); return false;" class="space-y-3.5" autocomplete="on">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" for="loginEmail">이메일</label>
+                        <input
+                            id="loginEmail"
+                            name="username"
+                            type="email"
+                            inputmode="email"
                             placeholder="email@example.com"
                             list="emailHistory"
-                            autocomplete="email"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            autocomplete="username"
+                            class="w-full px-3 py-2.5 text-sm bg-slate-100 border-0 rounded-lg text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:outline-none min-h-[42px] touch-manipulation"
                         />
                         <datalist id="emailHistory">
                             <!-- Email suggestions will be loaded here -->
                         </datalist>
                     </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1" for="loginPassword">비밀번호</label>
+                        <div class="relative">
+                            <input
+                                id="loginPassword"
+                                name="password"
+                                type="password"
+                                placeholder="비밀번호 입력"
+                                autocomplete="current-password"
+                                class="w-full px-3 py-2.5 pr-10 text-sm bg-slate-100 border-0 rounded-lg text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:outline-none min-h-[42px] touch-manipulation"
+                            />
+                            <button type="button" onclick="toggleLoginPasswordVisibility()" class="absolute inset-y-0 right-0 flex items-center justify-center px-2.5 text-gray-400 hover:text-gray-600 touch-manipulation" title="비밀번호 보기">
+                                <i id="loginPasswordToggleIcon" class="fas fa-eye text-sm leading-none"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <label class="flex items-center gap-2 cursor-pointer select-none group">
+                        <input type="checkbox" id="loginRememberCredentials" class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 shrink-0" />
+                        <span class="text-xs font-medium text-gray-700 group-hover:text-gray-900">이 기기에서 비밀번호 저장</span>
+                    </label>
+
+                    <button
+                        type="submit"
+                        class="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-semibold text-sm min-h-[42px] touch-manipulation">
+                        로그인
+                    </button>
+
+                    <p class="text-center text-xs pt-0.5">
+                        <button type="button" onclick="showForgotPasswordModal()" class="text-blue-500 hover:text-blue-600 hover:underline py-0.5 touch-manipulation">비밀번호를 잊으셨나요?</button>
+                    </p>
+                    <p class="text-center text-xs text-gray-600 leading-relaxed">
+                        <span>계정이 없으신가요? </span>
+                        <button type="button" onclick="hideLoginModal(); showSignupModal();" class="text-blue-500 font-semibold hover:text-blue-600 hover:underline py-0.5 touch-manipulation">회원가입</button>
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <!-- 로그인·자동 로그인 시: 달성 μ·언락 리워드 축하 (매번 표시) -->
+        <div id="loginRewardCelebrationModal" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[3px]" onclick="if (event.target === this) hideLoginRewardCelebrationModal()">
+            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-violet-200/90 max-w-md w-full max-h-[min(90vh,640px)] overflow-y-auto overflow-x-hidden login-reward-celeb-card" onclick="event.stopPropagation()">
+                <div id="loginRewardCelebrationGlow" class="pointer-events-none absolute inset-0 rounded-2xl z-0" aria-hidden="true"></div>
+                <div id="loginRewardParticleLayer" class="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl z-[30]" aria-hidden="true">
+                    <span class="login-reward-firework fw-left"></span>
+                    <span class="login-reward-firework fw-right"></span>
+                    <span class="login-reward-firework fw-mid"></span>
+                    <span class="login-reward-firework fw-left2"></span>
+                    <span class="login-reward-firework fw-right2"></span>
+                    <span class="login-reward-confetti c1"></span>
+                    <span class="login-reward-confetti c2"></span>
+                    <span class="login-reward-confetti c3"></span>
+                    <span class="login-reward-fanfare t1"><i class="fas fa-bullhorn"></i><span class="hit">빰!</span></span>
+                    <span class="login-reward-fanfare t2"><i class="fas fa-bullhorn"></i><span class="hit">빰!</span></span>
+                    <span class="login-reward-fanfare n1"><i class="fas fa-music"></i><span class="hit">팡</span></span>
+                    <span class="login-reward-fanfare n2"><i class="fas fa-music"></i><span class="hit">파레</span></span>
+                    <span class="login-reward-spark lr-s1"></span>
+                    <span class="login-reward-spark lr-s2"></span>
+                    <span class="login-reward-spark lr-s3"></span>
+                    <span class="login-reward-spark lr-s4"></span>
+                    <span class="login-reward-spark lr-s5"></span>
+                    <span class="login-reward-spark lr-s6"></span>
                 </div>
-                
-                <button 
-                    onclick="handleLogin()"
-                    class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold text-sm">
-                    로그인
-                </button>
-                
-                <p class="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-gray-600">
-                    계정이 없으신가요? 
-                    <button onclick="hideLoginModal(); showSignupModal();" class="text-blue-600 hover:underline">회원가입</button>
-                </p>
+                <div class="relative z-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 px-4 py-3.5 text-white text-center border-b border-white/20">
+                    <h2 id="loginRewardCelebrationTitle" class="login-reward-fanfare-title text-lg sm:text-xl font-bold leading-snug drop-shadow-sm">환영합니다</h2>
+                </div>
+                <div class="relative z-10 p-5 sm:p-6 space-y-4 bg-gradient-to-b from-white to-indigo-50/40">
+                    <div class="text-center rounded-xl bg-white/80 border border-blue-100 px-3 py-3 shadow-sm">
+                        <p class="text-sm text-gray-600 mb-1">
+                            종합 μ <span class="text-gray-400">(성경+기도+활동)</span>
+                        </p>
+                        <div id="loginRewardCelebrationTotal" class="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 tabular-nums">0</div>
+                        <p id="loginRewardCelebrationNextHint" class="text-xs text-violet-800 font-medium mt-2"></p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-chart-column text-indigo-600"></i> μ 구성 · 상승 그래프
+                        </p>
+                        <div class="flex items-end justify-center gap-2 sm:gap-3 px-1 rounded-xl bg-white/70 border border-indigo-100 py-3">
+                            <div class="flex flex-col items-center flex-1 max-w-[5rem]">
+                                <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
+                                    <div id="loginRewardBarScripture" class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 min-h-0 shadow-sm" style="height:0%"></div>
+                                </div>
+                                <span class="text-[10px] text-amber-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationScripture">0</span>μ</span>
+                                <span class="text-[10px] text-amber-800/90 font-medium">성경</span>
+                            </div>
+                            <div class="flex flex-col items-center flex-1 max-w-[5rem]">
+                                <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
+                                    <div id="loginRewardBarPrayer" class="w-full rounded-t-lg bg-gradient-to-t from-purple-500 to-purple-400 min-h-0 shadow-sm" style="height:0%"></div>
+                                </div>
+                                <span class="text-[10px] text-purple-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationPrayer">0</span>μ</span>
+                                <span class="text-[10px] text-purple-800/90 font-medium">기도</span>
+                            </div>
+                            <div class="flex flex-col items-center flex-1 max-w-[5rem]">
+                                <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
+                                    <div id="loginRewardBarActivity" class="w-full rounded-t-lg bg-gradient-to-t from-rose-500 to-rose-400 min-h-0 shadow-sm" style="height:0%"></div>
+                                </div>
+                                <span class="text-[10px] text-rose-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationActivity">0</span>μ</span>
+                                <span class="text-[10px] text-rose-800/90 font-medium">활동</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-check-circle text-emerald-600"></i> 달성한 리워드
+                        </p>
+                        <ul id="loginRewardUnlockList" class="space-y-2 text-left list-none p-0 m-0"></ul>
+                    </div>
+
+                    <div class="text-center px-1 space-y-1.5">
+                        <p class="text-xs text-gray-700 leading-relaxed">
+                            "기뻐하고 즐거워하라 하늘에서 너희의 상이 큼이라"
+                        </p>
+                        <p class="text-[11px] text-gray-500">마태복음 5:12</p>
+                    </div>
+                    <button type="button" onclick="hideLoginRewardCelebrationModal()" class="login-reward-fanfare-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold hover:from-blue-700 hover:to-violet-700 transition shadow-lg shadow-indigo-500/25">
+                        함께 지어져가요
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 종합 μ 200 / 1000 / 1400 마일스톤 축하 (세션 중 임계값 돌파 시) -->
+        <div id="scoreMilestoneCelebrationModal" class="hidden fixed inset-0 z-[125] flex items-center justify-center p-4 bg-black/55" onclick="if (event.target === this) hideScoreMilestoneCelebrationModal()">
+            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-blue-200 max-w-md w-full overflow-hidden milestone-modal-card" onclick="event.stopPropagation()">
+                <div id="milestoneJackpotGlow" class="pointer-events-none absolute inset-0 rounded-2xl z-0" aria-hidden="true"></div>
+                <div class="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl z-[5]" aria-hidden="true">
+                    <span class="milestone-spark milestone-spark-1"></span>
+                    <span class="milestone-spark milestone-spark-2"></span>
+                    <span class="milestone-spark milestone-spark-3"></span>
+                    <span class="milestone-spark milestone-spark-4"></span>
+                    <span class="milestone-spark milestone-spark-5"></span>
+                </div>
+                <div id="milestoneCelebrationHeader" class="relative z-10 px-5 py-4 text-white text-center rounded-t-2xl border-b border-white/20 bg-gradient-to-r from-blue-600 to-indigo-600">
+                    <p class="text-sm opacity-90">마일스톤 달성</p>
+                    <h2 id="milestoneCelebrationTitle" class="text-xl font-bold mt-1">200μ 달성!</h2>
+                    <p id="milestoneCelebrationSubtitle" class="text-xs opacity-90 mt-1 leading-snug">리워드가 열렸습니다</p>
+                </div>
+                <div class="p-5 sm:p-6 space-y-4 relative z-10">
+                    <div class="text-center">
+                        <p class="text-sm text-gray-600 mb-1">종합 μ <span class="text-gray-400">(성경+기도+활동)</span></p>
+                        <div id="milestoneCelebrationBigMu" class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 tabular-nums">0μ</div>
+                    </div>
+                    <div class="relative z-10 flex items-end justify-center gap-2 sm:gap-3 px-1">
+                        <div class="flex flex-col items-center flex-1 max-w-[5rem]">
+                            <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-200 overflow-hidden">
+                                <div id="milestoneBarScripture" class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 min-h-0" style="height:0%"></div>
+                            </div>
+                            <span class="text-[10px] text-amber-800 font-semibold mt-1.5">성경</span>
+                        </div>
+                        <div class="flex flex-col items-center flex-1 max-w-[5rem]">
+                            <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-200 overflow-hidden">
+                                <div id="milestoneBarPrayer" class="w-full rounded-t-lg bg-gradient-to-t from-purple-500 to-purple-400 min-h-0" style="height:0%"></div>
+                            </div>
+                            <span class="text-[10px] text-purple-800 font-semibold mt-1.5">기도</span>
+                        </div>
+                        <div class="flex flex-col items-center flex-1 max-w-[5rem]">
+                            <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-200 overflow-hidden">
+                                <div id="milestoneBarActivity" class="w-full rounded-t-lg bg-gradient-to-t from-rose-500 to-rose-400 min-h-0" style="height:0%"></div>
+                            </div>
+                            <span class="text-[10px] text-rose-800 font-semibold mt-1.5">활동</span>
+                        </div>
+                    </div>
+                    <p id="milestoneCelebrationRewardHint" class="text-center text-xs text-gray-500 leading-relaxed"></p>
+                    <button type="button" onclick="hideScoreMilestoneCelebrationModal()" class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md">확인</button>
+                </div>
             </div>
         </div>
 
@@ -6704,7 +7531,7 @@ app.get('/', (c) => {
                 </div>
                 
                 <div class="mt-6 flex justify-end">
-                    <button onclick="hideViewProfileModal(); showEditProfileModal();" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <button onclick="hideViewProfileModal(); void showEditProfileModal();" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
                         <i class="fas fa-edit mr-2"></i>프로필 수정하기
                     </button>
                 </div>
@@ -6733,6 +7560,30 @@ app.get('/', (c) => {
                             class="w-full p-3 border rounded-lg bg-gray-100 cursor-not-allowed"
                         />
                         <p class="text-xs text-gray-500 mt-1">이메일은 변경할 수 없습니다.</p>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                        <h3 class="text-sm font-bold text-gray-800 mb-1">
+                            <i class="fas fa-key text-blue-600 mr-2"></i>비밀번호 변경
+                        </h3>
+                        <p class="text-xs text-gray-500 mb-3">가입 시와 동일 규칙(소문자·숫자 각 3자 이상, 8자 이상, 대문자·특수문자 불가)</p>
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1" for="editPasswordCurrent">현재 비밀번호</label>
+                                <input type="password" id="editPasswordCurrent" autocomplete="current-password" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1" for="editPasswordNew">새 비밀번호</label>
+                                <input type="password" id="editPasswordNew" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1" for="editPasswordConfirm">새 비밀번호 확인</label>
+                                <input type="password" id="editPasswordConfirm" autocomplete="new-password" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                            </div>
+                            <button type="button" onclick="submitChangePasswordLegacy()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">
+                                비밀번호 변경
+                            </button>
+                        </div>
                     </div>
                     
                     <div>
@@ -7027,21 +7878,16 @@ app.get('/', (c) => {
             // Toggle Typing Area
             window.toggleTypingArea = function() {
                 const typingArea = document.getElementById('typingArea');
-                const toggleIcon = document.getElementById('typingToggleIcon');
                 
-                if (typingArea && toggleIcon) {
+                if (typingArea) {
                     const isHidden = typingArea.classList.contains('hidden');
                     
                     if (isHidden) {
                         // Show typing area
                         typingArea.classList.remove('hidden');
-                        toggleIcon.classList.remove('fa-chevron-down');
-                        toggleIcon.classList.add('fa-chevron-up');
                     } else {
                         // Hide typing area
                         typingArea.classList.add('hidden');
-                        toggleIcon.classList.remove('fa-chevron-up');
-                        toggleIcon.classList.add('fa-chevron-down');
                     }
                 }
             };

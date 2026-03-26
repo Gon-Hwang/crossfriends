@@ -1,3 +1,57 @@
+/** 프로덕션 단일 기준 도메인 — 미러·구 URL의 /api·R2 자산을 여기로 복구 */
+const CROSSFRIENDS_ORIGIN = 'https://crossfriends.org';
+
+function isCrossfriendsCanonicalHost() {
+    if (typeof location === 'undefined') return true;
+    const h = (location.hostname || '').toLowerCase();
+    return h === 'crossfriends.org' || h === 'www.crossfriends.org';
+}
+
+function isLocalDevHost() {
+    if (typeof location === 'undefined') return false;
+    const h = (location.hostname || '').toLowerCase();
+    return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+}
+
+function applyCrossfriendsAxiosBase() {
+    if (typeof axios === 'undefined') return;
+    if (isLocalDevHost()) return;
+    if (!isCrossfriendsCanonicalHost()) {
+        axios.defaults.baseURL = CROSSFRIENDS_ORIGIN;
+    }
+}
+
+/**
+ * 상대 경로·구 프리뷰 도메인의 앱 자산 URL을 crossfriends.org 기준 절대 URL로 통일
+ */
+function toCanonicalSiteUrl(url) {
+    if (url == null || url === '') return url;
+    const s = String(url).trim();
+    if (!s) return url;
+    if (s.startsWith('data:') || s.startsWith('blob:')) return s;
+    if (s.startsWith('//')) return 'https:' + s;
+    if (s.startsWith('/')) return CROSSFRIENDS_ORIGIN + s;
+    try {
+        const u = new URL(s);
+        const path = u.pathname + u.search + u.hash;
+        const host = u.hostname.toLowerCase();
+        const ourAssetPath = path.startsWith('/api/') || path.startsWith('/static/');
+        const ourLikeHost =
+            host === 'crossfriends.org' ||
+            host === 'www.crossfriends.org' ||
+            host.endsWith('.crossfriends.org') ||
+            host.endsWith('.pages.dev') ||
+            host.endsWith('.workers.dev');
+        if (ourAssetPath || ourLikeHost) {
+            return CROSSFRIENDS_ORIGIN + path;
+        }
+    } catch (e) {
+        /* ignore */
+    }
+    return s;
+}
+
+applyCrossfriendsAxiosBase();
 
 let currentUserId = null;
 let currentUser = null;
@@ -13,7 +67,7 @@ function showHowToUse() {
     const modal = document.getElementById('howToUseModal');
     if (modal) {
         modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        modal.classList.add(...howToUseModalLayoutClasses);
     } else {
         console.error('How-to-use modal not found');
     }
@@ -24,18 +78,78 @@ function hideHowToUse() {
     const modal = document.getElementById('howToUseModal');
     if (modal) {
         modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        modal.classList.remove(...howToUseModalLayoutClasses);
     }
 }
+
+const loginModalLayoutClasses = ['flex', 'items-center', 'justify-center', 'min-h-full', 'p-4'];
+
+const LS_LOGIN_REMEMBER = 'crossfriends_loginRememberCredentials';
+const LS_SAVED_LOGIN_EMAIL = 'crossfriends_savedLoginEmail';
+const LS_SAVED_LOGIN_PASSWORD = 'crossfriends_savedLoginPassword';
+
+function applySavedLoginCredentials() {
+    if (localStorage.getItem(LS_LOGIN_REMEMBER) !== '1') return;
+    const savedEmail = localStorage.getItem(LS_SAVED_LOGIN_EMAIL);
+    const savedPassword = localStorage.getItem(LS_SAVED_LOGIN_PASSWORD);
+    const emailInput = document.getElementById('loginEmail');
+    const pwInput = document.getElementById('loginPassword');
+    const rememberCb = document.getElementById('loginRememberCredentials');
+    if (rememberCb) rememberCb.checked = true;
+    if (savedEmail && emailInput) emailInput.value = savedEmail;
+    if (savedPassword && pwInput) pwInput.value = savedPassword;
+}
+
+function persistLoginCredentialsIfRequested(email, password) {
+    const rememberCb = document.getElementById('loginRememberCredentials');
+    if (rememberCb && rememberCb.checked) {
+        localStorage.setItem(LS_LOGIN_REMEMBER, '1');
+        localStorage.setItem(LS_SAVED_LOGIN_EMAIL, email);
+        localStorage.setItem(LS_SAVED_LOGIN_PASSWORD, password);
+    } else {
+        localStorage.removeItem(LS_LOGIN_REMEMBER);
+        localStorage.removeItem(LS_SAVED_LOGIN_EMAIL);
+        localStorage.removeItem(LS_SAVED_LOGIN_PASSWORD);
+    }
+}
+const howToUseModalLayoutClasses = ['flex', 'items-center', 'justify-center'];
 
 // Show login modal
 function showLoginModal() {
     const modal = document.getElementById('loginModal');
     if (modal) {
         modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        modal.classList.add(...loginModalLayoutClasses);
+        // 비밀번호 보기 상태 초기화
+        const pwInput = document.getElementById('loginPassword');
+        const pwIcon = document.getElementById('loginPasswordToggleIcon');
+        if (pwInput && pwIcon) {
+            pwInput.type = 'password';
+            pwIcon.classList.remove('fa-eye-slash');
+            pwIcon.classList.add('fa-eye');
+            pwIcon.parentElement && pwIcon.parentElement.setAttribute('title', '비밀번호 보기');
+        }
+        applySavedLoginCredentials();
     } else {
         console.error('Login modal not found');
+    }
+}
+
+// Toggle login password visibility
+function toggleLoginPasswordVisibility() {
+    const input = document.getElementById('loginPassword');
+    const icon = document.getElementById('loginPasswordToggleIcon');
+    if (!input || !icon) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+        icon.parentElement && icon.parentElement.setAttribute('title', '비밀번호 숨기기');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+        icon.parentElement && icon.parentElement.setAttribute('title', '비밀번호 보기');
     }
 }
 
@@ -44,8 +158,12 @@ function hideLoginModal() {
     const modal = document.getElementById('loginModal');
     if (modal) {
         modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        modal.classList.remove(...loginModalLayoutClasses);
     }
+    const elEmail = document.getElementById('loginEmail');
+    const elPw = document.getElementById('loginPassword');
+    if (elEmail) elEmail.value = '';
+    if (elPw) elPw.value = '';
 }
 
 // Show signup modal
@@ -56,7 +174,7 @@ function showSignupModal() {
     const modal = document.getElementById('signupModal');
     if (modal) {
         modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        modal.classList.add(...loginModalLayoutClasses);
     } else {
         console.error('Signup modal not found');
     }
@@ -67,17 +185,35 @@ function hideSignupModal() {
     const modal = document.getElementById('signupModal');
     if (modal) {
         modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        modal.classList.remove(...loginModalLayoutClasses);
     }
+    const ids = [
+        'signupEmail', 'signupName', 'signupPhone', 'signupPassword', 'signupPasswordConfirm',
+        'signupChurch', 'signupPastor', 'signupDenomination', 'signupProvince', 'signupCity', 'signupGender', 'signupPosition',
+        'signupAddress', 'signupMaritalStatus', 'signupAvatar'
+    ];
+    ids.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && 'value' in el) el.value = '';
+    });
+    for (let i = 1; i <= 10; i++) {
+        const el = document.getElementById('faith_q' + i);
+        if (el) el.value = '';
+    }
+    const preview = document.getElementById('avatarPreview');
+    if (preview) preview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+    const rulesDiv = document.getElementById('passwordRules');
+    const matchDiv = document.getElementById('passwordMatchMsg');
+    if (rulesDiv) rulesDiv.classList.add('hidden');
+    if (matchDiv) matchDiv.classList.add('hidden');
 }
 
-// Show edit profile modal
-function showEditProfileModal() {
+// 별도 팝업(#editProfileModal)으로 프로필 수정 — 구 경로·일부 버튼용
+function openLegacyEditProfileModal() {
     const modal = document.getElementById('editProfileModal');
     if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        // Load current user data
         loadEditProfileData();
     }
 }
@@ -186,6 +322,16 @@ let videoCheckInterval;
 let maxWatchedTime = 0;
 let videoDuration = 0;
 const CURRENT_VIDEO_ID = 'u13qcd4AePQ';
+/** 리워드1(오늘의 설교) — 프로덕션 UI·crossfriends.org와 동일 (종합점수 μ 기준) */
+const SERMON_REWARD1_THRESHOLD = 200;
+const SCORE_MILESTONE_REWARD2 = 1000;
+const SCORE_MILESTONE_REWARD3 = 1400;
+/** 종합 μ 마일스톤 (축하 패널·사이드바 리워드2/3) */
+const SCORE_MILESTONE_TIERS = [SERMON_REWARD1_THRESHOLD, SCORE_MILESTONE_REWARD2, SCORE_MILESTONE_REWARD3];
+let lastKnownCombinedScore = null;
+const scoreMilestoneQueue = [];
+let scoreMilestoneModalOpen = false;
+let scoreMilestoneEscapeHandler = null;
 let completedVideos = new Set();
 let lastCheckedTime = 0;
 
@@ -195,28 +341,30 @@ tag.src = "https://www.youtube.com/iframe_api";
 const firstScriptTag = document.getElementsByTagName('script')[0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-// Called automatically when YouTube API is ready
+// Called automatically when YouTube API is ready (반드시 전역에 등록)
 function onYouTubeIframeAPIReady() {
     // Check if sermon is unlocked before initializing player
     checkSermonReward();
 }
+window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
 
-// Check sermon reward status (500+ points)
-function checkSermonReward() {
-    if (!currentUserId) {
-        // Not logged in - show locked state
-        showSermonLocked(0);
-        return;
+function isYoutubeIframeApiReady() {
+    return typeof window.YT !== 'undefined' && window.YT && typeof window.YT.Player === 'function';
+}
+
+/** YT 스크립트가 늦게 로드될 때(loadUserScores → checkSermonReward) ReferenceError 방지 */
+function initSermonYoutubePlayer() {
+    if (!isYoutubeIframeApiReady()) {
+        return false;
     }
-    
-    // Get user's total score
-    const totalScore = typingScore + videoScore + prayerScore + activityScore;
-    
-    if (totalScore >= 500) {
-        // Unlocked! Show sermon
-        showSermonUnlocked(totalScore);
-        
-        // Initialize YouTube player
+    if (player) {
+        return true;
+    }
+    const mount = document.getElementById('sermonPlayer');
+    if (!mount) {
+        return false;
+    }
+    try {
         player = new YT.Player('sermonPlayer', {
             height: '100%',
             width: '100%',
@@ -231,6 +379,28 @@ function checkSermonReward() {
                 'onStateChange': onPlayerStateChange
             }
         });
+        return true;
+    } catch (e) {
+        console.warn('Sermon YouTube player init failed:', e);
+        return false;
+    }
+}
+
+// Check sermon reward status (종합점수 ≥ SERMON_REWARD1_THRESHOLD μ)
+function checkSermonReward() {
+    if (!currentUserId) {
+        // Not logged in - show locked state
+        showSermonLocked(0);
+        return;
+    }
+    
+    // Get user's total score
+    const totalScore = typingScore + videoScore + prayerScore + activityScore;
+    
+    if (totalScore >= SERMON_REWARD1_THRESHOLD) {
+        // Unlocked! Show sermon
+        showSermonUnlocked(totalScore);
+        initSermonYoutubePlayer();
     } else {
         // Locked - show reward screen
         showSermonLocked(totalScore);
@@ -239,47 +409,41 @@ function checkSermonReward() {
 
 // Show locked sermon reward
 function showSermonLocked(currentScore) {
-    document.getElementById('sermonLocked').classList.remove('hidden');
-    document.getElementById('sermonUnlocked').classList.add('hidden');
-    
-    // Update score display
-    document.getElementById('rewardTotalScore').textContent = currentScore;
-    
-    // Update progress bar
-    const progress = Math.min((currentScore / 500) * 100, 100);
-    document.getElementById('rewardProgressBar').style.width = progress + '%';
-    
-    // Note: rewardRemainingScore element was removed in previous update
-    
-    // Update unlock button
+    const lockedEl = document.getElementById('sermonLocked');
+    const unlockedEl = document.getElementById('sermonUnlocked');
+    if (lockedEl) lockedEl.classList.remove('hidden');
+    if (unlockedEl) unlockedEl.classList.add('hidden');
+
+    const totalEl = document.getElementById('rewardTotalScore');
+    if (totalEl) totalEl.textContent = String(currentScore);
+
+    const barEl = document.getElementById('rewardProgressBar');
+    if (barEl) {
+        const progress = Math.min((currentScore / SERMON_REWARD1_THRESHOLD) * 100, 100);
+        barEl.style.width = progress + '%';
+    }
+
     const unlockBtn = document.getElementById('unlockSermonBtn');
-    if (currentScore >= 500) {
+    if (!unlockBtn) return;
+
+    if (currentScore >= SERMON_REWARD1_THRESHOLD) {
         unlockBtn.disabled = false;
         unlockBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
         unlockBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white', 'hover:from-purple-600', 'hover:to-pink-600', 'cursor-pointer', 'animate-pulse');
         unlockBtn.innerHTML = '<i class="fas fa-unlock text-2xl"></i><span>클릭하여 언락!</span>';
-        unlockBtn.onclick = function() {
+        unlockBtn.onclick = function () {
             showSermonUnlocked(currentScore);
-            
-            // Initialize YouTube player
-            player = new YT.Player('sermonPlayer', {
-                height: '100%',
-                width: '100%',
-                videoId: CURRENT_VIDEO_ID,
-                playerVars: {
-                    'playsinline': 1,
-                    'rel': 0,
-                    'modestbranding': 1
-                },
-                events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
-                }
-            });
-            
-            // Show success message
-            showToast('🎉 리워드 언락! 오늘의 설교를 감상하세요!', 'success');
+            if (!initSermonYoutubePlayer()) {
+                showToast('영상 플레이어를 불러오는 중입니다. 잠시 후 다시 눌러주세요.', 'warning');
+                return;
+            }
         };
+    } else {
+        unlockBtn.disabled = true;
+        unlockBtn.onclick = null;
+        unlockBtn.className =
+            'w-full py-3 px-4 bg-gray-300 text-gray-600 rounded-xl font-bold font-size-desc cursor-not-allowed flex items-center justify-center gap-2 transition-all';
+        unlockBtn.innerHTML = '<i class="fas fa-lock text-base text-gray-500"></i><span>200μ 달성 후 공개 가능</span>';
     }
 }
 
@@ -307,7 +471,8 @@ function onPlayerReady(event) {
 
 // Player state changed (playing, paused, ended, etc.)
 function onPlayerStateChange(event) {
-    if (event.data == YT.PlayerState.PLAYING) {
+    const PS = (typeof YT !== 'undefined' && YT.PlayerState) ? YT.PlayerState : { PLAYING: 1, PAUSED: 2, ENDED: 0 };
+    if (event.data == PS.PLAYING) {
         // Hide unlock banner when video starts playing
         const unlockBanner = document.getElementById('unlockBanner');
         if (unlockBanner) {
@@ -319,12 +484,12 @@ function onPlayerStateChange(event) {
         
         // Start tracking progress
         startVideoTracking();
-    } else if (event.data == YT.PlayerState.PAUSED || event.data == YT.PlayerState.ENDED) {
+    } else if (event.data == PS.PAUSED || event.data == PS.ENDED) {
         // Stop tracking
         stopVideoTracking();
         
         // Check completion on ended
-        if (event.data == YT.PlayerState.ENDED) {
+        if (event.data == PS.ENDED) {
             checkVideoCompletion();
         }
     }
@@ -667,19 +832,19 @@ function updateTypingScoreDisplay() {
         }
         
         if (rewardProgressBarEl) {
-            const progress = Math.min((combinedScore / 500) * 100, 100);
+            const progress = Math.min((combinedScore / SERMON_REWARD1_THRESHOLD) * 100, 100);
             rewardProgressBarEl.style.width = progress + '%';
         }
         
         if (rewardRemainingScoreEl) {
-            const remaining = Math.max(0, 500 - combinedScore);
-            rewardRemainingScoreEl.textContent = remaining > 0 ? `목표까지 ${remaining}점` : '목표 달성!';
+            const remaining = Math.max(0, SERMON_REWARD1_THRESHOLD - combinedScore);
+            rewardRemainingScoreEl.textContent = remaining > 0 ? `목표까지 ${remaining}μ` : '목표 달성!';
         }
         
-        // Check if just unlocked (crossed 500 threshold)
+        // Check if just unlocked (crossed threshold)
         const wasLocked = document.getElementById('sermonLocked') && !document.getElementById('sermonLocked').classList.contains('hidden');
         
-        if (combinedScore >= 500 && wasLocked) {
+        if (combinedScore >= SERMON_REWARD1_THRESHOLD && wasLocked) {
             // Just unlocked! Enable unlock button
             const unlockBtn = document.getElementById('unlockSermonBtn');
             if (unlockBtn) {
@@ -689,33 +854,16 @@ function updateTypingScoreDisplay() {
                 unlockBtn.innerHTML = '<i class="fas fa-unlock text-2xl"></i><span>클릭하여 언락!</span>';
                 unlockBtn.onclick = function() {
                     showSermonUnlocked(combinedScore);
-                    
-                    // Initialize YouTube player
-                    if (!player) {
-                        player = new YT.Player('sermonPlayer', {
-                            height: '100%',
-                            width: '100%',
-                            videoId: CURRENT_VIDEO_ID,
-                            playerVars: {
-                                'playsinline': 1,
-                                'rel': 0,
-                                'modestbranding': 1
-                            },
-                            events: {
-                                'onReady': onPlayerReady,
-                                'onStateChange': onPlayerStateChange
-                            }
-                        });
+                    if (!initSermonYoutubePlayer()) {
+                        showToast('영상 플레이어를 불러오는 중입니다. 잠시 후 다시 눌러주세요.', 'warning');
+                        return;
                     }
-                    
-                    // Show success message
-                    showToast('🎉 축하합니다! 리워드1 언락! 오늘의 설교를 감상하세요!', 'success');
                 };
             }
-            
-            // Show toast notification
-            showToast('🎊 500점 달성! 리워드1 언락 버튼을 눌러주세요!', 'success');
         }
+
+        syncQtRewardSidebars(combinedScore);
+        onCombinedScoreUpdated(combinedScore);
     }
 }
 
@@ -1067,7 +1215,7 @@ async function loadEditProfileData() {
         // Load cover photo preview (for modal)
         const coverPreview = document.getElementById('editCoverPreview');
         if (coverPreview && user.cover_url) {
-            coverPreview.style.backgroundImage = `url(${user.cover_url})`;
+            coverPreview.style.backgroundImage = `url(${toCanonicalSiteUrl(user.cover_url)})`;
             coverPreview.style.backgroundSize = 'cover';
             coverPreview.style.backgroundPosition = 'center';
             coverPreview.innerHTML = '';
@@ -1076,7 +1224,7 @@ async function loadEditProfileData() {
         // Load cover photo preview (for inline)
         const coverPreviewInline = document.getElementById('editCoverPreviewInline');
         if (coverPreviewInline && user.cover_url) {
-            coverPreviewInline.style.backgroundImage = `url(${user.cover_url})`;
+            coverPreviewInline.style.backgroundImage = `url(${toCanonicalSiteUrl(user.cover_url)})`;
             coverPreviewInline.style.backgroundSize = 'cover';
             coverPreviewInline.style.backgroundPosition = 'center';
             coverPreviewInline.innerHTML = '';
@@ -1085,7 +1233,7 @@ async function loadEditProfileData() {
         // Load avatar preview
         const avatarPreview = document.getElementById('editAvatarPreview');
         if (avatarPreview && user.avatar_url) {
-            avatarPreview.innerHTML = `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" />`;
+            avatarPreview.innerHTML = `<img src="${toCanonicalSiteUrl(user.avatar_url)}" alt="Profile" class="w-full h-full object-cover" />`;
         }
         
         // Update current user data
@@ -1117,41 +1265,6 @@ function previewAvatar(event) {
     }
 }
 
-// Modal functions
-window.showSignupModal = function() {
-    document.getElementById('signupModal').classList.remove('hidden');
-}
-
-window.hideSignupModal = function() {
-    document.getElementById('signupModal').classList.add('hidden');
-    // Clear form
-    document.getElementById('signupEmail').value = '';
-    document.getElementById('signupName').value = '';
-    document.getElementById('signupChurch').value = '';
-    document.getElementById('signupPastor').value = '';
-    document.getElementById('signupDenomination').value = '';
-    document.getElementById('signupProvince').value = '';
-    document.getElementById('signupCity').value = '';
-    document.getElementById('signupGender').value = '';
-    document.getElementById('signupPosition').value = '';
-    document.getElementById('signupAvatar').value = '';
-    // Clear faith answers
-    for (let i = 1; i <= 10; i++) {
-        document.getElementById('faith_q' + i).value = '';
-    }
-    // Reset avatar preview
-    document.getElementById('avatarPreview').innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
-}
-
-window.showLoginModal = function() {
-    document.getElementById('loginModal').classList.remove('hidden');
-}
-
-window.hideLoginModal = function() {
-    document.getElementById('loginModal').classList.add('hidden');
-    document.getElementById('loginEmail').value = '';
-}
-
 // Profile Menu Toggle
 function toggleProfileMenu() {
     const menu = document.getElementById('profileMenu');
@@ -1161,9 +1274,15 @@ function toggleProfileMenu() {
 // Close profile menu when clicking outside
 document.addEventListener('click', function(event) {
     const profileMenu = document.getElementById('profileMenu');
-    const userMenu = document.getElementById('userMenu');
-    
-    if (profileMenu && userMenu && !userMenu.contains(event.target)) {
+    const userMenuLegacy = document.getElementById('userMenu');
+    const userMenuMobile = document.getElementById('userMenuMobile');
+    const userMenuRightPC = document.getElementById('userMenuRightPC');
+    const insideUserChrome =
+        (userMenuLegacy && userMenuLegacy.contains(event.target)) ||
+        (userMenuMobile && userMenuMobile.contains(event.target)) ||
+        (userMenuRightPC && userMenuRightPC.contains(event.target));
+
+    if (profileMenu && !insideUserChrome) {
         profileMenu.classList.add('hidden');
     }
 });
@@ -1180,8 +1299,8 @@ window.hideViewProfileModal = function() {
     document.getElementById('viewProfileModal').classList.add('hidden');
 }
 
-// Edit Profile Modal functions
-window.showEditProfileModal = async function(targetUserId) {
+// 인라인 프로필 수정(profileView 안에 폼 삽입)
+async function showEditProfileModal(targetUserId) {
     if (!currentUser) return;
     
     // Use provided targetUserId, or fallback to currentUserId
@@ -1248,7 +1367,7 @@ window.showEditProfileModal = async function(targetUserId) {
                             ${user.role === 'admin' 
                                 ? '<i class="fas fa-crown text-yellow-400"></i>'
                                 : user.avatar_url 
-                                    ? `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" />` 
+                                    ? `<img src="${toCanonicalSiteUrl(user.avatar_url)}" alt="Profile" class="w-full h-full object-cover" />` 
                                     : '<i class="fas fa-user"></i>'}
                         </div>
                         
@@ -1817,6 +1936,36 @@ window.showEditProfileModal = async function(targetUserId) {
                         </div>
                     </div>
                     
+                    ${
+                        isOwnProfile
+                            ? `
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-800 mb-1">
+                            <i class="fas fa-key mr-2 text-blue-600"></i>비밀번호 변경
+                        </h4>
+                        <p class="text-xs text-gray-500 mb-3">현재 비밀번호 확인 후 새 비밀번호로 변경합니다. (가입 시와 동일 규칙: 소문자 3자 이상·숫자 3자 이상·8자 이상, 대문자·특수문자 불가)</p>
+                        <div class="space-y-2 max-w-md">
+                            <div>
+                                <label class="block text-sm text-gray-700 mb-1" for="editCurrentPasswordInline">현재 비밀번호</label>
+                                <input type="password" id="editCurrentPasswordInline" autocomplete="current-password" class="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-700 mb-1" for="editNewPasswordInline">새 비밀번호</label>
+                                <input type="password" id="editNewPasswordInline" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-700 mb-1" for="editNewPasswordConfirmInline">새 비밀번호 확인</label>
+                                <input type="password" id="editNewPasswordConfirmInline" autocomplete="new-password" class="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                            </div>
+                            <button type="button" onclick="submitChangePasswordInline()" class="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">
+                                비밀번호 변경
+                            </button>
+                        </div>
+                    </div>
+                    `
+                            : ''
+                    }
+                    
                     <!-- Action Buttons -->
                     <div class="flex justify-end space-x-3">
                         <button 
@@ -1848,7 +1997,15 @@ window.showEditProfileModal = async function(targetUserId) {
         if (profileViewHeader) {
             profileViewHeader.innerHTML = '<i class="fas fa-user-edit text-blue-600 mr-2"></i>프로필 수정';
         }
-        
+
+        const pv = document.getElementById('profileView');
+        if (pv) pv.classList.remove('hidden');
+        const lb = document.getElementById('profileViewLogoutBtn');
+        if (lb) {
+            if (parseInt(String(editUserId), 10) === parseInt(String(currentUserId), 10)) lb.classList.remove('hidden');
+            else lb.classList.add('hidden');
+        }
+
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
@@ -1988,6 +2145,102 @@ async function deleteCoverInline() {
 // Cancel edit and go back to profile view
 function cancelEditProfile() {
     showUserProfileModal(currentUserId);
+}
+
+async function submitChangePasswordInline() {
+    if (!currentUserId) {
+        showToast('로그인이 필요합니다.', 'error');
+        return;
+    }
+    const editingEl = document.getElementById('editingUserId');
+    const editingId = editingEl ? parseInt(editingEl.value, 10) : NaN;
+    if (editingId !== currentUserId) {
+        showToast('본인 프로필에서만 비밀번호를 변경할 수 있습니다.', 'error');
+        return;
+    }
+    const cur = (document.getElementById('editCurrentPasswordInline') || {}).value || '';
+    const neu = (document.getElementById('editNewPasswordInline') || {}).value || '';
+    const confirmPw = (document.getElementById('editNewPasswordConfirmInline') || {}).value || '';
+    if (!cur) {
+        showToast('현재 비밀번호를 입력해주세요.', 'error');
+        return;
+    }
+    if (!neu) {
+        showToast('새 비밀번호를 입력해주세요.', 'error');
+        return;
+    }
+    if (neu !== confirmPw) {
+        showToast('새 비밀번호가 일치하지 않습니다.', 'error');
+        return;
+    }
+    const errs = getPasswordErrors(neu);
+    if (errs.length) {
+        showToast(errs[0], 'error');
+        return;
+    }
+    try {
+        const response = await axios.post('/api/users/' + currentUserId + '/change-password', {
+            current_password: cur,
+            new_password: neu
+        });
+        showToast(response.data.message || '비밀번호가 변경되었습니다.', 'success');
+        ['editCurrentPasswordInline', 'editNewPasswordInline', 'editNewPasswordConfirmInline'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        if (localStorage.getItem(LS_LOGIN_REMEMBER) === '1') {
+            localStorage.setItem(LS_SAVED_LOGIN_PASSWORD, neu);
+        }
+    } catch (error) {
+        const msg =
+            (error.response && error.response.data && error.response.data.error) || '비밀번호 변경에 실패했습니다.';
+        showToast(msg, 'error');
+    }
+}
+
+async function submitChangePasswordLegacy() {
+    if (!currentUserId) {
+        showToast('로그인이 필요합니다.', 'error');
+        return;
+    }
+    const cur = (document.getElementById('editPasswordCurrent') || {}).value || '';
+    const neu = (document.getElementById('editPasswordNew') || {}).value || '';
+    const confirmPw = (document.getElementById('editPasswordConfirm') || {}).value || '';
+    if (!cur) {
+        showToast('현재 비밀번호를 입력해주세요.', 'error');
+        return;
+    }
+    if (!neu) {
+        showToast('새 비밀번호를 입력해주세요.', 'error');
+        return;
+    }
+    if (neu !== confirmPw) {
+        showToast('새 비밀번호가 일치하지 않습니다.', 'error');
+        return;
+    }
+    const errs = getPasswordErrors(neu);
+    if (errs.length) {
+        showToast(errs[0], 'error');
+        return;
+    }
+    try {
+        const response = await axios.post('/api/users/' + currentUserId + '/change-password', {
+            current_password: cur,
+            new_password: neu
+        });
+        showToast(response.data.message || '비밀번호가 변경되었습니다.', 'success');
+        ['editPasswordCurrent', 'editPasswordNew', 'editPasswordConfirm'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        if (localStorage.getItem(LS_LOGIN_REMEMBER) === '1') {
+            localStorage.setItem(LS_SAVED_LOGIN_PASSWORD, neu);
+        }
+    } catch (error) {
+        const msg =
+            (error.response && error.response.data && error.response.data.error) || '비밀번호 변경에 실패했습니다.';
+        showToast(msg, 'error');
+    }
 }
 
 // Handle edit profile form submit
@@ -2321,6 +2574,8 @@ async function handleEditProfile() {
 async function handleSignup() {
     const email = document.getElementById('signupEmail').value;
     const name = document.getElementById('signupName').value;
+    const password = (document.getElementById('signupPassword') || {}).value;
+    const passwordConfirm = (document.getElementById('signupPasswordConfirm') || {}).value;
     const church = document.getElementById('signupChurch').value;
     const pastor = document.getElementById('signupPastor').value;
     const denomination = document.getElementById('signupDenomination').value;
@@ -2347,7 +2602,7 @@ async function handleSignup() {
         q10: document.getElementById('faith_q10').value
     };
 
-    // 필수 항목 확인 (이름, 성별, 이메일, 프로필 사진)
+    // 필수 항목 확인 (이름, 성별, 이메일, 비밀번호)
     if (!email || !name) {
         alert('이름과 이메일은 필수 항목입니다.');
         return;
@@ -2358,8 +2613,17 @@ async function handleSignup() {
         return;
     }
     
-    if (!avatarFile) {
-        alert('프로필 사진을 업로드해주세요.');
+    if (!password) {
+        alert('비밀번호를 입력해주세요.');
+        return;
+    }
+    if (password !== passwordConfirm) {
+        alert('비밀번호가 일치하지 않습니다.');
+        return;
+    }
+    const pwErrs = getPasswordErrors(password);
+    if (pwErrs.length) {
+        alert(pwErrs[0]);
         return;
     }
 
@@ -2370,11 +2634,11 @@ async function handleSignup() {
         return;
     }
     
-    // Phone validation (optional, only if provided)
+    // Phone validation (optional)
     if (phone) {
-        const phoneRegex = /^[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}$/;
-        if (!phoneRegex.test(phone)) {
-            alert('전화번호는 하이픈(-)을 포함하여 입력해주세요. 예) 010-1234-5678');
+        const digits = String(phone).replace(/[^0-9]/g, '');
+        if (digits.length < 9 || digits.length > 11) {
+            alert('전화번호 형식을 확인해주세요.');
             return;
         }
     }
@@ -2387,6 +2651,7 @@ async function handleSignup() {
         const response = await axios.post('/api/users', {
             email,
             name,
+            password,
             church,
             pastor,
             denomination,
@@ -2451,12 +2716,955 @@ async function handleSignup() {
     }
 }
 
+function getPasswordErrors(pw) {
+    const p = String(pw || '');
+    const errs = [];
+    if (p.length < 8) errs.push('비밀번호는 8자 이상이어야 합니다.');
+    const lower = (p.match(/[a-z]/g) || []).length;
+    const digit = (p.match(/[0-9]/g) || []).length;
+    if (lower < 3) errs.push('비밀번호는 영문 소문자 3개 이상이 포함되어야 합니다.');
+    if (digit < 3) errs.push('비밀번호는 숫자 3개 이상이 포함되어야 합니다.');
+    if (/[A-Z]/.test(p) || /[^a-z0-9]/.test(p)) errs.push('비밀번호는 대문자·특수문자를 사용할 수 없습니다.');
+    return errs;
+}
+
+function validatePasswordRealtime() {
+    const pwEl = document.getElementById('signupPassword');
+    const cfEl = document.getElementById('signupPasswordConfirm');
+    const rulesDiv = document.getElementById('passwordRules');
+    const matchDiv = document.getElementById('passwordMatchMsg');
+    if (!pwEl || !cfEl || !rulesDiv || !matchDiv) return;
+
+    const pw = pwEl.value || '';
+    const cf = cfEl.value || '';
+
+    if (pw) rulesDiv.classList.remove('hidden');
+    else rulesDiv.classList.add('hidden');
+
+    const setRule = (id, ok) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.toggle('text-gray-400', !ok);
+        el.classList.toggle('text-green-600', ok);
+        const icon = el.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-circle', !ok);
+            icon.classList.toggle('fa-check-circle', ok);
+        }
+    };
+    setRule('rule-length', pw.length >= 8);
+    setRule('rule-lower', (pw.match(/[a-z]/g) || []).length >= 3);
+    setRule('rule-digit', (pw.match(/[0-9]/g) || []).length >= 3);
+    setRule('rule-noUpper', !(/[A-Z]/.test(pw) || /[^a-z0-9]/.test(pw)));
+
+    if (!cf) {
+        matchDiv.classList.add('hidden');
+    } else {
+        matchDiv.classList.remove('hidden');
+        matchDiv.innerHTML = (pw === cf)
+            ? '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>비밀번호가 일치합니다</span>'
+            : '<span class="text-red-500"><i class="fas fa-times-circle mr-1"></i>비밀번호가 일치하지 않습니다</span>';
+    }
+}
+
+// =====================
+// Login reward celebration (count-up + progress bar)
+// =====================
+let loginRewardCelebrationOnEscape = null;
+
+function easeOutCubicLoginReward(t) {
+    return 1 - Math.pow(1 - t, 3);
+}
+
+function runLoginRewardCountUp(durationMs, onProgress) {
+    return new Promise(function (resolve) {
+        const t0 = performance.now();
+        function frame(now) {
+            const raw = Math.min((now - t0) / durationMs, 1);
+            onProgress(easeOutCubicLoginReward(raw));
+            if (raw < 1) requestAnimationFrame(frame);
+            else resolve();
+        }
+        requestAnimationFrame(frame);
+    });
+}
+
+function hideLoginRewardCelebrationModal() {
+    const m = document.getElementById('loginRewardCelebrationModal');
+    if (m) {
+        m.classList.add('hidden');
+        m.classList.remove('login-reward-celeb-active');
+    }
+    const glow = document.getElementById('loginRewardCelebrationGlow');
+    if (glow) glow.classList.remove('milestone-glow-burst');
+    if (loginRewardCelebrationOnEscape) {
+        document.removeEventListener('keydown', loginRewardCelebrationOnEscape);
+        loginRewardCelebrationOnEscape = null;
+    }
+}
+
+function loginRewardNextUnlockHint(combined) {
+    if (combined >= SCORE_MILESTONE_REWARD3) {
+        return '세 가지 리워드를 모두 열었어요. 정말 멋져요!';
+    }
+    if (combined < SERMON_REWARD1_THRESHOLD) {
+        return `리워드1(설교 말씀)까지 약 ${SERMON_REWARD1_THRESHOLD - combined}μ`;
+    }
+    if (combined < SCORE_MILESTONE_REWARD2) {
+        return `리워드2(QT 찬양)까지 약 ${SCORE_MILESTONE_REWARD2 - combined}μ`;
+    }
+    return `리워드3(QT 알람)까지 약 ${SCORE_MILESTONE_REWARD3 - combined}μ`;
+}
+
+function fillLoginRewardUnlockList(combined, listEl) {
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    const tiers = [
+        { mu: SERMON_REWARD1_THRESHOLD, label: '리워드1', desc: '오늘의 설교 말씀 영상' },
+        { mu: SCORE_MILESTONE_REWARD2, label: '리워드2', desc: 'QT 찬양 듣기' },
+        { mu: SCORE_MILESTONE_REWARD3, label: '리워드3', desc: 'QT 예약·알람' }
+    ];
+    let anyUnlocked = false;
+    for (let i = 0; i < tiers.length; i++) {
+        const t = tiers[i];
+        if (combined < t.mu) continue;
+        anyUnlocked = true;
+        const li = document.createElement('li');
+        li.className = 'flex items-start gap-3 rounded-xl border p-3 bg-emerald-50/95 border-emerald-200';
+        li.innerHTML =
+            '<span class="shrink-0 mt-0.5 text-lg"><i class="fas fa-check-circle text-emerald-600"></i></span>' +
+            '<div class="min-w-0 flex-1">' +
+            '<p class="font-semibold text-sm text-gray-900">' +
+            t.label +
+            ' <span class="text-blue-600">' +
+            t.mu +
+            'μ</span></p>' +
+            '<p class="text-xs text-gray-600 mt-0.5">' +
+            t.desc +
+            '</p>' +
+            '<p class="text-xs text-emerald-800 font-semibold mt-1">언락됨 · 왼쪽 사이드바에서 이용하세요</p>' +
+            '</div>';
+        listEl.appendChild(li);
+    }
+    if (!anyUnlocked) {
+        const emptyLi = document.createElement('li');
+        emptyLi.className = 'text-sm text-gray-500 text-center py-3 px-2 leading-relaxed';
+        emptyLi.textContent = '아직 달성한 리워드가 없습니다. 종합 μ를 올려 보세요.';
+        listEl.appendChild(emptyLi);
+    }
+}
+
+function mountLoginRewardRandomFalls(modalEl) {
+    if (!modalEl) return;
+    const layer = modalEl.querySelector('#loginRewardParticleLayer');
+    if (!layer) return;
+
+    const oldFalls = layer.querySelectorAll('.login-reward-fall.dynamic');
+    for (let i = 0; i < oldFalls.length; i++) oldFalls[i].remove();
+
+    const palette = ['#fde047', '#93c5fd', '#fca5a5', '#86efac', '#c4b5fd', '#fdba74', '#67e8f9', '#bef264'];
+    const pieceCount = 34;
+
+    for (let i = 0; i < pieceCount; i++) {
+        const fall = document.createElement('span');
+        fall.className = 'login-reward-fall dynamic';
+        const left = 3 + Math.random() * 94;
+        const top = -28 - Math.random() * 30;
+        const delay = Math.random() * 0.95;
+        const duration = 1.25 + Math.random() * 1.6;
+        const w = 4 + Math.random() * 6;
+        const h = 8 + Math.random() * 10;
+        const color = palette[Math.floor(Math.random() * palette.length)];
+        const rot = -25 + Math.random() * 50;
+
+        fall.style.left = left.toFixed(2) + '%';
+        fall.style.top = top.toFixed(2) + 'px';
+        fall.style.width = w.toFixed(1) + 'px';
+        fall.style.height = h.toFixed(1) + 'px';
+        fall.style.background = color;
+        fall.style.animationDelay = delay.toFixed(2) + 's';
+        fall.style.setProperty('--fall-duration', duration.toFixed(2) + 's');
+        // keyframes가 transform을 덮어쓸 수 있어, 회전은 큰 차이는 기대하지 않고 위치/크기 중심으로 랜덤화
+        fall.style.transform = 'rotate(' + rot.toFixed(1) + 'deg)';
+        layer.appendChild(fall);
+    }
+}
+
+function mountLoginRewardRandomFireworks(modalEl) {
+    if (!modalEl) return;
+    const layer = modalEl.querySelector('#loginRewardParticleLayer');
+    if (!layer) return;
+
+    const oldFws = layer.querySelectorAll('.login-reward-firework.dynamic-fw');
+    for (let i = 0; i < oldFws.length; i++) oldFws[i].remove();
+
+    const count = 8;
+    const hueBase = [0, 40, 80, 160, 210, 270];
+
+    for (let i = 0; i < count; i++) {
+        const fw = document.createElement('span');
+        fw.className = 'login-reward-firework dynamic-fw';
+
+        const left = 10 + Math.random() * 80;
+        const top = 10 + Math.random() * 20; // %
+        const size = 14 + Math.random() * 18; // px
+        const delay = Math.random() * 0.42;
+        const hue = hueBase[Math.floor(Math.random() * hueBase.length)] + (Math.random() * 20 - 10);
+
+        fw.style.left = left.toFixed(2) + '%';
+        fw.style.top = top.toFixed(2) + '%';
+        fw.style.width = size.toFixed(1) + 'px';
+        fw.style.height = size.toFixed(1) + 'px';
+        fw.style.animationDelay = delay.toFixed(2) + 's';
+        fw.style.filter =
+            'blur(0.18px) hue-rotate(' + hue.toFixed(1) + 'deg) drop-shadow(0 0 14px rgba(167, 139, 250, 0.75))';
+
+        layer.appendChild(fw);
+    }
+}
+
+/** 로그인·자동 로그인 후 매번: 달성 μ·리워드 언락을 언급하며 축하 (로그인 문구와 분리) */
+async function showLoginRewardCelebrationModal(user) {
+    const m = document.getElementById('loginRewardCelebrationModal');
+    if (!m || !user) return;
+
+    const titleEl = document.getElementById('loginRewardCelebrationTitle');
+    const listEl = document.getElementById('loginRewardUnlockList');
+    const totalEl = document.getElementById('loginRewardCelebrationTotal');
+    const scrEl = document.getElementById('loginRewardCelebrationScripture');
+    const prayEl = document.getElementById('loginRewardCelebrationPrayer');
+    const actEl = document.getElementById('loginRewardCelebrationActivity');
+    const nextHint = document.getElementById('loginRewardCelebrationNextHint');
+    const barS = document.getElementById('loginRewardBarScripture');
+    const barP = document.getElementById('loginRewardBarPrayer');
+    const barA = document.getElementById('loginRewardBarActivity');
+    const glow = document.getElementById('loginRewardCelebrationGlow');
+
+    const scriptureTotal = (typingScore || 0) + (videoScore || 0);
+    const prayer = prayerScore || 0;
+    const activity = activityScore || 0;
+    const combined = scriptureTotal + prayer + activity;
+    const maxPart = Math.max(scriptureTotal, prayer, activity, 1);
+    const pctS = Math.round((scriptureTotal / maxPart) * 100);
+    const pctP = Math.round((prayer / maxPart) * 100);
+    const pctA = Math.round((activity / maxPart) * 100);
+
+    if (titleEl) {
+        titleEl.textContent = `${user.name}님 · μ·리워드`;
+    }
+    if (nextHint) nextHint.textContent = loginRewardNextUnlockHint(combined);
+    fillLoginRewardUnlockList(combined, listEl);
+    mountLoginRewardRandomFalls(m);
+    mountLoginRewardRandomFireworks(m);
+
+    if (totalEl) totalEl.textContent = '0';
+    if (scrEl) scrEl.textContent = '0';
+    if (prayEl) prayEl.textContent = '0';
+    if (actEl) actEl.textContent = '0';
+    if (barS) {
+        barS.style.transition = 'none';
+        barS.style.height = '0%';
+    }
+    if (barP) {
+        barP.style.transition = 'none';
+        barP.style.height = '0%';
+    }
+    if (barA) {
+        barA.style.transition = 'none';
+        barA.style.height = '0%';
+    }
+    if (glow) glow.classList.remove('milestone-glow-burst');
+
+    const celebrationParticles = m.querySelectorAll('.login-reward-spark, .login-reward-firework, .login-reward-fall');
+    for (let si = 0; si < celebrationParticles.length; si++) {
+        celebrationParticles[si].style.animation = 'none';
+        void celebrationParticles[si].offsetWidth;
+        celebrationParticles[si].style.removeProperty('animation');
+    }
+
+    m.classList.remove('hidden');
+    m.classList.remove('login-reward-celeb-active');
+    void m.offsetWidth;
+    requestAnimationFrame(function () {
+        m.classList.add('login-reward-celeb-active');
+        if (glow) {
+            void glow.offsetWidth;
+            glow.classList.add('milestone-glow-burst');
+        }
+    });
+
+    loginRewardCelebrationOnEscape = function (e) {
+        if (e.key === 'Escape') hideLoginRewardCelebrationModal();
+    };
+    document.addEventListener('keydown', loginRewardCelebrationOnEscape);
+
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            if (barS) {
+                barS.style.transition = 'height 2.5s cubic-bezier(0.22, 1, 0.36, 1)';
+                barS.style.height = pctS + '%';
+            }
+            if (barP) {
+                barP.style.transition = 'height 2.5s cubic-bezier(0.22, 1, 0.36, 1)';
+                barP.style.height = pctP + '%';
+            }
+            if (barA) {
+                barA.style.transition = 'height 2.5s cubic-bezier(0.22, 1, 0.36, 1)';
+                barA.style.height = pctA + '%';
+            }
+        });
+    });
+
+    await runLoginRewardCountUp(2500, function (e) {
+        if (totalEl) totalEl.textContent = String(Math.round(combined * e));
+        if (scrEl) scrEl.textContent = String(Math.round(scriptureTotal * e));
+        if (prayEl) prayEl.textContent = String(Math.round(prayer * e));
+        if (actEl) actEl.textContent = String(Math.round(activity * e));
+    });
+}
+
+// =====================
+// 종합 μ 200 / 1000 / 1400 마일스톤 축하 (잭팟 스타일)
+// =====================
+function resetLastKnownCombinedScore() {
+    lastKnownCombinedScore = null;
+}
+
+function detectCrossedMilestones(prev, next) {
+    const crossed = [];
+    for (let i = 0; i < SCORE_MILESTONE_TIERS.length; i++) {
+        const t = SCORE_MILESTONE_TIERS[i];
+        if (prev < t && next >= t) crossed.push(t);
+    }
+    return crossed;
+}
+
+function enqueueScoreMilestoneCelebrations(crossedTiers, combinedAtHit) {
+    for (let i = 0; i < crossedTiers.length; i++) {
+        scoreMilestoneQueue.push({ tier: crossedTiers[i], combinedAtHit: combinedAtHit });
+    }
+    processScoreMilestoneQueue();
+}
+
+function processScoreMilestoneQueue() {
+    if (scoreMilestoneModalOpen || scoreMilestoneQueue.length === 0) return;
+    scoreMilestoneModalOpen = true;
+    const item = scoreMilestoneQueue.shift();
+    openScoreMilestoneCelebrationModal(item.tier, item.combinedAtHit);
+}
+
+function hideScoreMilestoneCelebrationModal() {
+    const m = document.getElementById('scoreMilestoneCelebrationModal');
+    if (m) {
+        m.classList.add('hidden');
+        m.classList.remove('milestone-modal-active');
+    }
+    if (scoreMilestoneEscapeHandler) {
+        document.removeEventListener('keydown', scoreMilestoneEscapeHandler);
+        scoreMilestoneEscapeHandler = null;
+    }
+    scoreMilestoneModalOpen = false;
+    processScoreMilestoneQueue();
+}
+
+function openScoreMilestoneCelebrationModal(tier, combinedAtHit) {
+    const m = document.getElementById('scoreMilestoneCelebrationModal');
+    if (!m) {
+        scoreMilestoneModalOpen = false;
+        processScoreMilestoneQueue();
+        return;
+    }
+
+    const titleEl = document.getElementById('milestoneCelebrationTitle');
+    const subEl = document.getElementById('milestoneCelebrationSubtitle');
+    const hintEl = document.getElementById('milestoneCelebrationRewardHint');
+    const headerEl = document.getElementById('milestoneCelebrationHeader');
+    const bigEl = document.getElementById('milestoneCelebrationBigMu');
+    const barS = document.getElementById('milestoneBarScripture');
+    const barP = document.getElementById('milestoneBarPrayer');
+    const barA = document.getElementById('milestoneBarActivity');
+    const glow = document.getElementById('milestoneJackpotGlow');
+
+    const scriptureTotal = (typingScore || 0) + (videoScore || 0);
+    const prayer = prayerScore || 0;
+    const activity = activityScore || 0;
+    const maxPart = Math.max(scriptureTotal, prayer, activity, 1);
+    const pctS = Math.round((scriptureTotal / maxPart) * 100);
+    const pctP = Math.round((prayer / maxPart) * 100);
+    const pctA = Math.round((activity / maxPart) * 100);
+
+    const themes = {
+        200: {
+            title: '200μ 달성!',
+            sub: '리워드1 · 오늘의 설교 말씀이 열렸습니다',
+            hint: '왼쪽 사이드바 「오늘의 설교 말씀」에서 영상을 감상해 보세요.',
+            headerClass: 'bg-gradient-to-r from-blue-600 to-indigo-600'
+        },
+        1000: {
+            title: '1000μ 달성!',
+            sub: '리워드2 · QT 찬양 기능이 공개되었습니다',
+            hint: 'QT 패널 상단의 찬양 버튼으로 찬양을 들을 수 있습니다.',
+            headerClass: 'bg-gradient-to-r from-indigo-600 to-purple-600'
+        },
+        1400: {
+            title: '1400μ 달성!',
+            sub: '리워드3 · QT 예약(알람)이 공개되었습니다',
+            hint: 'QT 패널에서 알람을 설정해 매일 QT를 이어가 보세요.',
+            headerClass: 'bg-gradient-to-r from-purple-600 to-violet-700'
+        }
+    };
+    const th = themes[tier] || themes[200];
+    if (titleEl) titleEl.textContent = th.title;
+    if (subEl) subEl.textContent = th.sub;
+    if (hintEl) hintEl.textContent = th.hint;
+    if (headerEl) {
+        headerEl.className =
+            'px-5 py-4 text-white text-center rounded-t-2xl border-b border-white/20 ' + th.headerClass;
+    }
+
+    if (bigEl) bigEl.textContent = '0μ';
+    if (barS) {
+        barS.style.transition = 'none';
+        barS.style.height = '0%';
+    }
+    if (barP) {
+        barP.style.transition = 'none';
+        barP.style.height = '0%';
+    }
+    if (barA) {
+        barA.style.transition = 'none';
+        barA.style.height = '0%';
+    }
+    if (glow) glow.classList.remove('milestone-glow-burst');
+
+    scoreMilestoneEscapeHandler = function (e) {
+        if (e.key === 'Escape') hideScoreMilestoneCelebrationModal();
+    };
+    document.addEventListener('keydown', scoreMilestoneEscapeHandler);
+
+    m.classList.remove('hidden');
+    const sparks = m.querySelectorAll('.milestone-spark');
+    for (let si = 0; si < sparks.length; si++) {
+        sparks[si].style.animation = 'none';
+        void sparks[si].offsetWidth;
+        sparks[si].style.removeProperty('animation');
+    }
+    requestAnimationFrame(function () {
+        m.classList.add('milestone-modal-active');
+        if (glow) void glow.offsetWidth;
+        if (glow) glow.classList.add('milestone-glow-burst');
+    });
+
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            if (barS) {
+                barS.style.transition = 'height 1s cubic-bezier(0.22, 1, 0.36, 1)';
+                barS.style.height = pctS + '%';
+            }
+            if (barP) {
+                barP.style.transition = 'height 1s cubic-bezier(0.22, 1, 0.36, 1)';
+                barP.style.height = pctP + '%';
+            }
+            if (barA) {
+                barA.style.transition = 'height 1s cubic-bezier(0.22, 1, 0.36, 1)';
+                barA.style.height = pctA + '%';
+            }
+        });
+    });
+
+    void runLoginRewardCountUp(1200, function (e) {
+        if (bigEl) bigEl.textContent = String(Math.round(combinedAtHit * e)) + 'μ';
+    });
+}
+
+function onCombinedScoreUpdated(combinedScore) {
+    if (!currentUserId) return;
+    if (lastKnownCombinedScore === null) {
+        lastKnownCombinedScore = combinedScore;
+        return;
+    }
+    const prev = lastKnownCombinedScore;
+    if (prev === combinedScore) return;
+    const crossed = detectCrossedMilestones(prev, combinedScore);
+    lastKnownCombinedScore = combinedScore;
+    if (crossed.length) enqueueScoreMilestoneCelebrations(crossed, combinedScore);
+}
+
+function syncQtRewardSidebars(combinedScore) {
+    const r2 = document.getElementById('reward2TotalScore');
+    const r2bar = document.getElementById('reward2ProgressBar');
+    if (r2) r2.textContent = String(combinedScore);
+    if (r2bar) r2bar.style.width = Math.min(100, (combinedScore / SCORE_MILESTONE_REWARD2) * 100) + '%';
+
+    const wLocked = document.getElementById('qtWorshipLocked');
+    const wUnlocked = document.getElementById('qtWorshipUnlocked');
+    const unlockW = document.getElementById('unlockQtWorshipBtn');
+    if (combinedScore >= SCORE_MILESTONE_REWARD2) {
+        if (wLocked) wLocked.classList.add('hidden');
+        if (wUnlocked) wUnlocked.classList.remove('hidden');
+    } else {
+        if (wLocked) wLocked.classList.remove('hidden');
+        if (wUnlocked) wUnlocked.classList.add('hidden');
+        if (unlockW) {
+            unlockW.disabled = true;
+            unlockW.className =
+                'w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all';
+            unlockW.innerHTML =
+                '<i class="fas fa-lock text-lg"></i><span>1000μ 달성 후 공개 가능</span>';
+        }
+    }
+
+    const r3 = document.getElementById('reward3TotalScore');
+    const r3bar = document.getElementById('reward3ProgressBar');
+    if (r3) r3.textContent = String(combinedScore);
+    if (r3bar) r3bar.style.width = Math.min(100, (combinedScore / SCORE_MILESTONE_REWARD3) * 100) + '%';
+
+    const aLocked = document.getElementById('qtAlarmLocked');
+    const aUnlocked = document.getElementById('qtAlarmUnlocked');
+    const unlockA = document.getElementById('unlockQtAlarmBtn');
+    if (combinedScore >= SCORE_MILESTONE_REWARD3) {
+        if (aLocked) aLocked.classList.add('hidden');
+        if (aUnlocked) aUnlocked.classList.remove('hidden');
+    } else {
+        if (aLocked) aLocked.classList.remove('hidden');
+        if (aUnlocked) aUnlocked.classList.add('hidden');
+        if (unlockA) {
+            unlockA.disabled = true;
+            unlockA.className =
+                'w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all';
+            unlockA.innerHTML =
+                '<i class="fas fa-lock text-lg"></i><span>1400μ 달성 후 공개 가능</span>';
+        }
+    }
+
+    const qtWorshipBtn = document.getElementById('qtWorshipBtn');
+    const qtAlarmBtn = document.getElementById('qtAlarmBtn');
+    if (qtWorshipBtn) {
+        if (combinedScore >= SCORE_MILESTONE_REWARD2) qtWorshipBtn.classList.remove('hidden');
+        else qtWorshipBtn.classList.add('hidden');
+    }
+    if (qtAlarmBtn) {
+        if (combinedScore >= SCORE_MILESTONE_REWARD3) qtAlarmBtn.classList.remove('hidden');
+        else qtAlarmBtn.classList.add('hidden');
+    }
+}
+
+// =====================
+// QT Panel Functions (restore)
+// =====================
+function toggleQtPanel() {
+    const qtPanel = document.getElementById('qtPanel');
+    if (!qtPanel) return;
+
+    // Toggle panel visibility
+    if (qtPanel.classList.contains('hidden')) {
+        qtPanel.classList.remove('hidden');
+        hideAllQtSections();
+        setQtButtonActive('prayer', false);
+        setQtButtonActive('read', false);
+        setQtButtonActive('apply', false);
+        setQtButtonActive('prayer2', false);
+        setQtHeaderButtonActive(true);
+    } else {
+        qtPanel.classList.add('hidden');
+        hideAllQtSections();
+        setQtButtonActive('prayer', false);
+        setQtButtonActive('read', false);
+        setQtButtonActive('apply', false);
+        setQtButtonActive('prayer2', false);
+        setQtHeaderButtonActive(false);
+
+        // Return center column to normal posting view (without touching right sidebar state)
+        const newPostCard = document.getElementById('newPostCard');
+        const postsFeedWrapper = document.getElementById('postsFeedWrapper');
+        if (newPostCard) newPostCard.classList.remove('hidden');
+        if (postsFeedWrapper) postsFeedWrapper.classList.remove('hidden');
+    }
+}
+
+function setQtHeaderButtonActive(active) {
+    const ids = ['qtBtn', 'qtBtnMobile'];
+    for (let i = 0; i < ids.length; i++) {
+        const b = document.getElementById(ids[i]);
+        if (!b) continue;
+        b.classList.toggle('text-red-600', active);
+        b.classList.toggle('border-red-600', active);
+        b.classList.toggle('bg-red-50', active);
+        b.classList.toggle('text-gray-500', !active);
+        b.classList.toggle('border-gray-500', !active);
+        b.classList.toggle('bg-transparent', !active);
+    }
+}
+
+function getQtStorageKey(suffix) {
+    const uid = currentUserId || 'guest';
+    return `qt_${uid}_${suffix}`;
+}
+
+function setQtDateNow() {
+    const qtDate = document.getElementById('qtDate');
+    if (!qtDate) return;
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    qtDate.textContent = `${y}-${m}-${d}`;
+}
+
+const qtBibleCache = {};
+function getTodayQtDateForApi() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function qtAutoGrow(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    const max = 220;
+    const next = Math.min(max, el.scrollHeight || 0);
+    el.style.height = `${Math.max(44, next)}px`;
+}
+
+function setQtSubmittedView(kind, submittedText) {
+    const isApply = kind === 'apply';
+    const composer = document.getElementById(isApply ? 'qtApplyComposer' : 'qtPrayerComposer');
+    const view = document.getElementById(isApply ? 'qtApplySavedView' : 'qtPrayerSavedView');
+    const textEl = document.getElementById(isApply ? 'qtApplySavedText' : 'qtPrayerSavedText');
+    if (!composer || !view || !textEl) return;
+    textEl.textContent = String(submittedText || '').trim();
+    composer.classList.add('hidden');
+    view.classList.remove('hidden');
+}
+
+function setQtComposeView(kind, initialText) {
+    const isApply = kind === 'apply';
+    const composer = document.getElementById(isApply ? 'qtApplyComposer' : 'qtPrayerComposer');
+    const view = document.getElementById(isApply ? 'qtApplySavedView' : 'qtPrayerSavedView');
+    const input = document.getElementById(isApply ? 'qtApplyInput' : 'qtPrayerInput');
+    if (!composer || !view || !input) return;
+    composer.classList.remove('hidden');
+    view.classList.add('hidden');
+    if (typeof initialText === 'string') input.value = initialText;
+    qtAutoGrow(input);
+}
+
+let qtActiveSection = null;
+function setQtButtonsActive(sectionKeyOrNull) {
+    const btns = [
+        { key: 'prayer', id: 'qtPrayerBtn' },
+        { key: 'read', id: 'qtReadBtn' },
+        { key: 'apply', id: 'qtApplyBtn' },
+        { key: 'prayer2', id: 'qtPrayer2Btn' }
+    ];
+
+    for (let i = 0; i < btns.length; i++) {
+        const b = document.getElementById(btns[i].id);
+        if (!b) continue;
+        const active = sectionKeyOrNull === btns[i].key;
+
+        b.classList.toggle('bg-red-100', active);
+        b.classList.toggle('text-red-800', active);
+        b.classList.toggle('border-red-300', active);
+
+        b.classList.toggle('bg-gray-100', !active);
+        b.classList.toggle('text-gray-700', !active);
+        b.classList.toggle('border-gray-300', !active);
+    }
+}
+
+function setQtButtonActive(sectionKey, active) {
+    const map = {
+        prayer: 'qtPrayerBtn',
+        read: 'qtReadBtn',
+        apply: 'qtApplyBtn',
+        prayer2: 'qtPrayer2Btn'
+    };
+    const id = map[sectionKey];
+    const b = id ? document.getElementById(id) : null;
+    if (!b) return;
+    b.classList.toggle('bg-red-100', active);
+    b.classList.toggle('text-red-800', active);
+    b.classList.toggle('border-red-300', active);
+    b.classList.toggle('bg-gray-100', !active);
+    b.classList.toggle('text-gray-700', !active);
+    b.classList.toggle('border-gray-300', !active);
+}
+
+function hideAllQtSections() {
+    const sections = document.querySelectorAll('#qtPanel .qt-section');
+    for (let i = 0; i < sections.length; i++) sections[i].classList.add('hidden');
+}
+
+async function loadQtBibleForDate(qtDate) {
+    if (qtBibleCache[qtDate]) return qtBibleCache[qtDate];
+    const res = await fetch(`/api/qt/bible?qtDate=${encodeURIComponent(qtDate)}`);
+    if (!res.ok) throw new Error('QT 성경을 불러오지 못했습니다.');
+    const data = await res.json();
+    qtBibleCache[qtDate] = data;
+    return data;
+}
+
+function toQtPassageShortRef(passageRef) {
+    const s = String(passageRef || '').replace(/\s+/g, ' ').trim();
+    // Examples seen: "마태복음 26 : 14~25"
+    const m = s.match(/^(.+?)\s+(\d+)\s*:\s*(\d+)/);
+    if (!m) return s || '';
+    const book = m[1].trim();
+    const chap = m[2];
+    const verse = m[3];
+    return `${book} ${chap}장 ${verse}절`;
+}
+
+async function showQtSection(sectionKey) {
+    const qtPanel = document.getElementById('qtPanel');
+    if (qtPanel) qtPanel.classList.remove('hidden');
+    setQtHeaderButtonActive(true);
+
+    const map = {
+        prayer: 'qtPrayerSection',
+        read: 'qtReadSection',
+        apply: 'qtApplySection',
+        prayer2: 'qtPrayer2Section'
+    };
+
+    const targetId = map[sectionKey];
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (!target) return;
+    const willOpen = target.classList.contains('hidden');
+    target.classList.toggle('hidden', !willOpen);
+    setQtButtonActive(sectionKey, willOpen);
+    if (!willOpen) return;
+
+    setQtDateNow();
+    const qtVerseRef = document.getElementById('qtVerseRef');
+    const qtScriptureText = document.getElementById('qtScriptureText');
+
+    // "읽기와 묵상" 버튼에서만 오늘 QT 본문을 펼칩니다.
+    if (sectionKey === 'read') {
+        if (qtScriptureText) qtScriptureText.textContent = '오늘의 QT 본문을 불러오는 중...';
+        const qtDate = getTodayQtDateForApi();
+        try {
+            const data = await loadQtBibleForDate(qtDate);
+            const passageRef = (data.passageRef || '').trim();
+            const fallbackRef = (data.reference || '').trim();
+            const refForHeader = (passageRef || fallbackRef).trim();
+
+            // 스크린샷처럼 상단 붉은 레퍼런스 라인을 채움
+            if (qtVerseRef) qtVerseRef.textContent = refForHeader;
+
+            // "마태복음 26장 14절" 형식 배지
+            const shortEl = document.getElementById('qtPassageShortRef');
+            if (shortEl) shortEl.textContent = toQtPassageShortRef(passageRef || refForHeader);
+            if (qtScriptureText) qtScriptureText.textContent = (data.scripture || '').trim();
+        } catch (e) {
+            if (qtScriptureText) qtScriptureText.textContent = '오늘의 QT 본문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+            showToast('QT 본문 로딩 실패', 'error');
+        }
+        return;
+    }
+
+    // Apply & prayer: prefill from local draft
+    if (sectionKey === 'apply') {
+        const input = document.getElementById('qtApplyInput');
+        const submitted = localStorage.getItem(getQtStorageKey('apply_submitted')) || '';
+        if (submitted) setQtSubmittedView('apply', submitted);
+        else if (input) {
+            const saved = localStorage.getItem(getQtStorageKey('apply')) || '';
+            setQtComposeView('apply', saved);
+        }
+    }
+
+    if (sectionKey === 'prayer2' || sectionKey === 'prayer') {
+        const input = document.getElementById('qtPrayerInput');
+        const submitted = localStorage.getItem(getQtStorageKey('prayer_submitted')) || '';
+        if (submitted) setQtSubmittedView('prayer', submitted);
+        else if (input) {
+            const saved = localStorage.getItem(getQtStorageKey('prayer')) || '';
+            setQtComposeView('prayer', saved);
+        }
+    }
+}
+
+async function sendQtApplyPost() {
+    if (!currentUserId) {
+        showToast('로그인이 필요합니다.', 'error');
+        showLoginModal();
+        return;
+    }
+    const input = document.getElementById('qtApplyInput');
+    const content = (input && input.value ? String(input.value) : '').trim();
+    if (!content) {
+        showToast('적용 내용을 입력해주세요.', 'error');
+        return;
+    }
+
+    const verseRef = ((document.getElementById('qtVerseRef') || {}).textContent || '').trim() || null;
+    try {
+        await axios.post('/api/posts', {
+            user_id: currentUserId,
+            content,
+            verse_reference: verseRef,
+            shared_post_id: null,
+            is_prayer_request: 0,
+            background_color: '#FFFFFF'
+        });
+        localStorage.setItem(getQtStorageKey('apply'), '');
+        localStorage.setItem(getQtStorageKey('apply_submitted'), content);
+        setQtSubmittedView('apply', content);
+        showToast('QT 적용 내용을 포스팅했어요.', 'success');
+        loadPosts();
+    } catch (e) {
+        console.error(e);
+        showToast('포스팅에 실패했습니다.', 'error');
+    }
+}
+
+async function sendQtPrayerPost() {
+    if (!currentUserId) {
+        showToast('로그인이 필요합니다.', 'error');
+        showLoginModal();
+        return;
+    }
+    const input = document.getElementById('qtPrayerInput');
+    const content = (input && input.value ? String(input.value) : '').trim();
+    if (!content) {
+        showToast('기도 제목을 입력해주세요.', 'error');
+        return;
+    }
+
+    const verseRef = ((document.getElementById('qtVerseRef') || {}).textContent || '').trim() || null;
+    try {
+        await axios.post('/api/posts', {
+            user_id: currentUserId,
+            content,
+            verse_reference: verseRef,
+            shared_post_id: null,
+            is_prayer_request: 0,
+            background_color: '#FFFFFF'
+        });
+        localStorage.setItem(getQtStorageKey('prayer'), '');
+        localStorage.setItem(getQtStorageKey('prayer_submitted'), content);
+        setQtSubmittedView('prayer', content);
+        showToast('QT 마침기도 내용을 포스팅했어요.', 'success');
+        loadPosts();
+    } catch (e) {
+        console.error(e);
+        showToast('포스팅에 실패했습니다.', 'error');
+    }
+}
+
+function editQtApply() {
+    const submitted = localStorage.getItem(getQtStorageKey('apply_submitted')) || '';
+    localStorage.removeItem(getQtStorageKey('apply_submitted'));
+    setQtComposeView('apply', submitted);
+}
+
+function editQtPrayer() {
+    const submitted = localStorage.getItem(getQtStorageKey('prayer_submitted')) || '';
+    localStorage.removeItem(getQtStorageKey('prayer_submitted'));
+    setQtComposeView('prayer', submitted);
+}
+
+let qtWorshipState = { open: false, muted: false, volume: 80, playing: false };
+
+function toggleQtWorship() {
+    const player = document.getElementById('qtWorshipPlayer');
+    if (!player) {
+        showToast('QT 찬양 플레이어 준비 중입니다.', 'info');
+        return;
+    }
+    const willOpen = player.classList.contains('hidden');
+    player.classList.toggle('hidden', !willOpen);
+    qtWorshipState.open = willOpen;
+    showToast(willOpen ? '찬양 플레이어를 열었습니다.' : '찬양 플레이어를 닫았습니다.', 'success');
+}
+
+function toggleQtWorshipPlay() {
+    const icon = document.getElementById('qtWorshipPlayIcon');
+    if (!icon) return;
+
+    qtWorshipState.playing = !qtWorshipState.playing;
+
+    icon.classList.toggle('fa-play', !qtWorshipState.playing);
+    icon.classList.toggle('fa-pause', qtWorshipState.playing);
+
+    // Currently: UI-only (no actual media) - avoids silent clicks.
+    showToast(qtWorshipState.playing ? '찬양 재생(미리보기) 시작' : '찬양 재생(미리보기) 중지', 'info');
+}
+
+function toggleQtWorshipMute() {
+    qtWorshipState.muted = !qtWorshipState.muted;
+    const muteIcon = document.getElementById('qtWorshipMuteIcon');
+    if (muteIcon) {
+        muteIcon.classList.toggle('fa-volume-up', !qtWorshipState.muted);
+        muteIcon.classList.toggle('fa-volume-mute', qtWorshipState.muted);
+    }
+    showToast(qtWorshipState.muted ? '음소거' : '음소거 해제', 'info');
+}
+
+function setQtWorshipVolume(vol) {
+    const v = Math.max(0, Math.min(100, Number(vol)));
+    qtWorshipState.volume = v;
+
+    const label = document.getElementById('qtWorshipVolumeLabel');
+    if (label) label.textContent = `${v}%`;
+
+    const muteIcon = document.getElementById('qtWorshipMuteIcon');
+    if (muteIcon) {
+        const shouldMute = v === 0;
+        muteIcon.classList.toggle('fa-volume-up', !shouldMute);
+        muteIcon.classList.toggle('fa-volume-mute', shouldMute);
+    }
+}
+
+function showQtAlarmModal() {
+    // Alarm modal markup doesn't exist in current HTML snapshot.
+    showToast('QT 예약(알람) 기능은 준비 중입니다.', 'info');
+}
+
+function showQtInviteModal() {
+    // Invite modal markup doesn't exist in current HTML snapshot.
+    showToast('QT 초대 기능은 준비 중입니다.', 'info');
+}
+
+function saveQtApply() {
+    const input = document.getElementById('qtApplyInput');
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) {
+        showToast('적용 내용을 입력해주세요.', 'error');
+        return;
+    }
+    localStorage.setItem(getQtStorageKey('apply'), val);
+    showToast('적용 내용을 저장했어요.', 'success');
+}
+
+function saveQtPrayer() {
+    const input = document.getElementById('qtPrayerInput');
+    if (!input) return;
+    const val = input.value.trim();
+    if (!val) {
+        showToast('기도 제목을 입력해주세요.', 'error');
+        return;
+    }
+    localStorage.setItem(getQtStorageKey('prayer'), val);
+    showToast('마침기도 내용을 저장했어요.', 'success');
+}
+
 // Login handler
 async function handleLogin() {
     const email = document.getElementById('loginEmail').value;
+    const password = (document.getElementById('loginPassword') || {}).value;
 
     if (!email) {
         alert('이메일을 입력해주세요.');
+        return;
+    }
+    if (!password) {
+        alert('비밀번호를 입력해주세요.');
         return;
     }
 
@@ -2471,9 +3679,9 @@ async function handleLogin() {
     console.log('로그인 시도:', trimmedEmail);
 
     try {
-        // Use /api/login endpoint (handles admin auto-creation)
         const response = await axios.post('/api/login', {
-            email: trimmedEmail
+            email: trimmedEmail,
+            password: password
         });
         
         if (response.data.user) {
@@ -2482,11 +3690,13 @@ async function handleLogin() {
             
             currentUserId = user.id;
             currentUser = user;
-            
+            resetLastKnownCombinedScore();
+
             // Save to localStorage
             localStorage.setItem('currentUserId', user.id);
             localStorage.setItem('currentUserEmail', user.email);
-            
+            persistLoginCredentialsIfRequested(trimmedEmail, password);
+
             // Save email to history
             saveEmailToHistory(trimmedEmail);
             
@@ -2505,13 +3715,7 @@ async function handleLogin() {
             updateAuthUI();
             hideLoginModal();
             loadPosts();
-            
-            // Special welcome for admin
-            if (user.role === 'admin') {
-                alert(`🎉 관리자님 환영합니다! (${user.name})`);
-            } else {
-                alert(`환영합니다, ${user.name}님! 😊`);
-            }
+            await showLoginRewardCelebrationModal(user);
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -2519,21 +3723,52 @@ async function handleLogin() {
         if (error.response && error.response.status === 404) {
             // User not found - redirect to signup
             alert('가입되지 않은 이메일입니다. 회원가입을 먼저 해주세요.');
+        } else if (error.response && error.response.data && error.response.data.error) {
+            alert(error.response.data.error);
         } else {
             alert('로그인에 실패했습니다. 다시 시도해주세요.');
         }
     }
 }
 
+function showForgotPasswordModal() {
+    hideLoginModal();
+    const modal = document.getElementById('forgotPasswordModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add(...loginModalLayoutClasses);
+    }
+}
+
+function hideForgotPasswordModal() {
+    const modal = document.getElementById('forgotPasswordModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove(...loginModalLayoutClasses);
+    }
+}
+
+async function requestPasswordReset() {
+    // 프로덕션과 UI는 맞추되, 로컬에서는 별도 메일 발송이 없을 수 있습니다.
+    const email = (document.getElementById('forgotPasswordEmail') || {}).value;
+    if (!email) {
+        alert('이메일을 입력해주세요.');
+        return;
+    }
+    alert('비밀번호 초기화 기능은 준비 중입니다. 관리자에게 문의해주세요.');
+}
+
 // Logout
 function logout() {
     currentUserId = null;
     currentUser = null;
-    
+    resetLastKnownCombinedScore();
+
     // Reset all scores
     typingScore = 0;
     videoScore = 0;
     prayerScore = 0;
+    activityScore = 0;
     completedVerses = new Set();
     completedVideos = new Set();
     
@@ -2553,13 +3788,29 @@ function logout() {
     // Stop notification polling
     stopNotificationPolling();
     
+    filterUserId = null;
+
     // Reset UI
     updateAuthUI();
     updateTypingScoreDisplay();
-    
-    // Clear posts feed
-    document.getElementById('postsFeed').innerHTML = '<div class="text-center text-gray-500 py-10">로그인하여 게시물을 확인하세요</div>';
-    
+
+    hideUserProfileCover();
+    const profileView = document.getElementById('profileView');
+    if (profileView) profileView.classList.add('hidden');
+
+    const newPostCard = document.getElementById('newPostCard');
+    if (newPostCard) newPostCard.classList.remove('hidden');
+
+    const qtPanel = document.getElementById('qtPanel');
+    if (qtPanel) qtPanel.classList.add('hidden');
+
+    const postsFeed = document.getElementById('postsFeed');
+    if (postsFeed) postsFeed.innerHTML = '';
+
+    if (typeof updatePostIndicators === 'function') {
+        updatePostIndicators();
+    }
+
     // Clear typing input
     const typingInput = document.getElementById('typingInput');
     const typingResult = document.getElementById('typingResult');
@@ -2590,11 +3841,6 @@ function logout() {
     removePostImage();
     removePostVideo();
     removeSharedPost();
-    
-    // Reload page to ensure clean state
-    setTimeout(() => {
-        window.location.reload();
-    }, 500);
 }
 
 // Go to admin panel
@@ -2605,24 +3851,55 @@ function goToAdmin() {
 // Update UI based on auth state
 function updateAuthUI() {
     const authButtons = document.getElementById('authButtons');
-    const userMenu = document.getElementById('userMenu');
+    const authButtonsPC = document.getElementById('authButtonsPC');
+    const userMenuLegacy = document.getElementById('userMenu');
+    const userMenuMobile = document.getElementById('userMenuMobile');
+    const userMenuCenterPC = document.getElementById('userMenuCenterPC');
+    const userMenuRightPC = document.getElementById('userMenuRightPC');
     const userName = document.getElementById('userName');
+    const userNameMobile = document.getElementById('userNameMobile');
     const userAvatarContainer = document.getElementById('userAvatarContainer');
+    const userAvatarContainerMobile = document.getElementById('userAvatarContainerMobile');
     const newPostAvatar = document.getElementById('newPostAvatar');
     const adminPanelBtn = document.getElementById('adminPanelBtn');
+    const adminPanelBtnMobile = document.getElementById('adminPanelBtnMobile');
     const typingToggleBtn = document.getElementById('typingToggleBtn');
     const typingLoginOverlay = document.getElementById('typingLoginOverlay');
     const videoLoginOverlay = document.getElementById('videoLoginOverlay');
 
+    function setAuthVisible(visible) {
+        if (authButtons) {
+            authButtons.classList.toggle('hidden', !visible);
+        }
+        if (authButtonsPC) {
+            authButtonsPC.classList.toggle('hidden', !visible);
+        }
+    }
+
+    function setLoggedInMenusVisible(visible) {
+        if (userMenuLegacy) {
+            userMenuLegacy.classList.toggle('hidden', !visible);
+        }
+        if (userMenuMobile) {
+            userMenuMobile.classList.toggle('hidden', !visible);
+        }
+        if (userMenuCenterPC) {
+            userMenuCenterPC.classList.toggle('hidden', !visible);
+        }
+        if (userMenuRightPC) {
+            userMenuRightPC.classList.toggle('hidden', !visible);
+        }
+    }
+
     if (currentUserId) {
-        authButtons.classList.add('hidden');
-        userMenu.classList.remove('hidden');
-        
+        setAuthVisible(false);
+        setLoggedInMenusVisible(true);
+
         // Remove tooltip from typing button when logged in
         if (typingToggleBtn) {
             typingToggleBtn.removeAttribute('title');
         }
-        
+
         // Hide login overlays when logged in
         if (typingLoginOverlay) {
             typingLoginOverlay.classList.add('hidden');
@@ -2630,68 +3907,87 @@ function updateAuthUI() {
         if (videoLoginOverlay) {
             videoLoginOverlay.classList.add('hidden');
         }
-        
-        // Update user name
-        userName.textContent = currentUser.name;
-        
+
+        // Update user name (PC + mobile)
+        if (userName) userName.textContent = currentUser.name;
+        if (userNameMobile) userNameMobile.textContent = currentUser.name;
+
         // Show admin panel button if user is admin
-        if (currentUser.role === 'admin') {
-            adminPanelBtn.classList.remove('hidden');
-        } else {
-            adminPanelBtn.classList.add('hidden');
+        const isAdmin = currentUser.role === 'admin';
+        if (adminPanelBtn) {
+            adminPanelBtn.classList.toggle('hidden', !isAdmin);
         }
-        
+        if (adminPanelBtnMobile) {
+            adminPanelBtnMobile.classList.toggle('hidden', !isAdmin);
+        }
+
         // Save to localStorage for admin panel access
         localStorage.setItem('currentUserId', currentUserId);
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        
-        // Update user avatar in header
-        if (currentUser.role === 'admin') {
-            // Admin: Show crown icon filling the avatar
-            userAvatarContainer.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
-            newPostAvatar.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
-        } else if (currentUser.avatar_url) {
-            // Regular users: Show avatar image
-            const img = document.createElement('img');
-            img.src = currentUser.avatar_url;
-            img.alt = 'Profile';
-            img.className = 'w-full h-full object-cover';
-            img.onerror = function() {
-                // If image fails to load, show default icon
-                userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
-            };
-            userAvatarContainer.innerHTML = '';
-            userAvatarContainer.appendChild(img);
-            
-            // Update new post avatar
-            const postImg = document.createElement('img');
-            postImg.src = currentUser.avatar_url;
-            postImg.alt = 'Profile';
-            postImg.className = 'w-full h-full object-cover';
-            postImg.onerror = function() {
+
+        const applyAvatarTo = (container) => {
+            if (!container) return;
+            if (currentUser.role === 'admin') {
+                container.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
+                return;
+            }
+            if (currentUser.avatar_url) {
+                const img = document.createElement('img');
+                img.src = toCanonicalSiteUrl(currentUser.avatar_url);
+                img.alt = 'Profile';
+                img.className = 'w-full h-full object-cover';
+                img.onerror = function() {
+                    container.innerHTML = '<i class="fas fa-user"></i>';
+                };
+                container.innerHTML = '';
+                container.appendChild(img);
+            } else {
+                container.innerHTML = '<i class="fas fa-user"></i>';
+            }
+        };
+
+        applyAvatarTo(userAvatarContainer);
+        applyAvatarTo(userAvatarContainerMobile);
+
+        if (newPostAvatar) {
+            if (currentUser.role === 'admin') {
+                newPostAvatar.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
+            } else if (currentUser.avatar_url) {
+                const postImg = document.createElement('img');
+                postImg.src = toCanonicalSiteUrl(currentUser.avatar_url);
+                postImg.alt = 'Profile';
+                postImg.className = 'w-full h-full object-cover';
+                postImg.onerror = function() {
+                    newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
+                };
+                newPostAvatar.innerHTML = '';
+                newPostAvatar.appendChild(postImg);
+            } else {
                 newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
-            };
-            newPostAvatar.innerHTML = '';
-            newPostAvatar.appendChild(postImg);
-        } else {
-            userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
-            newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
+            }
         }
-        
+
         // Add role badge (skip for admin since they have crown icon as avatar)
         if (currentUser.role !== 'admin') {
-            addRoleBadge(userAvatarContainer.parentElement, currentUser.role);
-            addRoleBadge(newPostAvatar.parentElement, currentUser.role);
+            if (userAvatarContainer && userAvatarContainer.parentElement) {
+                addRoleBadge(userAvatarContainer.parentElement, currentUser.role);
+            }
+            if (userAvatarContainerMobile && userAvatarContainerMobile.parentElement) {
+                addRoleBadge(userAvatarContainerMobile.parentElement, currentUser.role);
+            }
+            if (newPostAvatar && newPostAvatar.parentElement) {
+                addRoleBadge(newPostAvatar.parentElement, currentUser.role);
+            }
         }
     } else {
-        authButtons.classList.remove('hidden');
-        userMenu.classList.add('hidden');
-        
+        setAuthVisible(true);
+        setLoggedInMenusVisible(false);
+
         // Add tooltip to typing button when not logged in
         if (typingToggleBtn) {
             typingToggleBtn.setAttribute('title', '로그인 필요');
         }
-        
+
         // Show login overlays when not logged in
         if (typingLoginOverlay) {
             typingLoginOverlay.classList.remove('hidden');
@@ -2699,25 +3995,31 @@ function updateAuthUI() {
         if (videoLoginOverlay) {
             videoLoginOverlay.classList.remove('hidden');
         }
-        
+
         // Reset avatars to default
         if (userAvatarContainer) {
             userAvatarContainer.innerHTML = '<i class="fas fa-user"></i>';
         }
+        if (userAvatarContainerMobile) {
+            userAvatarContainerMobile.innerHTML = '<i class="fas fa-user"></i>';
+        }
         if (newPostAvatar) {
             newPostAvatar.innerHTML = '<i class="fas fa-user"></i>';
         }
-        
+
         // Reset scores to 0
         const scoreElement = document.getElementById('typingScore');
         const scoreUserElement = document.getElementById('typingScoreUser');
         const prayerScoreElement = document.getElementById('prayerScore');
         const prayerScoreUserElement = document.getElementById('prayerScoreUser');
-        
+
         if (scoreElement) scoreElement.textContent = '0';
         if (scoreUserElement) scoreUserElement.textContent = '0';
         if (prayerScoreElement) prayerScoreElement.textContent = '0';
         if (prayerScoreUserElement) prayerScoreUserElement.textContent = '0';
+
+        checkSermonReward();
+        syncQtRewardSidebars(0);
     }
 }
 
@@ -3057,8 +4359,8 @@ async function refreshComments(postId) {
                 // Avatar HTML - Admin shows crown icon
                 const avatarHtml = comment.user_role === 'admin'
                     ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
-                    : comment.user_avatar 
-                        ? `<img src="${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                    : comment.user_avatar
+                        ? `<img src="${toCanonicalSiteUrl(comment.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                         : '<i class="fas fa-user"></i>';
                 
                 // Role badge for comments (skip admin badge since they have crown icon as avatar)
@@ -3432,7 +4734,7 @@ async function sharePost(postId) {
         const avatarHtml = post.user_role === 'admin'
             ? '<i class="fas fa-crown text-yellow-400 text-xl"></i>'
             : post.user_avatar 
-                ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                ? `<img src="${toCanonicalSiteUrl(post.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                 : '<i class="fas fa-user"></i>';
         
         // Role badge for shared post (skip admin badge since they have crown icon as avatar)
@@ -3446,14 +4748,14 @@ async function sharePost(postId) {
         
         const imageHtml = post.image_url ? `
             <div class="mt-2">
-                <img src="${post.image_url}" alt="Post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
+                <img src="${toCanonicalSiteUrl(post.image_url)}" alt="Post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
             </div>
         ` : '';
         
         const videoHtml = post.video_url ? `
             <div class="mt-2">
                 <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
-                    <source src="${post.video_url}" type="video/mp4">
+                    <source src="${toCanonicalSiteUrl(post.video_url)}" type="video/mp4">
                     동영상을 재생할 수 없습니다.
                 </video>
             </div>
@@ -3542,8 +4844,8 @@ async function loadComments(postId) {
                 // Avatar HTML - Admin shows crown icon
                 const avatarHtml = comment.user_role === 'admin'
                     ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
-                    : comment.user_avatar 
-                        ? `<img src="${comment.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                    : comment.user_avatar
+                        ? `<img src="${toCanonicalSiteUrl(comment.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                         : '<i class="fas fa-user"></i>';
                 
                 // Role badge for comments (skip admin badge since they have crown icon as avatar)
@@ -3813,6 +5115,12 @@ async function deleteComment(commentId, postId) {
 // Load posts
 async function loadPosts() {
     try {
+        const feed = document.getElementById('postsFeed');
+        if (!currentUserId && !filterUserId) {
+            if (feed) feed.innerHTML = '';
+            return;
+        }
+
         // Build query parameters - ALWAYS use current filterUserId value
         let queryParams = `user_id=${currentUserId || 0}`;
         if (filterUserId) {
@@ -3821,11 +5129,10 @@ async function loadPosts() {
         } else {
             console.log('🔍 Loading all posts (no filter)');
         }
-        
+
         console.log('🔍 Full query:', queryParams);
         const response = await axios.get(`/api/posts?${queryParams}`);
         const posts = response.data.posts;
-        const feed = document.getElementById('postsFeed');
         
         let postsHtml = '';
         posts.forEach(post => {
@@ -3836,7 +5143,7 @@ async function loadPosts() {
             const avatarHtml = post.user_role === 'admin'
                 ? '<i class="fas fa-crown text-yellow-400 text-2xl"></i>'
                 : post.user_avatar 
-                    ? `<img src="${post.user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                    ? `<img src="${toCanonicalSiteUrl(post.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                     : '<i class="fas fa-user"></i>';
             
             // Role badge HTML (skip admin badge since they have crown icon as avatar)
@@ -3870,7 +5177,7 @@ async function loadPosts() {
                 const sharedAvatarHtml = post.shared_user_role === 'admin'
                     ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
                     : post.shared_user_avatar 
-                        ? `<img src="${post.shared_user_avatar}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                        ? `<img src="${toCanonicalSiteUrl(post.shared_user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                         : '<i class="fas fa-user"></i>';
                 
                 let sharedRoleBadgeHtml = '';
@@ -3883,14 +5190,14 @@ async function loadPosts() {
                 
                 const sharedImageHtml = post.shared_image_url ? `
                     <div class="mt-2 max-w-full">
-                        <img src="${post.shared_image_url}" alt="Shared post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
+                        <img src="${toCanonicalSiteUrl(post.shared_image_url)}" alt="Shared post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
                     </div>
                 ` : '';
                 
                 const sharedVideoHtml = post.shared_video_url ? `
                     <div class="mt-2 max-w-full">
                         <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
-                            <source src="${post.shared_video_url}" type="video/mp4">
+                            <source src="${toCanonicalSiteUrl(post.shared_video_url)}" type="video/mp4">
                             동영상을 재생할 수 없습니다.
                         </video>
                     </div>
@@ -4209,7 +5516,8 @@ async function autoLogin() {
                 // User exists, restore session
                 currentUserId = response.data.user.id;
                 currentUser = response.data.user;
-                
+                resetLastKnownCombinedScore();
+
                 // Update localStorage with latest data
                 localStorage.setItem('currentUserId', response.data.user.id);
                 
@@ -4229,6 +5537,7 @@ async function autoLogin() {
                 
                 loadPosts();
                 console.log('자동 로그인 성공:', currentUser.name, '(역할:', currentUser.role + ')');
+                await showLoginRewardCelebrationModal(currentUser);
             }
         } catch (error) {
             // Error fetching user, clear localStorage
@@ -4282,145 +5591,130 @@ function resetBackgroundColor() {
     textarea.style.color = '';
 }
 
-// Show any user's profile (for clicking avatars in posts)
+// Show any user's profile (avatar tap → cover + detail panel + chronological posts)
 async function showUserProfileModal(userId) {
+    if (!userId) return;
     try {
-        // CRITICAL: Clear any existing filter when opening profile
-        filterUserId = null;
-        console.log('🔴 showUserProfileModal: filterUserId cleared');
-        
-        // Fetch user data with current user context for privacy filtering
-        const url = currentUserId 
-            ? `/api/users/${userId}?current_user_id=${currentUserId}`
-            : `/api/users/${userId}`;
-        const response = await axios.get(url);
-        const user = response.data.user;
-        
-        // Fetch friend count
-        let friendCount = 0;
-        let isFriend = false;
-        let hasPendingRequest = false;
-        try {
-            const friendsResponse = await axios.get(`/api/friends/${userId}`);
-            friendCount = friendsResponse.data.friends?.length || 0;
-            
-            // Check if current user is friend with this user
-            if (currentUserId && currentUserId !== userId) {
-                const myFriendsResponse = await axios.get(`/api/friends/${currentUserId}`);
-                const myFriends = myFriendsResponse.data.friends || [];
-                isFriend = myFriends.some(f => f.id === userId);
-                
-                // Check for pending request
+        await filterByUser(userId);
+    } catch (error) {
+        console.error('Failed to open user profile:', error);
+        alert('프로필을 불러오는데 실패했습니다.');
+    }
+}
+
+/**
+ * 커버 아래에 표시할 상세 프로필(읽기 전용) HTML — 예전 프로필 모달과 동일한 정보 구역
+ */
+async function fillProfileViewPanelForUser(user) {
+    if (!user || user.id == null) return;
+
+    const userId = user.id;
+    let friendCount = 0;
+    let isFriend = false;
+    let hasPendingRequest = false;
+    try {
+        const friendsResponse = await axios.get(`/api/friends/${userId}`);
+        friendCount = friendsResponse.data.friends?.length || 0;
+        if (currentUserId && currentUserId !== userId) {
+            const myFriendsResponse = await axios.get(`/api/friends/${currentUserId}`);
+            const myFriends = myFriendsResponse.data.friends || [];
+            isFriend = myFriends.some((f) => f.id === userId);
+            try {
                 const notificationsResponse = await axios.get(`/api/notifications/${userId}`);
                 const notifications = notificationsResponse.data.notifications || [];
-                hasPendingRequest = notifications.some(n => 
-                    n.type === 'friend_request' && n.from_user_id === currentUserId
+                hasPendingRequest = notifications.some(
+                    (n) => n.type === 'friend_request' && n.from_user_id === currentUserId
                 );
+            } catch (e2) {
+                /* ignore */
             }
+        }
+    } catch (e) {
+        console.error('Failed to fetch friend count:', e);
+    }
+
+    let faithAnswers = null;
+    if (user.faith_answers) {
+        try {
+            faithAnswers = JSON.parse(user.faith_answers);
         } catch (e) {
-            console.error('Failed to fetch friend count:', e);
+            console.error('Failed to parse faith_answers:', e);
         }
-        
-        // Parse faith answers if exists
-        let faithAnswers = null;
-        if (user.faith_answers) {
-            try {
-                faithAnswers = JSON.parse(user.faith_answers);
-            } catch (e) {
-                console.error('Failed to parse faith_answers:', e);
-            }
-        }
-        
-        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
-        const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
-        
-        // Check if viewing own profile
-        const isOwnProfile = currentUserId && currentUserId === user.id;
-        
-        // Parse privacy settings
-        const privacySettings = user.privacy_settings ? JSON.parse(user.privacy_settings) : {};
-        const showBasicInfo = isOwnProfile || (privacySettings.basic_info === true);
-        const showChurchInfo = isOwnProfile || (privacySettings.church_info === true);
-        const showFaithAnswers = isOwnProfile || (privacySettings.faith_answers === true);
-        const showEducationInfo = isOwnProfile || (privacySettings.education_info === true);
-        const showCareerInfo = isOwnProfile || (privacySettings.career_info === true);
-        const showScores = isOwnProfile || (privacySettings.scores === true);
-        
-        console.log('프로필 수정 아이콘 표시 체크:', {
-            currentUserId,
-            userId: user.id,
-            isOwnProfile,
-            currentUserRole: currentUser?.role,
-            viewedUserRole: user.role
-        });
-        
-        const content = `
+    }
+
+    const roleColor =
+        user.role === 'admin'
+            ? 'text-red-600 bg-red-50'
+            : user.role === 'moderator'
+              ? 'text-yellow-600 bg-yellow-50'
+              : 'text-gray-600 bg-gray-50';
+    const roleName =
+        user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
+
+    const isOwnProfile = currentUserId && currentUserId === user.id;
+    let privacySettings = {};
+    try {
+        privacySettings = user.privacy_settings ? JSON.parse(user.privacy_settings) : {};
+    } catch (e) {
+        privacySettings = {};
+    }
+    const showBasicInfo = isOwnProfile || privacySettings.basic_info === true;
+    const showChurchInfo = isOwnProfile || privacySettings.church_info === true;
+    const showFaithAnswers = isOwnProfile || privacySettings.faith_answers === true;
+    const showEducationInfo = isOwnProfile || privacySettings.education_info === true;
+    const showCareerInfo = isOwnProfile || privacySettings.career_info === true;
+    const showScores = isOwnProfile || privacySettings.scores === true;
+
+    const nameJs = JSON.stringify(user.name || '');
+    const av = user.avatar_url ? toCanonicalSiteUrl(user.avatar_url) : '';
+
+    const faithQuestions = [
+        '1. 예수님이 창조주 하나님임을 믿습니까?',
+        '2. 십자가 대속을 믿습니까?',
+        '3. 예수님의 부활을 믿습니까?',
+        '4. 예수님을 주님으로 영접했습니까?',
+        '5. 성령님이 계십니까?',
+        '6. 천국 갈 것을 확신합니까?',
+        '7. 성경을 진리로 믿습니까?',
+        '8. 정기적으로 예배에 참석합니까?',
+        '9. 정기적으로 기도합니까?',
+        '10. 가끔 전도합니까?'
+    ];
+
+    const content = `
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Profile Section -->
                 <div class="md:col-span-1">
                     <div class="bg-gray-50 rounded-lg p-6 text-center">
                         <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
-                            ${user.role === 'admin' 
+                            ${user.role === 'admin'
                                 ? '<i class="fas fa-crown text-yellow-400"></i>'
-                                : user.avatar_url 
-                                    ? `<img src="${user.avatar_url}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />` 
-                                    : '<i class="fas fa-user"></i>'}
+                                : user.avatar_url
+                                  ? `<img src="${av}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                                  : '<i class="fas fa-user"></i>'}
                         </div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
                         ${user.position ? `<p class="text-sm text-gray-600 mb-2"><i class="fas fa-user-tie mr-1"></i>${user.position}</p>` : ''}
-                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
-                            ${roleName}
-                        </span>
+                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">${roleName}</span>
                         ${user.bio ? `<p class="text-sm text-gray-600 mt-3 px-2">${user.bio}</p>` : ''}
-                        <div class="mt-4 text-xs text-gray-500">
+                        <div class="mt-4 text-xs text-gray-500 space-y-1">
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <p><i class="fas fa-user-friends text-pink-500 mr-1"></i>친구 ${friendCount}명</p>
                         </div>
-                        
-                        <!-- View Posts Button -->
-                        <div class="mt-6">
-                            <button 
-                                onclick="filterByUser(${user.id}, '${user.name}'); hideProfile();"
-                                class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md font-semibold">
-                                <i class="fas fa-list mr-2"></i>포스팅 보기
-                            </button>
-                        </div>
-                        
-                        <!-- Friend Request Button -->
-                        ${!isOwnProfile && currentUserId ? `
+                        ${!isOwnProfile && currentUserId
+                            ? `
                         <div class="mt-3">
-                            ${isFriend ? `
-                                <button 
-                                    disabled
-                                    class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold">
-                                    <i class="fas fa-user-check mr-2"></i>친구
-                                </button>
-                            ` : hasPendingRequest ? `
-                                <button 
-                                    disabled
-                                    class="w-full px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold leading-tight">
-                                    <div class="flex flex-col items-center">
-                                        <div><i class="fas fa-clock mr-1"></i>친구</div>
-                                        <div class="text-sm">승인 대기중</div>
-                                    </div>
-                                </button>
-                            ` : `
-                                <button 
-                                    onclick="sendFriendRequest(${user.id}, '${user.name}')"
-                                    class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-md font-semibold leading-tight">
-                                    <div class="flex flex-col items-center">
-                                        <div><i class="fas fa-user-plus mr-1"></i>친구</div>
-                                        <div class="text-sm">제안 전송</div>
-                                    </div>
-                                </button>
-                            `}
-                        </div>
-                        ` : ''}
+                            ${isFriend
+                                ? `<button type="button" disabled class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold"><i class="fas fa-user-check mr-2"></i>친구</button>`
+                                : hasPendingRequest
+                                  ? `<button type="button" disabled class="w-full px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-clock mr-1"></i>친구</div><div class="text-sm">승인 대기중</div></div></button>`
+                                  : `<button type="button" onclick="sendFriendRequest(${user.id}, ${nameJs})" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-md font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-user-plus mr-1"></i>친구</div><div class="text-sm">제안 전송</div></div></button>`}
+                        </div>`
+                            : ''}
                     </div>
                 </div>
-                
-                <!-- Details Section -->
                 <div class="md:col-span-2 space-y-4">
-                    ${showScores && (isOwnProfile || user.prayer_score !== null || user.scripture_score !== null || user.activity_score !== null) ? `
+                    ${showScores && (isOwnProfile || user.prayer_score !== null || user.scripture_score !== null || user.activity_score !== null)
+                        ? `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-3 rounded">
                         <h4 class="font-semibold text-purple-800 mb-2 text-sm">
                             <i class="fas fa-trophy mr-2"></i>${isOwnProfile ? '나의 점수' : '점수 정보'}
@@ -4438,326 +5732,214 @@ async function showUserProfileModal(userId) {
                             <i class="fas fa-trophy text-purple-600"></i>
                             <span class="font-semibold text-purple-600">${(user.scripture_score ?? 0) + (user.prayer_score ?? 0) + (user.activity_score ?? 0)}</span>
                         </div>
-                    </div>
-                    ` : ''}
-                    
+                    </div>`
+                        : ''}
                     ${(() => {
-                        // Check if basic info should be shown
                         if (!showBasicInfo) return '';
-                        
-                        // Build basic info items
                         let basicItems = '';
                         if (user.email) basicItems += `<p><strong>이메일:</strong> ${user.email}</p>`;
                         if (user.bio) basicItems += `<p><strong>자기소개:</strong> ${user.bio}</p>`;
                         if (user.gender) basicItems += `<p><strong>성별:</strong> ${user.gender}</p>`;
                         if (user.marital_status) {
-                            const status = user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : user.marital_status === 'other' ? '기타' : user.marital_status;
+                            const status =
+                                user.marital_status === 'single'
+                                    ? '미혼'
+                                    : user.marital_status === 'married'
+                                      ? '기혼'
+                                      : user.marital_status === 'other'
+                                        ? '기타'
+                                        : user.marital_status;
                             basicItems += `<p><strong>결혼:</strong> ${status}</p>`;
                         }
                         if (user.phone) basicItems += `<p><strong>전화번호:</strong> ${user.phone}</p>`;
                         if (user.address) basicItems += `<p><strong>주소:</strong> ${user.address}</p>`;
-                        
-                        // Only show section if there are items
                         if (!basicItems) return '';
-                        
                         return `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                        <h4 class="font-semibold text-blue-800 mb-3">
-                            <i class="fas fa-info-circle mr-2"></i>기본 정보
-                        </h4>
-                        <div class="space-y-2 text-sm text-gray-700">
-                            ${basicItems}
-                        </div>
-                    </div>
-                        `;
+                        <h4 class="font-semibold text-blue-800 mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
+                        <div class="space-y-2 text-sm text-gray-700">${basicItems}</div>
+                    </div>`;
                     })()}
-                    
                     ${(() => {
-                        // Check if church info should be shown
                         if (!showChurchInfo) return '';
-                        
-                        // Build church info items
                         let churchItems = '';
                         if (user.church) churchItems += `<p><strong>소속 교회:</strong> ${user.church}</p>`;
                         if (user.pastor) churchItems += `<p><strong>담임목사:</strong> ${user.pastor}</p>`;
                         if (user.denomination) churchItems += `<p><strong>교단:</strong> ${user.denomination}</p>`;
                         if (user.location) churchItems += `<p><strong>교회 위치:</strong> ${user.location}</p>`;
                         if (user.position) churchItems += `<p><strong>직분:</strong> ${user.position}</p>`;
-                        
-                        // Only show section if there are items
                         if (!churchItems) return '';
-                        
                         return `
                     <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
-                        <h4 class="font-semibold text-green-800 mb-3">
-                            <i class="fas fa-church mr-2"></i>교회 정보
-                        </h4>
-                        <div class="space-y-2 text-sm text-gray-700">
-                            ${churchItems}
-                        </div>
-                    </div>
-                        `;
+                        <h4 class="font-semibold text-green-800 mb-3"><i class="fas fa-church mr-2"></i>교회 정보</h4>
+                        <div class="space-y-2 text-sm text-gray-700">${churchItems}</div>
+                    </div>`;
                     })()}
-                    
                     ${(() => {
-                        // Check if faith answers should be shown
                         if (!showFaithAnswers && !isOwnProfile) return '';
                         if (!faithAnswers) return '';
-                        
-                        // Check if there are any answered questions
-                        const hasAnswers = Object.values(faithAnswers).some(answer => answer && answer !== '-' && answer.trim() !== '');
+                        const hasAnswers = Object.values(faithAnswers).some(
+                            (answer) => answer && answer !== '-' && String(answer).trim() !== ''
+                        );
                         if (!hasAnswers) return '';
-                        
+                        const rows = faithQuestions
+                            .map((q, i) => {
+                                const k = 'q' + (i + 1);
+                                return `<div class="flex items-center justify-between gap-2"><span class="text-gray-700">${q}</span><span class="font-semibold text-gray-800 shrink-0">${faithAnswers[k] || '-'}</span></div>`;
+                            })
+                            .join('');
                         return `
                     <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
-                        <h4 class="font-semibold text-yellow-800 mb-3">
-                            <i class="fas fa-cross mr-2"></i>신앙 고백
-                        </h4>
-                        <div class="space-y-2 text-sm">
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">1. 예수님이 창조주 하나님임을 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q1 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">2. 십자가 대속을 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q2 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">3. 예수님의 부활을 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q3 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">4. 예수님을 주님으로 영접했습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q4 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">5. 성령님이 계십니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q5 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">6. 천국 갈 것을 확신합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q6 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">7. 성경을 진리로 믿습니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q7 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">8. 정기적으로 예배에 참석합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q8 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">9. 정기적으로 기도합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q9 || '-'}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-gray-700">10. 가끔 전도합니까?</span>
-                                <span class="font-semibold text-gray-800">${faithAnswers.q10 || '-'}</span>
-                            </div>
-                        </div>
-                    </div>
-                        `;
+                        <h4 class="font-semibold text-yellow-800 mb-3"><i class="fas fa-cross mr-2"></i>신앙 고백</h4>
+                        <div class="space-y-2 text-sm">${rows}</div>
+                    </div>`;
                     })()}
-                    
                     ${(() => {
-                        // Check if career info should be shown and has content
                         if (!showCareerInfo || user.careers === null) return '';
-                        
-                        const careers = user.careers ? JSON.parse(user.careers) : [];
-                        // Hide entire section if no careers
+                        let careers = [];
+                        try {
+                            careers = user.careers ? JSON.parse(user.careers) : [];
+                        } catch (e) {
+                            careers = [];
+                        }
                         if (careers.length === 0) return '';
-                        
-                        const careerItems = careers.map(career => {
-                            const parts = [];
-                            if (career.company) parts.push(career.company);
-                            if (career.position) parts.push(career.position);
-                            const text = parts.join(' - ');
-                            const period = career.period ? ' (' + career.period + ')' : '';
-                            return '<p class="ml-2">• ' + text + period + '</p>';
-                        }).join('');
-                        
-                        // Only show section if there are career items
+                        const careerItems = careers
+                            .map((career) => {
+                                const parts = [];
+                                if (career.company) parts.push(career.company);
+                                if (career.position) parts.push(career.position);
+                                const text = parts.join(' - ');
+                                const period = career.period ? ' (' + career.period + ')' : '';
+                                return '<p class="ml-2">• ' + text + period + '</p>';
+                            })
+                            .join('');
                         if (!careerItems) return '';
-                        
                         return `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
-                        <h4 class="font-semibold text-purple-800 mb-3">
-                            <i class="fas fa-briefcase mr-2"></i>직업 정보
-                        </h4>
-                        <div class="space-y-3 text-sm text-gray-700">
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">경력:</p>
-                                ${careerItems}
-                            </div>
-                        </div>
-                    </div>
-                        `;
+                        <h4 class="font-semibold text-purple-800 mb-3"><i class="fas fa-briefcase mr-2"></i>직업 정보</h4>
+                        <div class="space-y-3 text-sm text-gray-700"><div><p class="font-medium text-gray-800 mb-1">경력:</p>${careerItems}</div></div>
+                    </div>`;
                     })()}
-                    
                     ${(() => {
-                        // Check if education info should be shown
                         if (!showEducationInfo) return '';
-                        
-                        // Build education items
                         let educationItems = '';
-                        
-                        // Elementary school
                         if (user.elementary_school && user.elementary_school.trim()) {
-                            educationItems += `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">초등학교:</p>
-                                <p class="ml-2">${user.elementary_school}</p>
-                            </div>
-                            `;
+                            educationItems += `<div><p class="font-medium text-gray-800 mb-1">초등학교:</p><p class="ml-2">${user.elementary_school}</p></div>`;
                         }
-                        
-                        // Middle school
                         if (user.middle_school && user.middle_school.trim()) {
-                            educationItems += `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">중학교:</p>
-                                <p class="ml-2">${user.middle_school}</p>
-                            </div>
-                            `;
+                            educationItems += `<div><p class="font-medium text-gray-800 mb-1">중학교:</p><p class="ml-2">${user.middle_school}</p></div>`;
                         }
-                        
-                        // High school
                         if (user.high_school && user.high_school.trim()) {
-                            educationItems += `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">고등학교:</p>
-                                <p class="ml-2">${user.high_school}</p>
-                            </div>
-                            `;
+                            educationItems += `<div><p class="font-medium text-gray-800 mb-1">고등학교:</p><p class="ml-2">${user.high_school}</p></div>`;
                         }
-                        
-                        // Universities
                         if (user.universities !== null) {
-                            const universities = user.universities ? JSON.parse(user.universities) : [];
+                            let universities = [];
+                            try {
+                                universities = user.universities ? JSON.parse(user.universities) : [];
+                            } catch (e) {
+                                universities = [];
+                            }
                             if (universities.length === 0 && (user.university || user.university_major)) {
                                 universities.push({ school: user.university || '', major: user.university_major || '' });
                             }
                             if (universities.length > 0) {
-                                const univItems = universities.map(edu => {
-                                    const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
-                                    return '<p class="ml-2">• ' + text + '</p>';
-                                }).join('');
+                                const univItems = universities
+                                    .map((edu) => {
+                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                        return '<p class="ml-2">• ' + text + '</p>';
+                                    })
+                                    .join('');
                                 if (univItems) {
-                                    educationItems += `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">대학교:</p>
-                                ${univItems}
-                            </div>
-                                    `;
+                                    educationItems += `<div><p class="font-medium text-gray-800 mb-1">대학교:</p>${univItems}</div>`;
                                 }
                             }
                         }
-                        
-                        // Masters
                         if (user.masters_degrees !== null) {
-                            const masters = user.masters_degrees ? JSON.parse(user.masters_degrees) : [];
+                            let masters = [];
+                            try {
+                                masters = user.masters_degrees ? JSON.parse(user.masters_degrees) : [];
+                            } catch (e) {
+                                masters = [];
+                            }
                             if (masters.length === 0 && (user.masters || user.masters_major)) {
                                 masters.push({ school: user.masters || '', major: user.masters_major || '' });
                             }
                             if (masters.length > 0) {
-                                const mastersItems = masters.map(edu => {
-                                    const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
-                                    return '<p class="ml-2">• ' + text + '</p>';
-                                }).join('');
+                                const mastersItems = masters
+                                    .map((edu) => {
+                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                        return '<p class="ml-2">• ' + text + '</p>';
+                                    })
+                                    .join('');
                                 if (mastersItems) {
-                                    educationItems += `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">석사:</p>
-                                ${mastersItems}
-                            </div>
-                                    `;
+                                    educationItems += `<div><p class="font-medium text-gray-800 mb-1">석사:</p>${mastersItems}</div>`;
                                 }
                             }
                         }
-                        
-                        // PhDs
                         if (user.phd_degrees !== null) {
-                            const phds = user.phd_degrees ? JSON.parse(user.phd_degrees) : [];
+                            let phds = [];
+                            try {
+                                phds = user.phd_degrees ? JSON.parse(user.phd_degrees) : [];
+                            } catch (e) {
+                                phds = [];
+                            }
                             if (phds.length === 0 && (user.phd || user.phd_major)) {
                                 phds.push({ school: user.phd || '', major: user.phd_major || '' });
                             }
                             if (phds.length > 0) {
-                                const phdItems = phds.map(edu => {
-                                    const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
-                                    return '<p class="ml-2">• ' + text + '</p>';
-                                }).join('');
+                                const phdItems = phds
+                                    .map((edu) => {
+                                        const text = edu.school + (edu.major ? ' (' + edu.major + ')' : '');
+                                        return '<p class="ml-2">• ' + text + '</p>';
+                                    })
+                                    .join('');
                                 if (phdItems) {
-                                    educationItems += `
-                            <div>
-                                <p class="font-medium text-gray-800 mb-1">박사:</p>
-                                ${phdItems}
-                            </div>
-                                    `;
+                                    educationItems += `<div><p class="font-medium text-gray-800 mb-1">박사:</p>${phdItems}</div>`;
                                 }
                             }
                         }
-                        
-                        // Only show section if there are education items
                         if (!educationItems || educationItems.trim() === '') return '';
-                        
                         return `
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
-                        <h4 class="font-semibold text-orange-800 mb-3">
-                            <i class="fas fa-graduation-cap mr-2"></i>학교 정보
-                        </h4>
-                        <div class="space-y-3 text-sm text-gray-700">
-                            ${educationItems}
-                        </div>
-                    </div>
-                        `;
+                        <h4 class="font-semibold text-orange-800 mb-3"><i class="fas fa-graduation-cap mr-2"></i>학교 정보</h4>
+                        <div class="space-y-3 text-sm text-gray-700">${educationItems}</div>
+                    </div>`;
                     })()}
                 </div>
-            </div>
-        `;
-        
-        // Hide posts feed and show profile view
-        document.getElementById('postsFeed').classList.add('hidden');
-        document.getElementById('newPostCard').classList.add('hidden');
-        document.getElementById('profileView').classList.remove('hidden');
-        document.getElementById('profileViewContent').innerHTML = content;
-        
-        // Update profile header with edit button if viewing own profile
-        const profileViewHeader = document.querySelector('#profileView .flex.items-center.justify-between');
-        console.log('프로필 헤더 업데이트:', { 
-            profileViewHeader: !!profileViewHeader, 
-            isOwnProfile 
-        });
-        
-        if (profileViewHeader) {
-            const h2 = profileViewHeader.querySelector('h2');
-            console.log('h2 요소:', { h2: !!h2 });
-            
-            if (h2) {
-                // Reset h2 content to default "프로필"
-                h2.innerHTML = '<i class="fas fa-user text-blue-600 mr-2"></i>프로필';
-                
-                // Add edit button inside h2 if viewing own profile OR admin viewing any profile
-                const canEditProfile = isOwnProfile || (currentUser?.role === 'admin');
-                if (canEditProfile) {
-                    console.log('수정 버튼 추가 중... (본인 프로필 또는 관리자)');
-                    const editBtn = document.createElement('button');
-                    editBtn.onclick = function() { showEditProfileModal(user.id); };
-                    editBtn.className = 'text-blue-600 hover:text-blue-700 transition ml-3 relative -top-0.5';
-                    editBtn.title = isOwnProfile ? '프로필 수정' : '프로필 수정 (관리자)';
-                    editBtn.innerHTML = '<i class="fas fa-edit text-lg"></i>';
-                    h2.appendChild(editBtn);
-                    console.log('수정 버튼 추가 완료!');
-                } else {
-                    console.log('본인 프로필이 아니고 관리자도 아니므로 수정 버튼 미표시');
-                }
+            </div>`;
+
+    const pvc = document.getElementById('profileViewContent');
+    const pv = document.getElementById('profileView');
+    if (!pvc || !pv) return;
+    pvc.innerHTML = content;
+    pv.classList.remove('hidden');
+
+    const profileViewHeader = document.querySelector('#profileView .flex.items-center.justify-between');
+    if (profileViewHeader) {
+        const h2 = profileViewHeader.querySelector('h2');
+        if (h2) {
+            h2.innerHTML = '<i class="fas fa-user text-blue-600 mr-2"></i>프로필';
+            const canEditProfile = isOwnProfile || currentUser?.role === 'admin';
+            if (canEditProfile) {
+                const editBtn = document.createElement('button');
+                editBtn.onclick = function () {
+                    showEditProfileModal(user.id);
+                };
+                editBtn.className = 'text-blue-600 hover:text-blue-700 transition ml-3 relative -top-0.5';
+                editBtn.title = isOwnProfile ? '프로필 수정' : '프로필 수정 (관리자)';
+                editBtn.innerHTML = '<i class="fas fa-edit text-lg"></i>';
+                h2.appendChild(editBtn);
             }
         }
-        
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (error) {
-        console.error('Failed to load user profile:', error);
-        alert('프로필을 불러오는데 실패했습니다.');
+    }
+
+    const logoutBtn = document.getElementById('profileViewLogoutBtn');
+    if (logoutBtn) {
+        if (currentUserId && parseInt(String(currentUserId), 10) === parseInt(String(user.id), 10)) {
+            logoutBtn.classList.remove('hidden');
+        } else {
+            logoutBtn.classList.add('hidden');
+        }
     }
 }
 
@@ -4765,18 +5947,24 @@ async function showUserProfileModal(userId) {
 function hideProfile() {
     document.getElementById('profileView').classList.add('hidden');
     document.getElementById('postsFeed').classList.remove('hidden');
-    document.getElementById('newPostCard').classList.remove('hidden');
+    const newPostCard = document.getElementById('newPostCard');
+    if (newPostCard) {
+        if (filterUserId) newPostCard.classList.add('hidden');
+        else newPostCard.classList.remove('hidden');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Go to home (main feed)
 function goToHome() {
-    // Hide profile if it's open
+    if (filterUserId) {
+        clearUserFilter();
+        return;
+    }
     const profileView = document.getElementById('profileView');
     if (profileView && !profileView.classList.contains('hidden')) {
         hideProfile();
     } else {
-        // Already on home, just scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
@@ -4981,34 +6169,36 @@ function updateDeleteButtons(containerId) {
 updateAuthUI();
 updateEmailDatalist(); // Load email history
 autoLogin(); // Auto-login if session exists
+setSocialHeaderButtonActive('friends'); // 기본 노말뷰: 친구 버튼 활성
 
 // =====================
 // User Filter Functions
 // =====================
 
-// Filter posts by user (works for any user including self)
-window.filterByUser = function(userId, userName) {
+async function filterByUser(userId, userName) {
     console.log('🔍 filterByUser called with userId:', userId, 'userName:', userName);
     if (!userId) {
         console.log('❌ No userId provided, returning');
         return;
     }
-    
-    // CRITICAL: Set the global variable
+
     filterUserId = userId;
     console.log('✅ Global filterUserId set to:', filterUserId);
-    
-    // Show user profile cover
-    showUserProfileCover(userId);
-    
-    // Reload posts with filter (no banner needed)
+
+    const postsFeed = document.getElementById('postsFeed');
+    if (postsFeed) postsFeed.classList.remove('hidden');
+
+    const viewedUser = await showUserProfileCover(userId);
+    if (viewedUser) {
+        await fillProfileViewPanelForUser(viewedUser);
+    }
     loadPosts();
-    
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Show toast notification
-    const displayName = userName || '해당 회원';
+
+    const displayName =
+        (userName && String(userName).trim()) ||
+        (document.getElementById('profileCoverName') && document.getElementById('profileCoverName').textContent.trim()) ||
+        '해당 회원';
     showToast(`${displayName} 님의 포스팅만 표시 중입니다. 로고를 클릭하여 전체 보기로 돌아갈 수 있습니다.`, 'info');
 }
 
@@ -5018,40 +6208,28 @@ window.filterMyPosts = function() {
         showToast('로그인이 필요합니다.', 'error');
         return;
     }
-    
-    // Use the main filter function
-    filterByUser(currentUserId, currentUser.name);
-}
+    void filterByUser(currentUserId, currentUser.name);
+};
 
-// Clear user filter
-window.clearUserFilter = function() {
+function clearUserFilter() {
     console.log('🔴 clearUserFilter called!');
-    
-    // Clear filter
+
     const wasFiltered = filterUserId !== null;
     filterUserId = null;
     console.log('✅ Global filterUserId cleared (set to null)');
-    
-    // Hide user profile cover
+
+    const profileView = document.getElementById('profileView');
+    if (profileView) profileView.classList.add('hidden');
+
     hideUserProfileCover();
-    
-    // Reload all posts
     loadPosts();
-    
-    // Show toast if filter was active
+
     if (wasFiltered) {
         showToast('전체 포스팅을 표시합니다.', 'success');
     }
 }
 
-// =====================
-// User Profile Cover Functions
-// =====================
 
-// Filter posts by user (wrapper function)
-async function filterByUser(userId, userName) {
-    await showUserProfileCover(userId);
-}
 
 async function showUserProfileCover(userId) {
     try {
@@ -5076,13 +6254,13 @@ async function showUserProfileCover(userId) {
         const coverCard = document.getElementById('userProfileCover');
         const newPostCard = document.getElementById('newPostCard');
         
-        if (!coverCard || !newPostCard) return;
+        if (!coverCard || !newPostCard) return null;
         
         // Update cover photo
         const coverPhoto = document.getElementById('profileCoverPhoto');
         if (coverPhoto) {
             if (user.cover_url) {
-                coverPhoto.style.backgroundImage = `url(${user.cover_url})`;
+                coverPhoto.style.backgroundImage = `url(${toCanonicalSiteUrl(user.cover_url)})`;
                 coverPhoto.style.backgroundSize = 'cover';
                 coverPhoto.style.backgroundPosition = 'center';
             } else {
@@ -5094,7 +6272,7 @@ async function showUserProfileCover(userId) {
         // Update avatar
         const avatar = document.getElementById('profileCoverAvatar');
         if (user.avatar_url) {
-            avatar.innerHTML = `<img src="${user.avatar_url}" alt="${user.name}" class="w-full h-full object-cover">`;
+            avatar.innerHTML = `<img src="${toCanonicalSiteUrl(user.avatar_url)}" alt="${user.name}" class="w-full h-full object-cover">`;
         } else {
             avatar.innerHTML = '<i class="fas fa-user text-5xl"></i>';
         }
@@ -5189,10 +6367,12 @@ async function showUserProfileCover(userId) {
         // Show cover card and hide new post card
         coverCard.classList.remove('hidden');
         newPostCard.classList.add('hidden');
-        
+
+        return user;
     } catch (error) {
         console.error('Failed to load user profile cover:', error);
         showToast('프로필을 불러오는데 실패했습니다.', 'error');
+        return null;
     }
 }
 
@@ -5315,8 +6495,10 @@ async function loadFriendsList() {
 function updateSidebarFriendsList() {
     const container = document.getElementById('sidebarFriendsList');
     if (!container) return;
+    const friendsContent = document.getElementById('friendsTabContent');
     
     if (!friendsList || friendsList.length === 0) {
+        if (friendsContent) friendsContent.classList.add('friends-empty');
         container.innerHTML = `
             <div class="text-center py-8 text-gray-400">
                 <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
@@ -5326,13 +6508,15 @@ function updateSidebarFriendsList() {
         return;
     }
     
+    if (friendsContent) friendsContent.classList.remove('friends-empty');
+    
     container.innerHTML = friendsList.map(friend => `
         <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition">
             <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition"
                  onclick="showUserProfileModal(${friend.id})"
                  title="${friend.name} 프로필 보기">
-                ${friend.avatar_url 
-                    ? `<img src="${friend.avatar_url}" alt="${friend.name}" class="w-full h-full object-cover" />`
+                ${friend.avatar_url
+                    ? `<img src="${toCanonicalSiteUrl(friend.avatar_url)}" alt="${friend.name}" class="w-full h-full object-cover" />`
                     : `<i class="fas fa-user text-gray-500"></i>`
                 }
             </div>
@@ -5363,46 +6547,51 @@ function isFriend(userId) {
 let notificationsList = [];
 let isNotificationActive = false;
 
-// Toggle notifications in header
-function toggleNotifications() {
-    const notificationBtn = document.getElementById('notificationBtn');
+function setSocialHeaderButtonActive(kind) {
+    const friendsBtns = [document.getElementById('friendsListBtn'), document.getElementById('friendsListBtnMobile')];
+    const notifBtns = [document.getElementById('notificationBtn'), document.getElementById('notificationBtnMobile')];
+
+    const friendsActive = kind === 'friends';
+    const notifActive = kind === 'notifications';
+
+    for (let i = 0; i < friendsBtns.length; i++) {
+        const b = friendsBtns[i];
+        if (!b) continue;
+        b.classList.toggle('text-blue-600', friendsActive);
+        b.classList.toggle('text-gray-500', !friendsActive);
+    }
+    for (let i = 0; i < notifBtns.length; i++) {
+        const b = notifBtns[i];
+        if (!b) continue;
+        b.classList.toggle('text-blue-600', notifActive);
+        b.classList.toggle('text-gray-500', !notifActive);
+    }
+}
+
+function toggleFriendsList() {
     const friendsContent = document.getElementById('friendsTabContent');
     const notificationsContent = document.getElementById('notificationsTabContent');
-    
-    if (isNotificationActive) {
-        // Switch to friends
-        isNotificationActive = false;
-        
-        // Update button style
-        if (notificationBtn) {
-            notificationBtn.classList.remove('text-blue-600');
-            notificationBtn.classList.add('text-gray-600');
-        }
-        
-        // Show friends, hide notifications
-        if (friendsContent && notificationsContent) {
-            friendsContent.classList.remove('hidden');
-            notificationsContent.classList.add('hidden');
-        }
-    } else {
-        // Switch to notifications
-        isNotificationActive = true;
-        
-        // Update button style
-        if (notificationBtn) {
-            notificationBtn.classList.remove('text-gray-600');
-            notificationBtn.classList.add('text-blue-600');
-        }
-        
-        // Show notifications, hide friends
-        if (friendsContent && notificationsContent) {
-            friendsContent.classList.add('hidden');
-            notificationsContent.classList.remove('hidden');
-        }
-        
-        // Load notifications and mark as read (user is viewing them)
-        loadNotifications(true);
-    }
+    if (!friendsContent || !notificationsContent) return;
+
+    // Always keep friends active when clicked; do not toggle off on re-click.
+    friendsContent.classList.remove('hidden');
+    notificationsContent.classList.add('hidden');
+    isNotificationActive = false;
+    setSocialHeaderButtonActive('friends');
+}
+
+// Toggle notifications in header
+function toggleNotifications() {
+    const friendsContent = document.getElementById('friendsTabContent');
+    const notificationsContent = document.getElementById('notificationsTabContent');
+    if (!friendsContent || !notificationsContent) return;
+
+    // Always keep notifications active when clicked; do not toggle off on re-click.
+    isNotificationActive = true;
+    friendsContent.classList.add('hidden');
+    notificationsContent.classList.remove('hidden');
+    setSocialHeaderButtonActive('notifications');
+    loadNotifications(true);
 }
 
 // Load notifications
@@ -5447,8 +6636,10 @@ async function loadNotifications(markAsRead = false) {
 function updateSidebarNotificationsList() {
     const container = document.getElementById('sidebarNotificationsList');
     if (!container) return;
+    const notificationsContent = document.getElementById('notificationsTabContent');
     
     if (!notificationsList || notificationsList.length === 0) {
+        if (notificationsContent) notificationsContent.classList.add('notifications-empty');
         container.innerHTML = `
             <div class="text-center py-8 text-gray-400">
                 <i class="fas fa-bell text-4xl mb-3 opacity-40"></i>
@@ -5460,14 +6651,16 @@ function updateSidebarNotificationsList() {
         return;
     }
     
+    if (notificationsContent) notificationsContent.classList.remove('notifications-empty');
+    
     container.innerHTML = notificationsList.map(notification => {
         if (notification.type === 'friend_request') {
             return `
                 <div class="flex items-start space-x-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
-                            ${notification.from_user_avatar 
-                                ? `<img src="${notification.from_user_avatar}" alt="${notification.from_user_name}" class="w-full h-full object-cover">` 
+                            ${notification.from_user_avatar
+                                ? `<img src="${toCanonicalSiteUrl(notification.from_user_avatar)}" alt="${notification.from_user_name}" class="w-full h-full object-cover">`
                                 : `<i class="fas fa-user text-gray-600"></i>`
                             }
                         </div>
@@ -5504,8 +6697,8 @@ function updateSidebarNotificationsList() {
                 <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-green-50 border border-green-200'}">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
-                            ${notification.from_user_avatar 
-                                ? `<img src="${notification.from_user_avatar}" alt="${notification.from_user_name}" class="w-full h-full object-cover">` 
+                            ${notification.from_user_avatar
+                                ? `<img src="${toCanonicalSiteUrl(notification.from_user_avatar)}" alt="${notification.from_user_name}" class="w-full h-full object-cover">`
                                 : `<i class="fas fa-user text-gray-600"></i>`
                             }
                         </div>
@@ -5533,8 +6726,8 @@ function updateSidebarNotificationsList() {
                 <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-yellow-50 border border-yellow-200'}">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
-                            ${notification.from_user_avatar 
-                                ? `<img src="${notification.from_user_avatar}" alt="${notification.from_user_name}" class="w-full h-full object-cover">` 
+                            ${notification.from_user_avatar
+                                ? `<img src="${toCanonicalSiteUrl(notification.from_user_avatar)}" alt="${notification.from_user_name}" class="w-full h-full object-cover">`
                                 : `<i class="fas fa-user text-gray-600"></i>`
                             }
                         </div>
@@ -5768,10 +6961,13 @@ window.toggleCommentLike = toggleCommentLike;
 window.filterByUser = filterByUser;
 window.clearUserFilter = clearUserFilter;
 window.showUserProfileModal = showUserProfileModal;
+window.showMyProfile = showViewProfileModal;
 window.hideProfile = hideProfile;
 window.showEditProfileModal = showEditProfileModal;
 window.cancelEditProfile = cancelEditProfile;
 window.handleEditProfileSubmit = handleEditProfileSubmit;
+window.submitChangePasswordInline = submitChangePasswordInline;
+window.submitChangePasswordLegacy = submitChangePasswordLegacy;
 window.selectBackgroundColor = selectBackgroundColor;
 window.resetBackgroundColor = resetBackgroundColor;
 window.previewPostImage = previewPostImage;
@@ -5782,13 +6978,40 @@ window.removeSharedPost = removeSharedPost;
 window.loadPosts = loadPosts;
 window.loadFriendsList = loadFriendsList;
 window.loadNotifications = loadNotifications;
+window.toggleFriendsList = toggleFriendsList;
 window.toggleNotifications = toggleNotifications;
+window.toggleQtPanel = toggleQtPanel;
+window.showQtSection = showQtSection;
+window.toggleQtWorship = toggleQtWorship;
+window.toggleQtWorshipPlay = toggleQtWorshipPlay;
+window.toggleQtWorshipMute = toggleQtWorshipMute;
+window.setQtWorshipVolume = setQtWorshipVolume;
+window.showQtAlarmModal = showQtAlarmModal;
+window.showQtInviteModal = showQtInviteModal;
+window.saveQtApply = saveQtApply;
+window.saveQtPrayer = saveQtPrayer;
+window.qtAutoGrow = qtAutoGrow;
+window.sendQtApplyPost = sendQtApplyPost;
+window.sendQtPrayerPost = sendQtPrayerPost;
+window.editQtApply = editQtApply;
+window.editQtPrayer = editQtPrayer;
+window.setQtHeaderButtonActive = setQtHeaderButtonActive;
+window.setQtButtonActive = setQtButtonActive;
 window.sendFriendRequest = sendFriendRequest;
 window.acceptFriendRequest = acceptFriendRequest;
 window.rejectFriendRequest = rejectFriendRequest;
 window.showHowToUse = showHowToUse;
 window.hideHowToUse = hideHowToUse;
+window.showLoginModal = showLoginModal;
+window.showSignupModal = showSignupModal;
+window.showForgotPasswordModal = showForgotPasswordModal;
+window.hideForgotPasswordModal = hideForgotPasswordModal;
+window.toggleLoginPasswordVisibility = toggleLoginPasswordVisibility;
+window.requestPasswordReset = requestPasswordReset;
+window.validatePasswordRealtime = validatePasswordRealtime;
 window.hideLoginModal = hideLoginModal;
+window.hideLoginRewardCelebrationModal = hideLoginRewardCelebrationModal;
+window.hideScoreMilestoneCelebrationModal = hideScoreMilestoneCelebrationModal;
 window.hideSignupModal = hideSignupModal;
 window.hideEditProfileModal = hideEditProfileModal;
 window.updateNotificationBadge = updateNotificationBadge;
@@ -5865,4 +7088,11 @@ loadPosts = async function() {
 
 window.scrollPosts = scrollPosts;
 window.updatePostIndicators = updatePostIndicators;
+
+// 리워드 카드 헤더의 접기/펼치기 삼각형(chevron) 아이콘 제거 (스크롤/기능은 유지)
+setTimeout(() => {
+    try {
+        document.querySelectorAll('.reward-card-chevron').forEach(el => el.remove());
+    } catch (_) {}
+}, 0);
 

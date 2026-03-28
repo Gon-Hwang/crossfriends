@@ -1954,6 +1954,96 @@ async function fetchQtSimBibleFromWeb(qtDate: string): Promise<{
   return { passageRef, passageTitle, reference, scripture }
 }
 
+// 채널 전체 영상을 D1에 동기화 (페이지네이션으로 전체 수집)
+async function syncSermonVideos(DB: D1Database, apiKey: string): Promise<number> {
+  const chRes = await fetch(
+    `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&forHandle=hayongjo&key=${apiKey}`
+  )
+  const chData = await chRes.json() as { items?: { contentDetails?: { relatedPlaylists?: { uploads?: string } } }[] }
+  const uploadsId = chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads
+  if (!uploadsId) throw new Error('Channel not found')
+
+  let pageToken = ''
+  let totalSynced = 0
+
+  do {
+    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=50&key=${apiKey}${pageToken ? `&pageToken=${pageToken}` : ''}`
+    const res = await fetch(url)
+    const data = await res.json() as {
+      nextPageToken?: string
+      items?: { snippet?: { resourceId?: { videoId?: string }; title?: string; publishedAt?: string } }[]
+    }
+    const items = (data.items || []).filter(v => v.snippet?.resourceId?.videoId)
+
+    if (items.length > 0) {
+      const stmts = items.map(item =>
+        DB.prepare('INSERT OR IGNORE INTO sermon_videos (video_id, title, published_at) VALUES (?, ?, ?)')
+          .bind(
+            item.snippet!.resourceId!.videoId,
+            item.snippet!.title || '하용조 목사 설교',
+            item.snippet!.publishedAt || ''
+          )
+      )
+      await DB.batch(stmts)
+      totalSynced += items.length
+    }
+
+    pageToken = data.nextPageToken || ''
+  } while (pageToken)
+
+  return totalSynced
+}
+
+// 오늘의 설교: D1에서 중복 없이 랜덤 선택, 없으면 YouTube API 전체 동기화
+app.get('/api/sermon/today', async (c) => {
+  const { DB } = c.env
+  const apiKey = c.env.YOUTUBE_API_KEY
+  const today = new Date().toISOString().slice(0, 10)
+
+  try {
+    // 1. 오늘 이미 배정된 영상이 있으면 바로 반환
+    const assigned = await DB.prepare(
+      'SELECT sv.video_id, sv.title, sv.published_at FROM sermon_daily sd JOIN sermon_videos sv ON sd.video_id = sv.video_id WHERE sd.sermon_date = ?'
+    ).bind(today).first() as { video_id: string; title: string; published_at: string } | null
+
+    if (assigned) {
+      return c.json({ videoId: assigned.video_id, title: assigned.title, preacher: '하용조 목사 (온누리교회)', publishedAt: assigned.published_at })
+    }
+
+    // 2. sermon_videos 비어 있으면 YouTube API로 전체 동기화
+    const countRow = await DB.prepare('SELECT COUNT(*) as cnt FROM sermon_videos').first() as { cnt: number } | null
+    if (!countRow || countRow.cnt === 0) {
+      if (!apiKey) return c.json({ error: 'YouTube API key not configured' }, 500)
+      await syncSermonVideos(DB, apiKey)
+    }
+
+    // 3. 아직 배정 안 된 영상 중 랜덤 선택
+    let chosen = await DB.prepare(
+      'SELECT video_id, title, published_at FROM sermon_videos WHERE video_id NOT IN (SELECT video_id FROM sermon_daily) ORDER BY RANDOM() LIMIT 1'
+    ).first() as { video_id: string; title: string; published_at: string } | null
+
+    // 4. 모두 소진되면 sermon_daily 초기화 후 재선택
+    if (!chosen) {
+      await DB.prepare('DELETE FROM sermon_daily').run()
+      chosen = await DB.prepare(
+        'SELECT video_id, title, published_at FROM sermon_videos ORDER BY RANDOM() LIMIT 1'
+      ).first() as { video_id: string; title: string; published_at: string } | null
+    }
+
+    if (!chosen) return c.json({ error: 'No videos available' }, 404)
+
+    // 5. 오늘 날짜에 배정 저장
+    await retryD1(() =>
+      DB.prepare('INSERT OR REPLACE INTO sermon_daily (sermon_date, video_id) VALUES (?, ?)').bind(today, chosen!.video_id).run()
+    )
+
+    return c.json({ videoId: chosen.video_id, title: chosen.title, preacher: '하용조 목사 (온누리교회)', publishedAt: chosen.published_at })
+  } catch (e) {
+    console.error('[sermon/today]', e)
+    return c.json({ error: 'Failed to fetch sermon' }, 500)
+  }
+})
+
 app.get('/api/qt/bible', async (c) => {
   const qtDateRaw = c.req.query('qtDate')
   if (!qtDateRaw || typeof qtDateRaw !== 'string') {
@@ -2545,6 +2635,20 @@ const requireAdmin = async (c: any, next: any) => {
   
   await next()
 }
+
+// 관리자용: 채널 영상 수동 동기화
+app.post('/api/sermon/sync', requireAdmin, async (c) => {
+  const apiKey = c.env.YOUTUBE_API_KEY
+  if (!apiKey) return c.json({ error: 'YouTube API key not configured' }, 500)
+  try {
+    const count = await syncSermonVideos(c.env.DB, apiKey)
+    const total = await c.env.DB.prepare('SELECT COUNT(*) as cnt FROM sermon_videos').first() as { cnt: number }
+    return c.json({ synced: count, total: total.cnt })
+  } catch (e) {
+    console.error('[sermon/sync]', e)
+    return c.json({ error: String(e) }, 500)
+  }
+})
 
 // Admin: Get all users with statistics
 app.get('/api/admin/users', requireAdmin, async (c) => {
@@ -5780,20 +5884,10 @@ app.get('/', (c) => {
             .reward-card-chevron {
                 font-size: 0.88rem;
                 transition: transform 0.2s ease;
-                display: none !important; /* 리워드바: 접기/펼치기 삼각형 숨김 (스크롤은 유지) */
+                display: inline-block;
             }
             #typingToggleIcon {
                 display: none !important; /* 말씀 타이핑 버튼 우측 삼각형 숨김 */
-            }
-            /* 혹시 아이콘이 다른 클래스로 렌더(FA svg 교체 등)되더라도 리워드바에서는 chevron 완전 제거 */
-            #leftSidebar .fa-chevron-up,
-            #leftSidebar .fa-chevron-down,
-            #leftSidebar .fa-caret-up,
-            #leftSidebar .fa-caret-down {
-                display: none !important;
-            }
-            .reward-card-collapsed .reward-card-chevron {
-                transform: rotate(180deg);
             }
             .reward-card-content {
                 display: block;
@@ -6133,6 +6227,25 @@ app.get('/', (c) => {
             }
             
             /* Custom Scrollbar for Sidebar */
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            ::-webkit-scrollbar-button {
+                display: none;
+                width: 0;
+                height: 0;
+            }
+            ::-webkit-scrollbar-track {
+                background: #F3F4F6;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #D1D5DB;
+                border-radius: 10px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #9CA3AF;
+            }
             .sidebar-scroll::-webkit-scrollbar,
             .panel-scroll::-webkit-scrollbar {
                 width: 8px;
@@ -7272,6 +7385,9 @@ app.get('/', (c) => {
                                     <div class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200" title="오늘 본문(시작 절)">
                                         <span data-qt-field="passageShort">-</span>
                                     </div>
+                                    <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-red-50 text-red-600 border border-red-300 hover:bg-red-100" title="QT 찬양">
+                                        <i class="fas fa-music text-[13px] leading-none" aria-hidden="true"></i>
+                                    </button>
                                     <button type="button" data-qt-field="qtAlarmBtn" data-qt-act="alarm" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">
                                         <i class="fas fa-bell text-[13px] leading-none" aria-hidden="true"></i>
                                     </button>
@@ -7356,10 +7472,11 @@ app.get('/', (c) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="absolute -left-[9999px] w-1 h-1 overflow-hidden"><div data-qt-field="worshipYtAnchor"></div></div>
                             </div>
                         </div>
                     </template>
+                    <!-- 찬양 YT 플레이어 전역 마운트 (화면 밖 고정, 이동 금지) -->
+                    <div id="qtWorshipYtGlobal" class="fixed -left-[9999px] top-0 w-1 h-1 overflow-hidden" aria-hidden="true"></div>
                     <div id="qtPanelsWrap" class="hidden flex flex-col gap-4 mb-4">
                         <div id="qtPanelsStack" class="flex flex-col gap-4"></div>
                     </div>
@@ -8499,7 +8616,7 @@ app.get('/', (c) => {
 
         <!-- 로그인·자동 로그인 시: 달성 μ·언락 리워드 축하 (매번 표시) -->
         <div id="loginRewardCelebrationModal" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[3px]" onclick="if (event.target === this) hideLoginRewardCelebrationModal()">
-            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-violet-200/90 max-w-md w-full overflow-hidden login-reward-celeb-card" onclick="event.stopPropagation()">
+            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-violet-200/90 max-w-md w-full overflow-hidden login-reward-celeb-card max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
                 <div id="loginRewardCelebrationGlow" class="pointer-events-none absolute inset-0 rounded-2xl z-0" aria-hidden="true"></div>
                 <div id="loginRewardParticleLayer" class="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl z-[30]" aria-hidden="true">
                     <span class="login-reward-firework fw-left"></span>
@@ -8524,7 +8641,7 @@ app.get('/', (c) => {
                 <div class="relative z-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 px-4 py-3.5 text-white text-center border-b border-white/20">
                     <h2 id="loginRewardCelebrationTitle" class="login-reward-fanfare-title text-lg sm:text-xl font-bold leading-snug drop-shadow-sm">환영합니다</h2>
                 </div>
-                <div class="relative z-10 p-5 sm:p-6 space-y-4 bg-gradient-to-b from-white to-indigo-50/40">
+                <div class="relative z-10 p-5 sm:p-6 space-y-4 bg-gradient-to-b from-white to-indigo-50/40 overflow-y-auto flex-1">
                     <div class="text-center rounded-xl bg-white/80 border border-blue-100 px-3 py-3 shadow-sm">
                         <p class="text-sm text-gray-600 mb-1">
                             종합 μ <span class="text-gray-400">(성경+기도+활동)</span>
@@ -8584,7 +8701,7 @@ app.get('/', (c) => {
 
         <!-- 종합 μ 200 / 1000 / 1400 마일스톤 축하 (세션 중 임계값 돌파 시) -->
         <div id="scoreMilestoneCelebrationModal" class="hidden fixed inset-0 z-[125] flex items-center justify-center p-4 bg-black/55" onclick="if (event.target === this) hideScoreMilestoneCelebrationModal()">
-            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-blue-200 max-w-md w-full overflow-hidden milestone-modal-card" onclick="event.stopPropagation()">
+            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-blue-200 max-w-md w-full overflow-hidden milestone-modal-card max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
                 <div id="milestoneJackpotGlow" class="pointer-events-none absolute inset-0 rounded-2xl z-0" aria-hidden="true"></div>
                 <div class="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl z-[5]" aria-hidden="true">
                     <span class="milestone-spark milestone-spark-1"></span>
@@ -8598,7 +8715,7 @@ app.get('/', (c) => {
                     <h2 id="milestoneCelebrationTitle" class="text-xl font-bold mt-1">200μ 달성!</h2>
                     <p id="milestoneCelebrationSubtitle" class="text-xs opacity-90 mt-1 leading-snug">리워드가 열렸습니다</p>
                 </div>
-                <div class="p-5 sm:p-6 space-y-4 relative z-10">
+                <div class="p-5 sm:p-6 space-y-4 relative z-10 overflow-y-auto flex-1">
                     <div class="text-center">
                         <p class="text-sm text-gray-600 mb-1">종합 μ <span class="text-gray-400">(성경+기도+활동)</span></p>
                         <div id="milestoneCelebrationBigMu" class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 tabular-nums">0μ</div>

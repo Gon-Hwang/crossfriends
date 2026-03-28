@@ -485,7 +485,7 @@ let player;
 let videoCheckInterval;
 let maxWatchedTime = 0;
 let videoDuration = 0;
-const CURRENT_VIDEO_ID = 'u13qcd4AePQ';
+let CURRENT_VIDEO_ID = 'u13qcd4AePQ'; // 오늘 API로 교체됨, 폴백용 초기값
 /** 리워드1(오늘의 설교) — 프로덕션 UI·crossfriends.org와 동일 (종합점수 μ 기준) */
 const SERMON_REWARD1_THRESHOLD = 200;
 const SCORE_MILESTONE_REWARD2 = 1000;
@@ -562,9 +562,8 @@ function checkSermonReward() {
     const totalScore = typingScore + videoScore + prayerScore + activityScore;
     
     if (totalScore >= SERMON_REWARD1_THRESHOLD) {
-        // Unlocked! Show sermon
+        // Unlocked! Show sermon (loadTodaySermon + initPlayer는 showSermonUnlocked 내부에서 처리)
         showSermonUnlocked(totalScore);
-        initSermonYoutubePlayer();
     } else {
         // Locked - show reward screen
         showSermonLocked(totalScore);
@@ -611,15 +610,51 @@ function showSermonLocked(currentScore) {
     }
 }
 
+// 오늘의 설교 영상을 API에서 가져오기 (localStorage 하루 캐시)
+async function loadTodaySermon() {
+    const todayKey = 'sermon_today_' + new Date().toISOString().slice(0, 10);
+    const cached = localStorage.getItem(todayKey);
+    if (cached) {
+        try {
+            const data = JSON.parse(cached);
+            applySermonData(data);
+            return;
+        } catch (e) { /* 파싱 실패 시 재fetch */ }
+    }
+    try {
+        const res = await axios.get('/api/sermon/today');
+        const data = res.data;
+        localStorage.setItem(todayKey, JSON.stringify(data));
+        applySermonData(data);
+    } catch (e) {
+        console.warn('[sermon] API 호출 실패, 기본 영상 사용', e);
+    }
+}
+
+function applySermonData(data) {
+    if (!data || !data.videoId) return;
+    CURRENT_VIDEO_ID = data.videoId;
+    const titleEl = document.getElementById('sermonTitleText');
+    const refEl = document.getElementById('sermonReferenceText');
+    const preacherEl = document.getElementById('sermonPreacherText');
+    if (titleEl) titleEl.textContent = data.title || '하용조 목사 설교';
+    if (refEl) refEl.textContent = data.publishedAt ? new Date(data.publishedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+    if (preacherEl) preacherEl.innerHTML = '<i class="fas fa-user-tie mr-1"></i>' + (data.preacher || '하용조 목사 (온누리교회)');
+    // 플레이어가 이미 초기화된 경우 영상 교체
+    if (player && player.loadVideoById) {
+        player.loadVideoById(CURRENT_VIDEO_ID);
+    }
+}
+
 // Show unlocked sermon
-function showSermonUnlocked(currentScore) {
+async function showSermonUnlocked(currentScore) {
     document.getElementById('sermonLocked').classList.add('hidden');
     document.getElementById('sermonUnlocked').classList.remove('hidden');
-    
-    // Save unlocked state
     if (currentUserId) {
         localStorage.setItem(`sermon_unlocked_${currentUserId}`, 'true');
     }
+    await loadTodaySermon();
+    initSermonYoutubePlayer();
 }
 
 // Player is ready
@@ -3475,11 +3510,10 @@ function syncQtRewardSidebars(combinedScore) {
         }
     }
 
-    const qtWorshipBtn = document.getElementById('qtWorshipBtn');
-    if (qtWorshipBtn) {
-        if (combinedScore >= SCORE_MILESTONE_REWARD2) qtWorshipBtn.classList.remove('hidden');
-        else qtWorshipBtn.classList.add('hidden');
-    }
+    document.querySelectorAll('.qt-panel-instance [data-qt-field="qtWorshipBtn"]').forEach((btn) => {
+        if (combinedScore >= SCORE_MILESTONE_REWARD2) btn.classList.remove('hidden');
+        else btn.classList.add('hidden');
+    });
     document.querySelectorAll('.qt-panel-instance [data-qt-field="qtAlarmBtn"]').forEach((qtAlarmBtn) => {
         if (combinedScore >= SCORE_MILESTONE_REWARD3) qtAlarmBtn.classList.remove('hidden');
         else qtAlarmBtn.classList.add('hidden');
@@ -3616,6 +3650,15 @@ function onQtPanelsWrapClick(e) {
     }
     if (act === 'invite') {
         showQtInviteModal();
+        return;
+    }
+    if (act === 'worship') {
+        const wrap = qf(panel, 'worshipWrap');
+        if (wrap && wrap.classList.contains('hidden')) {
+            openQtWorshipForPanel(panel);
+        } else {
+            closeQtWorshipForPanel(panel);
+        }
         return;
     }
     if (act === 'worship-play') {
@@ -4242,67 +4285,137 @@ async function deleteQtLogForPanel(panel) {
     }
 }
 
-let qtWorshipState = { open: false, muted: false, volume: 80, playing: false };
+// ── QT 찬양 플레이어 ──────────────────────────────────────────────
+// YT 플레이어는 전역 div(#qtWorshipYtGlobal)에 한 번만 생성 — iframe DOM 이동 금지.
+// 여러 패널이 열려도 플레이어는 하나이고, UI 패널만 한 번에 하나만 열린다.
+const WORSHIP_VIDEO_IDS = [
+    '5JvEYRcuJNE',  // 첫 번째 찬양
+];
+let qtWorshipPlayer = null;   // YT.Player (전역 단일 인스턴스)
+let qtWorshipPlayerReady = false;
+let qtWorshipState = { muted: false, volume: 80, playing: false };
 
-function getTodayQtWorshipPanel() {
-    return getQtPanelByDate(getTodayQtDateForApi());
+function getWorshipVideoId() {
+    return WORSHIP_VIDEO_IDS[0];
 }
 
-function toggleQtWorship() {
-    const panel = getTodayQtWorshipPanel();
-    const wrap = panel && qf(panel, 'worshipWrap');
-    if (!wrap) {
-        showToast('QT 찬양 플레이어 준비 중입니다.', 'info');
-        return;
+// 아이콘을 재생 상태에 따라 동기화 (열려 있는 모든 패널)
+function syncWorshipPlayIcons() {
+    document.querySelectorAll('.qt-panel-instance [data-qt-field="worshipPlayIcon"]').forEach(ic => {
+        ic.classList.toggle('fa-play', !qtWorshipState.playing);
+        ic.classList.toggle('fa-pause', qtWorshipState.playing);
+    });
+}
+
+// 전역 마운트에 플레이어를 한 번만 생성
+function ensureQtWorshipPlayer() {
+    if (qtWorshipPlayer) return;
+    if (!isYoutubeIframeApiReady()) return;
+    const mount = document.getElementById('qtWorshipYtGlobal');
+    if (!mount) return;
+    const div = document.createElement('div');
+    mount.appendChild(div);
+    qtWorshipPlayer = new YT.Player(div, {
+        height: '1',
+        width: '1',
+        videoId: getWorshipVideoId(),
+        playerVars: { playsinline: 1, rel: 0, controls: 0, autoplay: 0 },
+        events: {
+            onReady(e) {
+                qtWorshipPlayerReady = true;
+                e.target.setVolume(qtWorshipState.volume);
+                if (qtWorshipState.muted) e.target.mute();
+            },
+            onStateChange(e) {
+                const PS = (typeof YT !== 'undefined' && YT.PlayerState)
+                    ? YT.PlayerState : { PLAYING: 1 };
+                qtWorshipState.playing = (e.data === PS.PLAYING);
+                syncWorshipPlayIcons();
+            }
+        }
+    });
+}
+
+// 다른 모든 패널의 찬양 UI를 닫는다 (단일 UI 원칙)
+function closeAllWorshipWraps(exceptPanel) {
+    document.querySelectorAll('.qt-panel-instance').forEach(p => {
+        if (p === exceptPanel) return;
+        const wrap = qf(p, 'worshipWrap');
+        if (wrap) wrap.classList.add('hidden');
+    });
+}
+
+function openQtWorshipForPanel(panel) {
+    const wrap = qf(panel, 'worshipWrap');
+    if (!wrap) return;
+    closeAllWorshipWraps(panel);   // 다른 패널 찬양 UI 닫기
+    wrap.classList.remove('hidden');
+    ensureQtWorshipPlayer();       // 플레이어가 없으면 생성 (전역 마운트에)
+    // 볼륨·음소거 UI를 현재 상태로 동기화
+    const volBar = qf(panel, 'worshipVolumeBar');
+    if (volBar) volBar.value = qtWorshipState.volume;
+    const volLabel = qf(panel, 'worshipVolumeLabel');
+    if (volLabel) volLabel.textContent = `${qtWorshipState.volume}%`;
+    const muteIc = qf(panel, 'worshipMuteIcon');
+    if (muteIc) {
+        muteIc.classList.toggle('fa-volume-up', !qtWorshipState.muted);
+        muteIc.classList.toggle('fa-volume-mute', qtWorshipState.muted);
     }
-    const willOpen = wrap.classList.contains('hidden');
-    wrap.classList.toggle('hidden', !willOpen);
-    qtWorshipState.open = willOpen;
-    showToast(willOpen ? '찬양 플레이어를 열었습니다.' : '찬양 플레이어를 닫았습니다.', 'success');
+    syncWorshipPlayIcons();
+}
+
+function closeQtWorshipForPanel(panel) {
+    const wrap = qf(panel, 'worshipWrap');
+    if (!wrap) return;
+    wrap.classList.add('hidden');
+    if (qtWorshipPlayer && qtWorshipState.playing) {
+        try { qtWorshipPlayer.pauseVideo(); } catch (e) {}
+    }
 }
 
 function toggleQtWorshipPlay() {
-    const panel = getTodayQtWorshipPanel();
-    const icon = panel && qf(panel, 'worshipPlayIcon');
-    if (!icon) return;
-
-    qtWorshipState.playing = !qtWorshipState.playing;
-
-    icon.classList.toggle('fa-play', !qtWorshipState.playing);
-    icon.classList.toggle('fa-pause', qtWorshipState.playing);
-
-    showToast(qtWorshipState.playing ? '찬양 재생(미리보기) 시작' : '찬양 재생(미리보기) 중지', 'info');
+    ensureQtWorshipPlayer();
+    if (!qtWorshipPlayer || !qtWorshipPlayerReady) return;
+    try {
+        if (qtWorshipState.playing) qtWorshipPlayer.pauseVideo();
+        else qtWorshipPlayer.playVideo();
+    } catch (e) { console.warn('worship play error', e); }
 }
 
 function toggleQtWorshipMute() {
     qtWorshipState.muted = !qtWorshipState.muted;
-    const panel = getTodayQtWorshipPanel();
-    const muteIcon = panel && qf(panel, 'worshipMuteIcon');
-    if (muteIcon) {
-        muteIcon.classList.toggle('fa-volume-up', !qtWorshipState.muted);
-        muteIcon.classList.toggle('fa-volume-mute', qtWorshipState.muted);
+    if (qtWorshipPlayer) {
+        try {
+            qtWorshipState.muted ? qtWorshipPlayer.mute() : qtWorshipPlayer.unMute();
+        } catch (e) {}
     }
-    showToast(qtWorshipState.muted ? '음소거' : '음소거 해제', 'info');
+    document.querySelectorAll('.qt-panel-instance [data-qt-field="worshipMuteIcon"]').forEach(ic => {
+        ic.classList.toggle('fa-volume-up', !qtWorshipState.muted);
+        ic.classList.toggle('fa-volume-mute', qtWorshipState.muted);
+    });
 }
 
 function setQtWorshipVolume(vol) {
     const v = Math.max(0, Math.min(100, Number(vol)));
     qtWorshipState.volume = v;
-    const panel = getTodayQtWorshipPanel();
-    const label = panel && qf(panel, 'worshipVolumeLabel');
-    if (label) label.textContent = `${v}%`;
-    const muteIcon = panel && qf(panel, 'worshipMuteIcon');
-    if (muteIcon) {
-        const shouldMute = v === 0;
-        muteIcon.classList.toggle('fa-volume-up', !shouldMute);
-        muteIcon.classList.toggle('fa-volume-mute', shouldMute);
+    if (qtWorshipPlayer) {
+        try { qtWorshipPlayer.setVolume(v); } catch (e) {}
+        if (v > 0 && qtWorshipState.muted) {
+            qtWorshipState.muted = false;
+            try { qtWorshipPlayer.unMute(); } catch (e) {}
+        }
     }
+    document.querySelectorAll('.qt-panel-instance [data-qt-field="worshipVolumeLabel"]').forEach(el => {
+        el.textContent = `${v}%`;
+    });
+    document.querySelectorAll('.qt-panel-instance [data-qt-field="worshipMuteIcon"]').forEach(ic => {
+        ic.classList.toggle('fa-volume-up', v > 0);
+        ic.classList.toggle('fa-volume-mute', v === 0);
+    });
 }
 
 function setQtWorshipVolumeFromPanel(el) {
     if (!el) return;
-    const panel = el.closest('.qt-panel-instance');
-    if (!panel || panelQtDate(panel) !== normalizeQtDateKey(getTodayQtDateForApi())) return;
     setQtWorshipVolume(el.value);
 }
 
@@ -8551,10 +8664,57 @@ loadPosts = async function() {
 window.scrollPosts = scrollPosts;
 window.updatePostIndicators = updatePostIndicators;
 
-// 리워드 카드 헤더의 접기/펼치기 삼각형(chevron) 아이콘 제거 (스크롤/기능은 유지)
-setTimeout(() => {
-    try {
-        document.querySelectorAll('.reward-card-chevron').forEach(el => el.remove());
-    } catch (_) {}
-}, 0);
+// 리워드 카드 접기/펼치기 (localStorage 상태 유지)
+(function initRewardCardCollapse() {
+    const STORAGE_KEY = 'rewardCardCollapsed';
+
+    function getCollapsedSet() {
+        try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
+        catch { return new Set(); }
+    }
+
+    function saveCollapsedSet(set) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...set])); } catch {}
+    }
+
+    function applyState(card, collapsed) {
+        card.classList.toggle('reward-card-collapsed', collapsed);
+        const chevron = card.querySelector('.reward-card-chevron');
+        if (chevron) {
+            chevron.classList.toggle('fa-chevron-up', !collapsed);
+            chevron.classList.toggle('fa-chevron-down', collapsed);
+        }
+    }
+
+    function initCards() {
+        const collapsed = getCollapsedSet();
+        document.querySelectorAll('.reward-card-collapsible').forEach(card => {
+            const key = card.dataset.rewardKey;
+            if (!key) return;
+            applyState(card, collapsed.has(key));
+
+            const header = card.querySelector('.reward-card-header-line');
+            if (!header || header.dataset.collapseInit) return;
+            header.dataset.collapseInit = '1';
+            header.addEventListener('click', () => {
+                const isCollapsed = card.classList.contains('reward-card-collapsed');
+                const newCollapsed = !isCollapsed;
+                applyState(card, newCollapsed);
+                const set = getCollapsedSet();
+                newCollapsed ? set.add(key) : set.delete(key);
+                saveCollapsedSet(set);
+            });
+        });
+    }
+
+    // Run after DOM is ready and again after login (cards may re-render)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCards);
+    } else {
+        initCards();
+    }
+    // Re-init when new cards appear (e.g. after login)
+    const obs = new MutationObserver(() => initCards());
+    obs.observe(document.body, { childList: true, subtree: true });
+})();
 

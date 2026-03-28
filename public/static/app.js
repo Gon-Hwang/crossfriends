@@ -30,7 +30,7 @@ function toCanonicalSiteUrl(url) {
     if (!s) return url;
     if (s.startsWith('data:') || s.startsWith('blob:')) return s;
     if (s.startsWith('//')) return 'https:' + s;
-    if (s.startsWith('/')) return CROSSFRIENDS_ORIGIN + s;
+    if (s.startsWith('/')) return (isLocalDevHost() ? '' : CROSSFRIENDS_ORIGIN) + s;
     try {
         const u = new URL(s);
         const path = u.pathname + u.search + u.hash;
@@ -43,7 +43,7 @@ function toCanonicalSiteUrl(url) {
             host.endsWith('.pages.dev') ||
             host.endsWith('.workers.dev');
         if (ourAssetPath || ourLikeHost) {
-            return CROSSFRIENDS_ORIGIN + path;
+            return (isLocalDevHost() ? '' : CROSSFRIENDS_ORIGIN) + path;
         }
     } catch (e) {
         /* ignore */
@@ -56,6 +56,8 @@ applyCrossfriendsAxiosBase();
 let currentUserId = null;
 let currentUser = null;
 let selectedBackgroundColor = null; // 선택된 배경색
+let selectedPostImages = [];
+let selectedPostImageSeq = 0;
 let filterUserId = null; // 필터링할 사용자 ID
 
 // =====================
@@ -81,6 +83,161 @@ function hideHowToUse() {
         modal.classList.remove(...howToUseModalLayoutClasses);
     }
 }
+
+// =====================
+// 피드백 요청 모달 → POST /api/feedback (관리자 메신저)
+// =====================
+let feedbackImageFile = null;
+let feedbackVideoFile = null;
+let feedbackModalEscapeHandler = null;
+
+function pickFeedbackImage() {
+    const el = document.getElementById('feedbackImageInput');
+    if (el) el.click();
+}
+
+function pickFeedbackVideo() {
+    const el = document.getElementById('feedbackVideoInput');
+    if (el) el.click();
+}
+
+function removeFeedbackAttachment() {
+    feedbackImageFile = null;
+    feedbackVideoFile = null;
+    const imgInput = document.getElementById('feedbackImageInput');
+    const vidInput = document.getElementById('feedbackVideoInput');
+    const preview = document.getElementById('feedbackAttachmentPreview');
+    const imgPrev = document.getElementById('feedbackAttachmentImagePreview');
+    const vidPrev = document.getElementById('feedbackAttachmentVideoPreview');
+    if (imgInput) imgInput.value = '';
+    if (vidInput) vidInput.value = '';
+    if (preview) preview.classList.add('hidden');
+    if (imgPrev) {
+        imgPrev.src = '';
+        imgPrev.classList.add('hidden');
+    }
+    if (vidPrev) {
+        vidPrev.src = '';
+        vidPrev.classList.add('hidden');
+    }
+}
+
+function renderFeedbackAttachmentPreview() {
+    const preview = document.getElementById('feedbackAttachmentPreview');
+    const imgPrev = document.getElementById('feedbackAttachmentImagePreview');
+    const vidPrev = document.getElementById('feedbackAttachmentVideoPreview');
+    if (!preview || !imgPrev || !vidPrev) return;
+    if (feedbackImageFile) {
+        imgPrev.src = URL.createObjectURL(feedbackImageFile);
+        imgPrev.classList.remove('hidden');
+        vidPrev.classList.add('hidden');
+        preview.classList.remove('hidden');
+        return;
+    }
+    if (feedbackVideoFile) {
+        vidPrev.src = URL.createObjectURL(feedbackVideoFile);
+        vidPrev.classList.remove('hidden');
+        imgPrev.classList.add('hidden');
+        preview.classList.remove('hidden');
+    }
+}
+
+function setupFeedbackFileInputs() {
+    const imgInput = document.getElementById('feedbackImageInput');
+    const vidInput = document.getElementById('feedbackVideoInput');
+    if (!imgInput || !vidInput || imgInput.dataset.fbSetup === '1') return;
+    imgInput.dataset.fbSetup = '1';
+    imgInput.addEventListener('change', () => {
+        const f = imgInput.files && imgInput.files[0];
+        if (!f) return;
+        feedbackImageFile = f;
+        feedbackVideoFile = null;
+        vidInput.value = '';
+        renderFeedbackAttachmentPreview();
+    });
+    vidInput.addEventListener('change', () => {
+        const f = vidInput.files && vidInput.files[0];
+        if (!f) return;
+        feedbackVideoFile = f;
+        feedbackImageFile = null;
+        imgInput.value = '';
+        renderFeedbackAttachmentPreview();
+    });
+}
+
+function showFeedbackModal() {
+    if (!currentUserId) {
+        showLoginModal();
+        return;
+    }
+    const modal = document.getElementById('feedbackModal');
+    const ta = document.getElementById('feedbackModalText');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    if (ta) ta.value = '';
+    removeFeedbackAttachment();
+    setupFeedbackFileInputs();
+    if (ta) setTimeout(() => ta.focus(), 50);
+
+    if (feedbackModalEscapeHandler) {
+        document.removeEventListener('keydown', feedbackModalEscapeHandler);
+    }
+    feedbackModalEscapeHandler = (e) => {
+        if (e.key === 'Escape') hideFeedbackModal();
+    };
+    document.addEventListener('keydown', feedbackModalEscapeHandler);
+}
+
+function hideFeedbackModal() {
+    const modal = document.getElementById('feedbackModal');
+    if (modal) modal.classList.add('hidden');
+    if (feedbackModalEscapeHandler) {
+        document.removeEventListener('keydown', feedbackModalEscapeHandler);
+        feedbackModalEscapeHandler = null;
+    }
+}
+
+async function submitFeedbackToAdmin() {
+    if (!currentUserId) return;
+    const ta = document.getElementById('feedbackModalText');
+    const content = ta ? String(ta.value || '').trim() : '';
+    if (!content && !feedbackImageFile && !feedbackVideoFile) {
+        showToast('내용을 입력하거나 파일을 첨부해 주세요.', 'error');
+        return;
+    }
+    const btn = document.getElementById('feedbackModalSubmitBtn');
+    if (btn) btn.disabled = true;
+    try {
+        if (feedbackImageFile || feedbackVideoFile) {
+            const fd = new FormData();
+            fd.append('user_id', String(currentUserId));
+            fd.append('content', content || '');
+            if (feedbackImageFile) fd.append('image', feedbackImageFile);
+            if (feedbackVideoFile) fd.append('video', feedbackVideoFile);
+            await axios.post('/api/feedback', fd);
+        } else {
+            await axios.post('/api/feedback', { user_id: currentUserId, content });
+        }
+        showToast('관리자에게 전달되었습니다.', 'success');
+        hideFeedbackModal();
+    } catch (e) {
+        console.error(e);
+        const msg =
+            e.response && e.response.data && e.response.data.error
+                ? e.response.data.error
+                : '전송에 실패했습니다.';
+        showToast(msg, 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+window.pickFeedbackImage = pickFeedbackImage;
+window.pickFeedbackVideo = pickFeedbackVideo;
+window.removeFeedbackAttachment = removeFeedbackAttachment;
+window.showFeedbackModal = showFeedbackModal;
+window.hideFeedbackModal = hideFeedbackModal;
+window.submitFeedbackToAdmin = submitFeedbackToAdmin;
 
 const loginModalLayoutClasses = ['flex', 'items-center', 'justify-center', 'min-h-full', 'p-4'];
 
@@ -190,7 +347,7 @@ function hideSignupModal() {
     const ids = [
         'signupEmail', 'signupName', 'signupPhone', 'signupPassword', 'signupPasswordConfirm',
         'signupChurch', 'signupPastor', 'signupDenomination', 'signupProvince', 'signupCity', 'signupGender', 'signupPosition',
-        'signupAddress', 'signupMaritalStatus', 'signupAvatar'
+        'signupAddress', 'signupMaritalStatus', 'signupAvatar', 'signupCover'
     ];
     ids.forEach((id) => {
         const el = document.getElementById(id);
@@ -202,6 +359,13 @@ function hideSignupModal() {
     }
     const preview = document.getElementById('avatarPreview');
     if (preview) preview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+    const coverPrev = document.getElementById('signupCoverPreview');
+    if (coverPrev) {
+        coverPrev.style.backgroundImage = '';
+        coverPrev.className =
+            'w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center overflow-hidden';
+        coverPrev.innerHTML = '<span class="text-gray-500 text-xs">미리보기</span>';
+    }
     const rulesDiv = document.getElementById('passwordRules');
     const matchDiv = document.getElementById('passwordMatchMsg');
     if (rulesDiv) rulesDiv.classList.add('hidden');
@@ -1265,6 +1429,26 @@ function previewAvatar(event) {
     }
 }
 
+function previewSignupCover(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+        alert('커버 사진은 10MB를 초과할 수 없습니다.');
+        event.target.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const preview = document.getElementById('signupCoverPreview');
+        if (!preview) return;
+        preview.innerHTML = '';
+        preview.style.backgroundImage = 'url(' + e.target.result + ')';
+        preview.style.backgroundSize = 'cover';
+        preview.style.backgroundPosition = 'center';
+    };
+    reader.readAsDataURL(file);
+}
+
 // Profile Menu Toggle
 function toggleProfileMenu() {
     const menu = document.getElementById('profileMenu');
@@ -1307,7 +1491,7 @@ async function showEditProfileModal(targetUserId) {
     const editUserId = targetUserId || currentUserId;
     
     // Check permission: must be own profile or admin
-    const isOwnProfile = editUserId === currentUserId;
+    const isOwnProfile = Number(editUserId) === Number(currentUserId);
     const isAdmin = currentUser.role === 'admin';
     
     if (!isOwnProfile && !isAdmin) {
@@ -1364,11 +1548,11 @@ async function showEditProfileModal(targetUserId) {
                             id="editAvatarPreviewInline"
                             onclick="cancelEditProfile()"
                             title="프로필 보기로 돌아가기">
-                            ${user.role === 'admin' 
-                                ? '<i class="fas fa-crown text-yellow-400"></i>'
-                                : user.avatar_url 
-                                    ? `<img src="${toCanonicalSiteUrl(user.avatar_url)}" alt="Profile" class="w-full h-full object-cover" />` 
-                                    : '<i class="fas fa-user"></i>'}
+                            ${user.avatar_url
+                                ? `<img src="${toCanonicalSiteUrl(user.avatar_url)}" alt="Profile" class="w-full h-full object-cover" />`
+                                : user.role === 'admin'
+                                  ? '<i class="fas fa-crown text-yellow-400"></i>'
+                                  : '<i class="fas fa-user"></i>'}
                         </div>
                         
                         <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
@@ -1380,7 +1564,6 @@ async function showEditProfileModal(targetUserId) {
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                         </div>
                         
-                        ${user.role !== 'admin' ? `
                         <div class="space-y-2 border-t pt-4">
                             <input 
                                 type="file" 
@@ -1390,7 +1573,7 @@ async function showEditProfileModal(targetUserId) {
                                 class="hidden" />
                             <input 
                                 type="file" 
-                                id="editCover" 
+                                id="editCoverInline" 
                                 accept="image/*"
                                 onchange="previewEditCoverInline(event)"
                                 class="hidden" />
@@ -1408,7 +1591,7 @@ async function showEditProfileModal(targetUserId) {
                             </button>
                             
                             <label 
-                                for="editCover"
+                                for="editCoverInline"
                                 class="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition text-sm font-semibold text-center">
                                 <i class="fas fa-image mr-2"></i>커버 사진 변경
                             </label>
@@ -1425,7 +1608,6 @@ async function showEditProfileModal(targetUserId) {
                             
                             <p class="text-xs text-gray-500 mt-2 text-center">프로필: 최대 5MB / 커버: 최대 10MB</p>
                         </div>
-                        ` : ''}
                     </div>
                 </div>
                 
@@ -2044,13 +2226,19 @@ async function deleteAvatarInline() {
         alert('로그인이 필요합니다.');
         return;
     }
+    const hid = document.getElementById('editingUserId');
+    let targetUserId = currentUserId;
+    if (hid && hid.value !== '') {
+        const n = parseInt(hid.value, 10);
+        if (Number.isFinite(n)) targetUserId = n;
+    }
     
     if (!confirm('프로필 사진을 삭제하시겠습니까?')) {
         return;
     }
     
     try {
-        await axios.delete('/api/users/' + currentUserId + '/avatar');
+        await axios.delete('/api/users/' + targetUserId + '/avatar');
         
         // Update preview to default
         const preview = document.getElementById('editAvatarPreviewInline');
@@ -2068,9 +2256,11 @@ async function deleteAvatarInline() {
         }
         
         // Refresh user data
-        const userResponse = await axios.get('/api/users/' + currentUserId);
-        currentUser = userResponse.data.user;
-        updateAuthUI();
+        const userResponse = await axios.get('/api/users/' + targetUserId);
+        if (targetUserId === currentUserId) {
+            currentUser = userResponse.data.user;
+            updateAuthUI();
+        }
         
         showToast('프로필 사진이 삭제되었습니다.', 'success');
     } catch (error) {
@@ -2109,13 +2299,19 @@ async function deleteCoverInline() {
         alert('로그인이 필요합니다.');
         return;
     }
+    const hid = document.getElementById('editingUserId');
+    let targetUserId = currentUserId;
+    if (hid && hid.value !== '') {
+        const n = parseInt(hid.value, 10);
+        if (Number.isFinite(n)) targetUserId = n;
+    }
     
     if (!confirm('커버 사진을 삭제하시겠습니까?')) {
         return;
     }
     
     try {
-        await axios.delete('/api/users/' + currentUserId + '/cover');
+        await axios.delete('/api/users/' + targetUserId + '/cover');
         
         // Update preview to default
         const preview = document.getElementById('editCoverPreviewInline');
@@ -2126,14 +2322,16 @@ async function deleteCoverInline() {
         }
         
         // Clear file input
-        const fileInput = document.getElementById('editCover');
+        const fileInput = document.getElementById('editCoverInline');
         if (fileInput) {
             fileInput.value = '';
         }
         
         // Refresh user data
-        const userResponse = await axios.get('/api/users/' + currentUserId);
-        currentUser = userResponse.data.user;
+        const userResponse = await axios.get('/api/users/' + targetUserId);
+        if (targetUserId === currentUserId) {
+            currentUser = userResponse.data.user;
+        }
         
         showToast('커버 사진이 삭제되었습니다.', 'success');
     } catch (error) {
@@ -2154,7 +2352,7 @@ async function submitChangePasswordInline() {
     }
     const editingEl = document.getElementById('editingUserId');
     const editingId = editingEl ? parseInt(editingEl.value, 10) : NaN;
-    if (editingId !== currentUserId) {
+    if (Number(editingId) !== Number(currentUserId)) {
         showToast('본인 프로필에서만 비밀번호를 변경할 수 있습니다.', 'error');
         return;
     }
@@ -2248,7 +2446,11 @@ async function handleEditProfileSubmit(event) {
     event.preventDefault();
     
     // Get the user ID being edited (from hidden field)
-    const editingUserId = parseInt(document.getElementById('editingUserId').value);
+    const editingUserId = parseInt(document.getElementById('editingUserId').value, 10);
+    if (!Number.isFinite(editingUserId)) {
+        showToast('회원 정보를 확인할 수 없습니다.', 'error');
+        return;
+    }
     
     const name = document.getElementById('editNameInline').value;
     const bio = document.getElementById('editBioInline').value;
@@ -2260,7 +2462,7 @@ async function handleEditProfileSubmit(event) {
     const phone = document.getElementById('editPhoneInline').value;
     const address = document.getElementById('editAddressInline').value;
     const avatarFile = document.getElementById('editAvatarInline')?.files[0];
-    const coverFile = document.getElementById('editCover')?.files[0];
+    const coverFile = document.getElementById('editCoverInline')?.files[0];
     
     // 학교 정보 수집 (기존 방식)
     const elementary_school = document.getElementById('editElementarySchoolInline')?.value || '';
@@ -2390,11 +2592,14 @@ async function handleEditProfileSubmit(event) {
             formData.append('avatar', avatarFile);
             
             try {
-                await axios.post('/api/users/' + editingUserId + '/avatar', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await axios.post('/api/users/' + editingUserId + '/avatar', formData);
             } catch (uploadError) {
                 console.error('Avatar upload error:', uploadError);
+                const msg =
+                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
+                    '프로필 사진 업로드에 실패했습니다.';
+                showToast(msg, 'error');
+                return;
             }
         }
 
@@ -2404,26 +2609,29 @@ async function handleEditProfileSubmit(event) {
             formData.append('cover', coverFile);
             
             try {
-                await axios.post('/api/users/' + editingUserId + '/cover', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await axios.post('/api/users/' + editingUserId + '/cover', formData);
             } catch (uploadError) {
                 console.error('Cover upload error:', uploadError);
+                const msg =
+                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
+                    '커버 사진 업로드에 실패했습니다.';
+                showToast(msg, 'error');
+                return;
             }
         }
 
         // Refresh user data
         const userResponse = await axios.get('/api/users/' + editingUserId);
         
-        // Update currentUser if editing own profile
-        if (editingUserId === currentUserId) {
+        // Update currentUser if editing own profile (id는 API/로컬에서 숫자·문자 혼용 가능)
+        if (Number(editingUserId) === Number(currentUserId)) {
             currentUser = userResponse.data.user;
             updateAuthUI();
         }
         
         showToast('프로필이 수정되었습니다! 👍', 'success');
         
-        // Go back to profile view
+        // Go back to profile view (filterByUser → 커버·상세 패널 최신화)
         showUserProfileModal(editingUserId);
         
         // Reload posts to update user info in posts
@@ -2534,11 +2742,14 @@ async function handleEditProfile() {
             formData.append('avatar', avatarFile);
             
             try {
-                await axios.post('/api/users/' + editingUserId + '/avatar', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await axios.post('/api/users/' + currentUserId + '/avatar', formData);
             } catch (uploadError) {
                 console.error('Avatar upload error:', uploadError);
+                const msg =
+                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
+                    '프로필 사진 업로드에 실패했습니다.';
+                alert(msg);
+                return;
             }
         }
 
@@ -2548,11 +2759,14 @@ async function handleEditProfile() {
             formData.append('cover', coverFile);
             
             try {
-                await axios.post('/api/users/' + editingUserId + '/cover', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await axios.post('/api/users/' + currentUserId + '/cover', formData);
             } catch (uploadError) {
                 console.error('Cover upload error:', uploadError);
+                const msg =
+                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
+                    '커버 사진 업로드에 실패했습니다.';
+                alert(msg);
+                return;
             }
         }
 
@@ -2587,6 +2801,7 @@ async function handleSignup() {
     const address = document.getElementById('signupAddress').value;
     const phone = document.getElementById('signupPhone').value;
     const avatarFile = document.getElementById('signupAvatar').files[0];
+    const coverFile = document.getElementById('signupCover') && document.getElementById('signupCover').files[0];
     
     // 신앙 고백 답변 수집
     const faithAnswers = {
@@ -2664,20 +2879,41 @@ async function handleSignup() {
             faith_answers: JSON.stringify(faithAnswers)
         });
 
-        const newUserId = response.data.id;
+        const newUserId = Number(response.data.id);
+        if (!Number.isFinite(newUserId)) {
+            alert('가입 응답이 올바르지 않습니다. 로그인을 시도해 보시고, 문제가 계속되면 관리자에게 문의해 주세요.');
+            hideSignupModal();
+            showLoginModal();
+            return;
+        }
 
         // 2. Upload avatar if selected
         if (avatarFile) {
             const formData = new FormData();
             formData.append('avatar', avatarFile);
-            
             try {
-                await axios.post('/api/users/' + newUserId + '/avatar', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await axios.post('/api/users/' + newUserId + '/avatar', formData);
             } catch (uploadError) {
                 console.error('Avatar upload error:', uploadError);
-                // Continue even if avatar upload fails
+                const msg =
+                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
+                    '프로필 사진 업로드에 실패했습니다. 로그인 후 다시 시도해 주세요.';
+                showToast(msg, 'error');
+            }
+        }
+
+        // 3. Upload cover if selected
+        if (coverFile) {
+            const formData = new FormData();
+            formData.append('cover', coverFile);
+            try {
+                await axios.post('/api/users/' + newUserId + '/cover', formData);
+            } catch (uploadError) {
+                console.error('Cover upload error:', uploadError);
+                const msg =
+                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
+                    '커버 사진 업로드에 실패했습니다. 로그인 후 다시 시도해 주세요.';
+                showToast(msg, 'error');
             }
         }
 
@@ -2944,6 +3180,8 @@ async function showLoginRewardCelebrationModal(user) {
     const prayer = prayerScore || 0;
     const activity = activityScore || 0;
     const combined = scriptureTotal + prayer + activity;
+    // 리워드 미달성 상태에서는 로그인 축하 패널을 열지 않음
+    if (combined < SERMON_REWARD1_THRESHOLD) return;
     const maxPart = Math.max(scriptureTotal, prayer, activity, 1);
     const pctS = Math.round((scriptureTotal / maxPart) * 100);
     const pctP = Math.round((prayer / maxPart) * 100);
@@ -3238,45 +3476,184 @@ function syncQtRewardSidebars(combinedScore) {
     }
 
     const qtWorshipBtn = document.getElementById('qtWorshipBtn');
-    const qtAlarmBtn = document.getElementById('qtAlarmBtn');
     if (qtWorshipBtn) {
         if (combinedScore >= SCORE_MILESTONE_REWARD2) qtWorshipBtn.classList.remove('hidden');
         else qtWorshipBtn.classList.add('hidden');
     }
-    if (qtAlarmBtn) {
+    document.querySelectorAll('.qt-panel-instance [data-qt-field="qtAlarmBtn"]').forEach((qtAlarmBtn) => {
         if (combinedScore >= SCORE_MILESTONE_REWARD3) qtAlarmBtn.classList.remove('hidden');
         else qtAlarmBtn.classList.add('hidden');
-    }
+    });
 }
 
 // =====================
-// QT Panel Functions (restore)
+// QT Panel Functions (multi-date diary + 서버 로그)
 // =====================
-function toggleQtPanel() {
-    const qtPanel = document.getElementById('qtPanel');
-    if (!qtPanel) return;
+/** 날짜 시뮬 헤더 버튼·오프셋 — 다시 쓸 때 true 로 변경 */
+const QT_DAY_SIM_UI_ENABLED = false;
 
-    // Toggle panel visibility
-    if (qtPanel.classList.contains('hidden')) {
-        qtPanel.classList.remove('hidden');
+let qtLogsByDate = {};
+
+/** 서버·로컬 키 불일치(공백, ISO 접두)로 삭제 후 로그가 되살아나는 것 방지 */
+function normalizeQtDateKey(d) {
+    const s = String(d == null ? '' : d)
+        .trim()
+        .replace(/^(\d{4}-\d{2}-\d{2})[\sT].*$/, '$1');
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}
+
+function panelQtDate(panel) {
+    return normalizeQtDateKey(panel && panel.dataset ? panel.dataset.qtDate : '');
+}
+
+function qf(panel, field) {
+    return panel ? panel.querySelector(`[data-qt-field="${field}"]`) : null;
+}
+
+function getQtPanelByDate(qtDate) {
+    const stack = document.getElementById('qtPanelsStack');
+    const q = normalizeQtDateKey(qtDate);
+    if (!stack || !q) return null;
+    return stack.querySelector(`.qt-panel-instance[data-qt-date="${q}"]`);
+}
+
+function getQtPanelDatesOrdered() {
+    const today = normalizeQtDateKey(getTodayQtDateForApi());
+    const dateSet = new Set();
+    if (today) dateSet.add(today);
+
+    // 묵상 또는 마침기도가 저장된 날짜는 일기처럼 보존
+    for (const [date, log] of Object.entries(qtLogsByDate)) {
+        const hasContent =
+            (log.apply_text && String(log.apply_text).trim()) ||
+            (log.closing_prayer_text && String(log.closing_prayer_text).trim());
+        if (hasContent) {
+            const nk = normalizeQtDateKey(date);
+            if (nk) dateSet.add(nk);
+        }
+    }
+
+    // 최신순 정렬
+    return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
+}
+
+function mergeQtLogRowIntoCache(row) {
+    if (!row || row.qt_date == null) return;
+    const nk = normalizeQtDateKey(row.qt_date);
+    if (!nk) return;
+    qtLogsByDate[nk] = { ...row, qt_date: nk };
+}
+
+function purgeQtLogFromClientCache(logId, qtDateRaw) {
+    const qd = normalizeQtDateKey(qtDateRaw);
+    const drop = new Set();
+    Object.keys(qtLogsByDate).forEach((k) => {
+        const r = qtLogsByDate[k];
+        const nk = normalizeQtDateKey(k);
+        if (r && Number(r.id) === Number(logId)) drop.add(k);
+        if (qd && nk === qd) drop.add(k);
+    });
+    drop.forEach((k) => delete qtLogsByDate[k]);
+}
+
+async function fetchQtLogsCache() {
+    qtLogsByDate = {};
+    if (!currentUserId) return;
+    try {
+        const { data } = await axios.get(`/api/qt/logs?user_id=${encodeURIComponent(String(currentUserId))}`, {
+            params: { _: Date.now() },
+            headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' }
+        });
+        const logs = data.logs || [];
+        for (let i = 0; i < logs.length; i++) mergeQtLogRowIntoCache(logs[i]);
+    } catch (e) {
+        console.warn('QT logs fetch failed', e);
+    }
+}
+
+function ensureQtPanelsClickDelegate() {
+    const wrap = document.getElementById('qtPanelsWrap');
+    if (!wrap || wrap.dataset.qtDeleg === '1') return;
+    wrap.dataset.qtDeleg = '1';
+    wrap.addEventListener('click', onQtPanelsWrapClick);
+}
+
+function onQtPanelsWrapClick(e) {
+    const t = e.target.closest('[data-qt-act]');
+    if (!t) return;
+    const panel = t.closest('.qt-panel-instance');
+    if (!panel) return;
+    const d = panelQtDate(panel);
+    if (d) window.__activeQtDate = d;
+    const act = t.dataset.qtAct;
+    if (act === 'toggle-section') {
+        void showQtSectionForPanel(panel, t.getAttribute('data-section'));
+        return;
+    }
+    if (act === 'send-apply') {
+        void sendQtApplyPostForPanel(panel);
+        return;
+    }
+    if (act === 'send-prayer') {
+        void sendQtPrayerPostForPanel(panel);
+        return;
+    }
+    if (act === 'edit-apply') {
+        editQtApplyForPanel(panel);
+        return;
+    }
+    if (act === 'edit-prayer') {
+        editQtPrayerForPanel(panel);
+        return;
+    }
+    if (act === 'delete-log') {
+        void deleteQtLogForPanel(panel);
+        return;
+    }
+    if (act === 'alarm') {
+        showQtAlarmModal();
+        return;
+    }
+    if (act === 'invite') {
+        showQtInviteModal();
+        return;
+    }
+    if (act === 'worship-play') {
+        toggleQtWorshipPlay();
+        return;
+    }
+    if (act === 'worship-mute') {
+        toggleQtWorshipMute();
+        return;
+    }
+}
+
+async function toggleQtPanel() {
+    const qtPanelsWrap = document.getElementById('qtPanelsWrap');
+    if (!qtPanelsWrap) return;
+    ensureQtPanelsClickDelegate();
+    const mainFeedPart1 = document.getElementById('mainFeedPart1');
+    const newPostCard = document.getElementById('newPostCard');
+    const postsFeedWrapper = document.getElementById('postsFeedWrapper');
+
+    if (qtPanelsWrap.classList.contains('hidden')) {
+        await fetchQtLogsCache();
+        await renderQtPanels();
+        qtPanelsWrap.classList.remove('hidden');
         hideAllQtSections();
-        setQtButtonActive('prayer', false);
-        setQtButtonActive('read', false);
-        setQtButtonActive('apply', false);
-        setQtButtonActive('prayer2', false);
+        resetAllQtSectionButtonStyles();
         setQtHeaderButtonActive(true);
+
+        if (mainFeedPart1) mainFeedPart1.classList.add('hidden');
+        if (newPostCard) newPostCard.classList.add('hidden');
+        if (postsFeedWrapper) postsFeedWrapper.classList.add('hidden');
     } else {
-        qtPanel.classList.add('hidden');
+        qtPanelsWrap.classList.add('hidden');
         hideAllQtSections();
-        setQtButtonActive('prayer', false);
-        setQtButtonActive('read', false);
-        setQtButtonActive('apply', false);
-        setQtButtonActive('prayer2', false);
+        resetAllQtSectionButtonStyles();
         setQtHeaderButtonActive(false);
 
-        // Return center column to normal posting view (without touching right sidebar state)
-        const newPostCard = document.getElementById('newPostCard');
-        const postsFeedWrapper = document.getElementById('postsFeedWrapper');
+        if (mainFeedPart1) mainFeedPart1.classList.remove('hidden');
         if (newPostCard) newPostCard.classList.remove('hidden');
         if (postsFeedWrapper) postsFeedWrapper.classList.remove('hidden');
     }
@@ -3296,24 +3673,96 @@ function setQtHeaderButtonActive(active) {
     }
 }
 
-function getQtStorageKey(suffix) {
+function getQtStorageKey(suffix, qtDate) {
     const uid = currentUserId || 'guest';
-    return `qt_${uid}_${suffix}`;
-}
-
-function setQtDateNow() {
-    const qtDate = document.getElementById('qtDate');
-    if (!qtDate) return;
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    qtDate.textContent = `${y}-${m}-${d}`;
+    const d = qtDate || getTodayQtDateForApi();
+    return `qt_${uid}_${d}_${suffix}`;
 }
 
 const qtBibleCache = {};
+const QT_SIM_DAY_OFFSET_KEY = 'qt_sim_day_offset';
+
+function getQtSimDayOffset() {
+    if (!QT_DAY_SIM_UI_ENABLED) return 0;
+    const n = parseInt(localStorage.getItem(QT_SIM_DAY_OFFSET_KEY) || '0', 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function setQtSimDayOffset(n) {
+    localStorage.setItem(QT_SIM_DAY_OFFSET_KEY, String(Math.max(0, Math.floor(Number(n) || 0))));
+}
+
+function clearQtBibleCacheAll() {
+    Object.keys(qtBibleCache).forEach((k) => delete qtBibleCache[k]);
+}
+
+function syncQtSimButtonTitles() {
+    const pc = document.getElementById('qtDaySimBtn');
+    const mob = document.getElementById('qtDaySimBtnMobile');
+    if (!QT_DAY_SIM_UI_ENABLED) {
+        if (pc) pc.classList.add('hidden');
+        if (mob) mob.classList.add('hidden');
+        return;
+    }
+    if (pc) pc.classList.remove('hidden');
+    if (mob) mob.classList.remove('hidden');
+    const off = getQtSimDayOffset();
+    const title =
+        off > 0
+            ? `날짜 시뮬: 실제보다 ${off}일 진행 중. 클릭하면 하루 더 진행 · Shift+클릭하면 초기화`
+            : '클릭: 하루 진행(페이크) · Shift+클릭: 초기화 (Duranno 대신 랜덤 WEB 본문)';
+    const apply = (btn) => {
+        if (!btn) return;
+        btn.title = title;
+        const badge = btn.querySelector('[data-qt-sim-badge]');
+        if (badge) {
+            if (off > 0) {
+                badge.textContent = `+${off}`;
+                badge.classList.remove('hidden');
+            } else {
+                badge.textContent = '';
+                badge.classList.add('hidden');
+            }
+        }
+        btn.classList.toggle('ring-2', off > 0);
+        btn.classList.toggle('ring-violet-400', off > 0);
+    };
+    apply(pc);
+    apply(mob);
+}
+
+async function advanceQtDaySimulation(ev) {
+    if (!QT_DAY_SIM_UI_ENABLED) return;
+    if (!currentUserId) {
+        showToast('로그인 후 사용할 수 있어요.', 'error');
+        return;
+    }
+    const shift = ev && ev.shiftKey;
+    if (shift) {
+        setQtSimDayOffset(0);
+        clearQtBibleCacheAll();
+        showToast('날짜 시뮬을 초기화했어요.', 'success');
+    } else {
+        const next = getQtSimDayOffset() + 1;
+        setQtSimDayOffset(next);
+        clearQtBibleCacheAll();
+        showToast(`시뮬 하루 진행 (+${next}일) · 오늘: ${getTodayQtDateForApi()}`, 'success');
+    }
+    syncQtSimButtonTitles();
+    await fetchQtLogsCache();
+    const wrap = document.getElementById('qtPanelsWrap');
+    const open = wrap && !wrap.classList.contains('hidden');
+    if (open) await renderQtPanels();
+}
+
+window.advanceQtDaySimulation = advanceQtDaySimulation;
+
 function getTodayQtDateForApi() {
     const now = new Date();
+    const off = getQtSimDayOffset();
+    if (off > 0) {
+        now.setDate(now.getDate() + off);
+    }
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
@@ -3328,22 +3777,22 @@ function qtAutoGrow(el) {
     el.style.height = `${Math.max(44, next)}px`;
 }
 
-function setQtSubmittedView(kind, submittedText) {
+function setQtSubmittedViewForPanel(panel, kind, submittedText) {
     const isApply = kind === 'apply';
-    const composer = document.getElementById(isApply ? 'qtApplyComposer' : 'qtPrayerComposer');
-    const view = document.getElementById(isApply ? 'qtApplySavedView' : 'qtPrayerSavedView');
-    const textEl = document.getElementById(isApply ? 'qtApplySavedText' : 'qtPrayerSavedText');
+    const composer = qf(panel, isApply ? 'applyComposer' : 'prayerComposer');
+    const view = qf(panel, isApply ? 'applySavedView' : 'prayerSavedView');
+    const textEl = qf(panel, isApply ? 'applySavedText' : 'prayerSavedText');
     if (!composer || !view || !textEl) return;
     textEl.textContent = String(submittedText || '').trim();
     composer.classList.add('hidden');
     view.classList.remove('hidden');
 }
 
-function setQtComposeView(kind, initialText) {
+function setQtComposeViewForPanel(panel, kind, initialText) {
     const isApply = kind === 'apply';
-    const composer = document.getElementById(isApply ? 'qtApplyComposer' : 'qtPrayerComposer');
-    const view = document.getElementById(isApply ? 'qtApplySavedView' : 'qtPrayerSavedView');
-    const input = document.getElementById(isApply ? 'qtApplyInput' : 'qtPrayerInput');
+    const composer = qf(panel, isApply ? 'applyComposer' : 'prayerComposer');
+    const view = qf(panel, isApply ? 'applySavedView' : 'prayerSavedView');
+    const input = qf(panel, isApply ? 'applyInput' : 'prayerInput');
     if (!composer || !view || !input) return;
     composer.classList.remove('hidden');
     view.classList.add('hidden');
@@ -3351,39 +3800,8 @@ function setQtComposeView(kind, initialText) {
     qtAutoGrow(input);
 }
 
-let qtActiveSection = null;
-function setQtButtonsActive(sectionKeyOrNull) {
-    const btns = [
-        { key: 'prayer', id: 'qtPrayerBtn' },
-        { key: 'read', id: 'qtReadBtn' },
-        { key: 'apply', id: 'qtApplyBtn' },
-        { key: 'prayer2', id: 'qtPrayer2Btn' }
-    ];
-
-    for (let i = 0; i < btns.length; i++) {
-        const b = document.getElementById(btns[i].id);
-        if (!b) continue;
-        const active = sectionKeyOrNull === btns[i].key;
-
-        b.classList.toggle('bg-red-100', active);
-        b.classList.toggle('text-red-800', active);
-        b.classList.toggle('border-red-300', active);
-
-        b.classList.toggle('bg-gray-100', !active);
-        b.classList.toggle('text-gray-700', !active);
-        b.classList.toggle('border-gray-300', !active);
-    }
-}
-
-function setQtButtonActive(sectionKey, active) {
-    const map = {
-        prayer: 'qtPrayerBtn',
-        read: 'qtReadBtn',
-        apply: 'qtApplyBtn',
-        prayer2: 'qtPrayer2Btn'
-    };
-    const id = map[sectionKey];
-    const b = id ? document.getElementById(id) : null;
+function setQtSectionBtnActive(panel, sectionKey, active) {
+    const b = panel.querySelector(`[data-qt-sec-btn="${sectionKey}"]`);
     if (!b) return;
     b.classList.toggle('bg-red-100', active);
     b.classList.toggle('text-red-800', active);
@@ -3393,197 +3811,459 @@ function setQtButtonActive(sectionKey, active) {
     b.classList.toggle('border-gray-300', !active);
 }
 
+function resetAllQtSectionButtonStyles() {
+    document.querySelectorAll('.qt-panel-instance').forEach((panel) => {
+        ['prayer', 'read', 'apply', 'prayer2'].forEach((k) => setQtSectionBtnActive(panel, k, false));
+    });
+}
+
+/** @deprecated 단일 패널 호환 — 헤더 버튼만 끌 때 사용 */
+function setQtButtonActive(sectionKey, active) {
+    document.querySelectorAll('.qt-panel-instance').forEach((panel) => setQtSectionBtnActive(panel, sectionKey, active));
+}
+
 function hideAllQtSections() {
-    const sections = document.querySelectorAll('#qtPanel .qt-section');
-    for (let i = 0; i < sections.length; i++) sections[i].classList.add('hidden');
+    document.querySelectorAll('.qt-panel-instance .qt-section').forEach((el) => el.classList.add('hidden'));
 }
 
 async function loadQtBibleForDate(qtDate) {
-    if (qtBibleCache[qtDate]) return qtBibleCache[qtDate];
-    const res = await fetch(`/api/qt/bible?qtDate=${encodeURIComponent(qtDate)}`);
+    const sim = getQtSimDayOffset() > 0;
+    const cacheKey = sim ? `${qtDate}\0sim` : qtDate;
+    if (qtBibleCache[cacheKey]) return qtBibleCache[cacheKey];
+    const simQ = sim ? '&sim=1' : '';
+    const res = await fetch(`/api/qt/bible?qtDate=${encodeURIComponent(qtDate)}${simQ}`);
     if (!res.ok) throw new Error('QT 성경을 불러오지 못했습니다.');
     const data = await res.json();
-    qtBibleCache[qtDate] = data;
+    qtBibleCache[cacheKey] = data;
     return data;
 }
 
 function toQtPassageShortRef(passageRef) {
     const s = String(passageRef || '').replace(/\s+/g, ' ').trim();
-    // Examples seen: "마태복음 26 : 14~25"
-    const m = s.match(/^(.+?)\s+(\d+)\s*:\s*(\d+)/);
+    const m = s.match(/^(.+?)\s+(\d+)\s*:\s*(\d+)(~\d+)?/);
     if (!m) return s || '';
     const book = m[1].trim();
     const chap = m[2];
-    const verse = m[3];
-    return `${book} ${chap}장 ${verse}절`;
+    const v1 = m[3];
+    const tildeRange = m[4];
+    if (tildeRange) {
+        const end = tildeRange.replace(/^~/, '');
+        return `${book} ${chap}장 ${v1}~${end}절`;
+    }
+    return `${book} ${chap}장 ${v1}절`;
 }
 
-async function showQtSection(sectionKey) {
-    const qtPanel = document.getElementById('qtPanel');
-    if (qtPanel) qtPanel.classList.remove('hidden');
+function applyQtPassageHeaderFromData(data, panel) {
+    const passageRef = (data.passageRef || '').trim();
+    const fallbackRef = (data.reference || '').trim();
+    const refForHeader = (passageRef || fallbackRef).trim();
+    const rawEl = qf(panel, 'verseRefRaw');
+    if (rawEl) rawEl.textContent = refForHeader;
+
+    const shortEl = qf(panel, 'passageShort');
+    const short = toQtPassageShortRef(passageRef || refForHeader);
+    if (shortEl) shortEl.textContent = short && short.length ? short : '-';
+
+    const qtVerseRef = qf(panel, 'verseRef');
+    if (qtVerseRef) {
+        const line = '──────────';
+        const m = refForHeader.match(/^(.+?)\s+\d+\s*:\s*/);
+        const bookOnly = m ? m[1].trim() : '';
+        const rest =
+            bookOnly && short.startsWith(bookOnly) ? short.slice(bookOnly.length).trim() : '';
+        if (bookOnly && rest) {
+            qtVerseRef.textContent = `${bookOnly}\n${line}\n${rest}`;
+        } else if (refForHeader) {
+            qtVerseRef.textContent = refForHeader;
+        } else {
+            qtVerseRef.textContent = '';
+        }
+    }
+}
+
+function setQtPassageHeaderLoading(panel) {
+    const shortEl = qf(panel, 'passageShort');
+    const qtVerseRef = qf(panel, 'verseRef');
+    const rawEl = qf(panel, 'verseRefRaw');
+    if (rawEl) rawEl.textContent = '';
+    if (shortEl) shortEl.textContent = '불러오는 중';
+    const line = '──────────';
+    if (qtVerseRef) qtVerseRef.textContent = `오늘의 본문\n${line}\n확인 중…`;
+}
+
+async function refreshQtPanelHeaderForDate(panel, qtDate) {
+    setQtPassageHeaderLoading(panel);
+    try {
+        const data = await loadQtBibleForDate(qtDate);
+        applyQtPassageHeaderFromData(data, panel);
+    } catch (e) {
+        const shortEl = qf(panel, 'passageShort');
+        const qtVerseRef = qf(panel, 'verseRef');
+        const rawEl = qf(panel, 'verseRefRaw');
+        if (rawEl) rawEl.textContent = '';
+        if (shortEl) shortEl.textContent = '-';
+        const line = '──────────';
+        if (qtVerseRef) qtVerseRef.textContent = `본문 정보\n${line}\n불러오지 못했습니다`;
+    }
+}
+
+function getQtVerseReferenceForPanel(panel) {
+    const raw = qf(panel, 'verseRefRaw');
+    const v = raw && raw.textContent ? String(raw.textContent).trim() : '';
+    return v || null;
+}
+
+function canDeleteQtLogRow(row) {
+    if (!row || !currentUserId) return false;
+    const uid = Number(row.user_id);
+    const role = currentUser && currentUser.role;
+    return uid === Number(currentUserId) || role === 'admin' || role === 'moderator';
+}
+
+async function renderQtPanels() {
+    const stack = document.getElementById('qtPanelsStack');
+    const tpl = document.getElementById('qtPanelTemplate');
+    if (!stack || !tpl || !tpl.content || !tpl.content.firstElementChild) return;
+    stack.innerHTML = '';
+    const dates = getQtPanelDatesOrdered();
+    for (let i = 0; i < dates.length; i++) {
+        const qtDate = dates[i];
+        const node = tpl.content.firstElementChild.cloneNode(true);
+        node.dataset.qtDate = qtDate;
+        const row = qtLogsByDate[qtDate];
+        if (row && row.id) node.dataset.qtLogId = String(row.id);
+        else node.dataset.qtLogId = '';
+
+        const dl = qf(node, 'dateLabel');
+        if (dl) dl.textContent = qtDate;
+
+        const wwrap = qf(node, 'worshipWrap');
+        if (wwrap) wwrap.classList.add('hidden');
+
+        const delBtn = qf(node, 'deleteLogBtn');
+        if (delBtn) {
+            if (row && row.id && canDeleteQtLogRow(row)) delBtn.classList.remove('hidden');
+            else delBtn.classList.add('hidden');
+        }
+
+        stack.appendChild(node);
+        await refreshQtPanelHeaderForDate(node, qtDate);
+        hydrateQtPanelSavedState(node, qtDate);
+    }
+
+    const score =
+        typeof lastKnownCombinedScore === 'number' && !Number.isNaN(lastKnownCombinedScore)
+            ? lastKnownCombinedScore
+            : 0;
+    syncQtRewardSidebars(score);
+}
+
+function hydrateQtPanelSavedState(panel, qtDate) {
+    const row = qtLogsByDate[qtDate];
+    const applySrv = row && row.apply_text ? String(row.apply_text).trim() : '';
+    const closeSrv = row && row.closing_prayer_text ? String(row.closing_prayer_text).trim() : '';
+
+    const applyLocSub = localStorage.getItem(getQtStorageKey('apply_submitted', qtDate)) || '';
+    const prayLocSub = localStorage.getItem(getQtStorageKey('prayer_submitted', qtDate)) || '';
+    const applyDraft = localStorage.getItem(getQtStorageKey('apply', qtDate)) || '';
+    const prayDraft = localStorage.getItem(getQtStorageKey('prayer', qtDate)) || '';
+
+    const applyText = applySrv || applyLocSub;
+    if (applyText) setQtSubmittedViewForPanel(panel, 'apply', applyText);
+    else setQtComposeViewForPanel(panel, 'apply', applyDraft);
+
+    const prayText = closeSrv || prayLocSub;
+    if (prayText) setQtSubmittedViewForPanel(panel, 'prayer', prayText);
+    else setQtComposeViewForPanel(panel, 'prayer', prayDraft);
+}
+
+async function showQtSectionForPanel(panel, sectionKey) {
+    const qtPanelsWrap = document.getElementById('qtPanelsWrap');
+    if (qtPanelsWrap) qtPanelsWrap.classList.remove('hidden');
     setQtHeaderButtonActive(true);
 
-    const map = {
-        prayer: 'qtPrayerSection',
-        read: 'qtReadSection',
-        apply: 'qtApplySection',
-        prayer2: 'qtPrayer2Section'
-    };
-
-    const targetId = map[sectionKey];
-    const target = targetId ? document.getElementById(targetId) : null;
+    const target = panel.querySelector(`[data-qt-section="${sectionKey}"]`);
     if (!target) return;
     const willOpen = target.classList.contains('hidden');
     target.classList.toggle('hidden', !willOpen);
-    setQtButtonActive(sectionKey, willOpen);
+    setQtSectionBtnActive(panel, sectionKey, willOpen);
     if (!willOpen) return;
 
-    setQtDateNow();
-    const qtVerseRef = document.getElementById('qtVerseRef');
-    const qtScriptureText = document.getElementById('qtScriptureText');
+    window.__activeQtDate = panelQtDate(panel);
 
-    // "읽기와 묵상" 버튼에서만 오늘 QT 본문을 펼칩니다.
+    const qtDate = panelQtDate(panel);
+    const scriptureEl = qf(panel, 'scriptureText');
+
     if (sectionKey === 'read') {
-        if (qtScriptureText) qtScriptureText.textContent = '오늘의 QT 본문을 불러오는 중...';
-        const qtDate = getTodayQtDateForApi();
+        if (scriptureEl) scriptureEl.textContent = '오늘의 QT 본문을 불러오는 중...';
         try {
             const data = await loadQtBibleForDate(qtDate);
-            const passageRef = (data.passageRef || '').trim();
-            const fallbackRef = (data.reference || '').trim();
-            const refForHeader = (passageRef || fallbackRef).trim();
-
-            // 스크린샷처럼 상단 붉은 레퍼런스 라인을 채움
-            if (qtVerseRef) qtVerseRef.textContent = refForHeader;
-
-            // "마태복음 26장 14절" 형식 배지
-            const shortEl = document.getElementById('qtPassageShortRef');
-            if (shortEl) shortEl.textContent = toQtPassageShortRef(passageRef || refForHeader);
-            if (qtScriptureText) qtScriptureText.textContent = (data.scripture || '').trim();
+            applyQtPassageHeaderFromData(data, panel);
+            if (scriptureEl) scriptureEl.textContent = (data.scripture || '').trim();
         } catch (e) {
-            if (qtScriptureText) qtScriptureText.textContent = '오늘의 QT 본문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+            if (scriptureEl) scriptureEl.textContent = '오늘의 QT 본문을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
             showToast('QT 본문 로딩 실패', 'error');
         }
         return;
     }
 
-    // Apply & prayer: prefill from local draft
     if (sectionKey === 'apply') {
-        const input = document.getElementById('qtApplyInput');
-        const submitted = localStorage.getItem(getQtStorageKey('apply_submitted')) || '';
-        if (submitted) setQtSubmittedView('apply', submitted);
-        else if (input) {
-            const saved = localStorage.getItem(getQtStorageKey('apply')) || '';
-            setQtComposeView('apply', saved);
+        const row = qtLogsByDate[qtDate];
+        const srv = row && row.apply_text ? String(row.apply_text).trim() : '';
+        const submitted = srv || localStorage.getItem(getQtStorageKey('apply_submitted', qtDate)) || '';
+        if (submitted) setQtSubmittedViewForPanel(panel, 'apply', submitted);
+        else {
+            const saved = localStorage.getItem(getQtStorageKey('apply', qtDate)) || '';
+            setQtComposeViewForPanel(panel, 'apply', saved);
         }
     }
 
     if (sectionKey === 'prayer2' || sectionKey === 'prayer') {
-        const input = document.getElementById('qtPrayerInput');
-        const submitted = localStorage.getItem(getQtStorageKey('prayer_submitted')) || '';
-        if (submitted) setQtSubmittedView('prayer', submitted);
-        else if (input) {
-            const saved = localStorage.getItem(getQtStorageKey('prayer')) || '';
-            setQtComposeView('prayer', saved);
+        const row = qtLogsByDate[qtDate];
+        const srv = row && row.closing_prayer_text ? String(row.closing_prayer_text).trim() : '';
+        const submitted = srv || localStorage.getItem(getQtStorageKey('prayer_submitted', qtDate)) || '';
+        if (submitted) setQtSubmittedViewForPanel(panel, 'prayer', submitted);
+        else {
+            const saved = localStorage.getItem(getQtStorageKey('prayer', qtDate)) || '';
+            setQtComposeViewForPanel(panel, 'prayer', saved);
         }
     }
 }
 
-async function sendQtApplyPost() {
+async function showQtSection(sectionKey) {
+    const d = normalizeQtDateKey(window.__activeQtDate || getTodayQtDateForApi());
+    const panel = getQtPanelByDate(d);
+    if (panel) await showQtSectionForPanel(panel, sectionKey);
+}
+
+async function sendQtApplyPostForPanel(panel) {
     if (!currentUserId) {
         showToast('로그인이 필요합니다.', 'error');
         showLoginModal();
         return;
     }
-    const input = document.getElementById('qtApplyInput');
+    const qtDate = panelQtDate(panel);
+    const input = qf(panel, 'applyInput');
     const content = (input && input.value ? String(input.value) : '').trim();
     if (!content) {
         showToast('적용 내용을 입력해주세요.', 'error');
         return;
     }
 
-    const verseRef = ((document.getElementById('qtVerseRef') || {}).textContent || '').trim() || null;
+    const verseRef = getQtVerseReferenceForPanel(panel);
+    const row = qtLogsByDate[qtDate] || {};
+    let applyPostId = row.apply_post_id ? Number(row.apply_post_id) : null;
+
     try {
-        await axios.post('/api/posts', {
+        if (applyPostId) {
+            await axios.put(`/api/posts/${applyPostId}`, {
+                content,
+                verse_reference: verseRef,
+                background_color: '#FFFFFF'
+            });
+        } else {
+            const pr = await axios.post('/api/posts', {
+                user_id: currentUserId,
+                content,
+                verse_reference: verseRef,
+                shared_post_id: null,
+                is_prayer_request: 0,
+                background_color: '#FFFFFF'
+            });
+            applyPostId = pr.data && pr.data.id ? Number(pr.data.id) : null;
+        }
+
+        const payload = {
             user_id: currentUserId,
-            content,
-            verse_reference: verseRef,
-            shared_post_id: null,
-            is_prayer_request: 0,
-            background_color: '#FFFFFF'
-        });
-        localStorage.setItem(getQtStorageKey('apply'), '');
-        localStorage.setItem(getQtStorageKey('apply_submitted'), content);
-        setQtSubmittedView('apply', content);
-        showToast('QT 적용 내용을 포스팅했어요.', 'success');
+            qt_date: qtDate,
+            apply_text: content,
+            verse_reference_raw: verseRef || (row.verse_reference_raw ? String(row.verse_reference_raw) : ''),
+            apply_post_id: applyPostId
+        };
+        if (row.closing_prayer_text) payload.closing_prayer_text = row.closing_prayer_text;
+        if (row.closing_post_id) payload.closing_post_id = row.closing_post_id;
+
+        const up = await axios.post('/api/qt/logs/upsert', payload);
+        if (up.data && up.data.log) mergeQtLogRowIntoCache(up.data.log);
+
+        localStorage.setItem(getQtStorageKey('apply', qtDate), '');
+        localStorage.setItem(getQtStorageKey('apply_submitted', qtDate), content);
+        setQtSubmittedViewForPanel(panel, 'apply', content);
+
+        const delBtn = qf(panel, 'deleteLogBtn');
+        if (delBtn && up.data && up.data.log && up.data.log.id && canDeleteQtLogRow(up.data.log)) {
+            delBtn.classList.remove('hidden');
+            panel.dataset.qtLogId = String(up.data.log.id);
+        }
+
+        showToast('QT 적용이 저장·포스팅되었어요.', 'success');
         loadPosts();
     } catch (e) {
         console.error(e);
-        showToast('포스팅에 실패했습니다.', 'error');
+        showToast('저장에 실패했습니다.', 'error');
     }
 }
 
-async function sendQtPrayerPost() {
+async function sendQtPrayerPostForPanel(panel) {
     if (!currentUserId) {
         showToast('로그인이 필요합니다.', 'error');
         showLoginModal();
         return;
     }
-    const input = document.getElementById('qtPrayerInput');
+    const qtDate = panelQtDate(panel);
+    const input = qf(panel, 'prayerInput');
     const content = (input && input.value ? String(input.value) : '').trim();
     if (!content) {
         showToast('기도 제목을 입력해주세요.', 'error');
         return;
     }
 
-    const verseRef = ((document.getElementById('qtVerseRef') || {}).textContent || '').trim() || null;
+    const verseRef = getQtVerseReferenceForPanel(panel);
+    const row = qtLogsByDate[qtDate] || {};
+    let closingPostId = row.closing_post_id ? Number(row.closing_post_id) : null;
+
     try {
-        await axios.post('/api/posts', {
+        if (closingPostId) {
+            await axios.put(`/api/posts/${closingPostId}`, {
+                content,
+                verse_reference: verseRef,
+                background_color: '#FFFFFF'
+            });
+        } else {
+            const pr = await axios.post('/api/posts', {
+                user_id: currentUserId,
+                content,
+                verse_reference: verseRef,
+                shared_post_id: null,
+                is_prayer_request: 0,
+                background_color: '#FFFFFF'
+            });
+            closingPostId = pr.data && pr.data.id ? Number(pr.data.id) : null;
+        }
+
+        const payload = {
             user_id: currentUserId,
-            content,
-            verse_reference: verseRef,
-            shared_post_id: null,
-            is_prayer_request: 0,
-            background_color: '#FFFFFF'
-        });
-        localStorage.setItem(getQtStorageKey('prayer'), '');
-        localStorage.setItem(getQtStorageKey('prayer_submitted'), content);
-        setQtSubmittedView('prayer', content);
-        showToast('QT 마침기도 내용을 포스팅했어요.', 'success');
+            qt_date: qtDate,
+            closing_prayer_text: content,
+            verse_reference_raw: verseRef || row.verse_reference_raw || '',
+            closing_post_id: closingPostId
+        };
+        if (row.apply_text) payload.apply_text = row.apply_text;
+        if (row.apply_post_id) payload.apply_post_id = row.apply_post_id;
+
+        const up = await axios.post('/api/qt/logs/upsert', payload);
+        if (up.data && up.data.log) mergeQtLogRowIntoCache(up.data.log);
+
+        localStorage.setItem(getQtStorageKey('prayer', qtDate), '');
+        localStorage.setItem(getQtStorageKey('prayer_submitted', qtDate), content);
+        setQtSubmittedViewForPanel(panel, 'prayer', content);
+
+        const delBtn = qf(panel, 'deleteLogBtn');
+        if (delBtn && up.data && up.data.log && up.data.log.id && canDeleteQtLogRow(up.data.log)) {
+            delBtn.classList.remove('hidden');
+            panel.dataset.qtLogId = String(up.data.log.id);
+        }
+
+        showToast('QT 마침기도가 저장·포스팅되었어요.', 'success');
         loadPosts();
     } catch (e) {
         console.error(e);
-        showToast('포스팅에 실패했습니다.', 'error');
+        showToast('저장에 실패했습니다.', 'error');
     }
 }
 
+async function sendQtApplyPost() {
+    const d = normalizeQtDateKey(window.__activeQtDate || getTodayQtDateForApi());
+    const panel = getQtPanelByDate(d);
+    if (panel) await sendQtApplyPostForPanel(panel);
+}
+
+async function sendQtPrayerPost() {
+    const d = normalizeQtDateKey(window.__activeQtDate || getTodayQtDateForApi());
+    const panel = getQtPanelByDate(d);
+    if (panel) await sendQtPrayerPostForPanel(panel);
+}
+
+function editQtApplyForPanel(panel) {
+    const qtDate = panelQtDate(panel);
+    const row = qtLogsByDate[qtDate] || {};
+    const submitted =
+        (row.apply_text ? String(row.apply_text) : '') ||
+        localStorage.getItem(getQtStorageKey('apply_submitted', qtDate)) ||
+        '';
+    localStorage.removeItem(getQtStorageKey('apply_submitted', qtDate));
+    setQtComposeViewForPanel(panel, 'apply', submitted);
+}
+
+function editQtPrayerForPanel(panel) {
+    const qtDate = panelQtDate(panel);
+    const row = qtLogsByDate[qtDate] || {};
+    const submitted =
+        (row.closing_prayer_text ? String(row.closing_prayer_text) : '') ||
+        localStorage.getItem(getQtStorageKey('prayer_submitted', qtDate)) ||
+        '';
+    localStorage.removeItem(getQtStorageKey('prayer_submitted', qtDate));
+    setQtComposeViewForPanel(panel, 'prayer', submitted);
+}
+
 function editQtApply() {
-    const submitted = localStorage.getItem(getQtStorageKey('apply_submitted')) || '';
-    localStorage.removeItem(getQtStorageKey('apply_submitted'));
-    setQtComposeView('apply', submitted);
+    const d = normalizeQtDateKey(window.__activeQtDate || getTodayQtDateForApi());
+    const panel = getQtPanelByDate(d);
+    if (panel) editQtApplyForPanel(panel);
 }
 
 function editQtPrayer() {
-    const submitted = localStorage.getItem(getQtStorageKey('prayer_submitted')) || '';
-    localStorage.removeItem(getQtStorageKey('prayer_submitted'));
-    setQtComposeView('prayer', submitted);
+    const d = normalizeQtDateKey(window.__activeQtDate || getTodayQtDateForApi());
+    const panel = getQtPanelByDate(d);
+    if (panel) editQtPrayerForPanel(panel);
+}
+
+async function deleteQtLogForPanel(panel) {
+    const id = String(panel.dataset.qtLogId || '').trim();
+    const qtDate = panelQtDate(panel);
+    if (!id || !currentUserId || !qtDate) return;
+    if (!confirm('저장된 QT 로그를 삭제할까요? (다이어리에서 제거됩니다)')) return;
+    try {
+        await axios.post('/api/qt/logs/remove', {
+            id: Number(id),
+            actor_user_id: currentUserId
+        });
+        purgeQtLogFromClientCache(id, qtDate);
+        localStorage.removeItem(getQtStorageKey('apply', qtDate));
+        localStorage.removeItem(getQtStorageKey('apply_submitted', qtDate));
+        localStorage.removeItem(getQtStorageKey('prayer', qtDate));
+        localStorage.removeItem(getQtStorageKey('prayer_submitted', qtDate));
+        await fetchQtLogsCache();
+        showToast('QT 로그를 삭제했습니다.', 'success');
+        await renderQtPanels();
+    } catch (e) {
+        console.error(e);
+        showToast('삭제에 실패했습니다.', 'error');
+    }
 }
 
 let qtWorshipState = { open: false, muted: false, volume: 80, playing: false };
 
+function getTodayQtWorshipPanel() {
+    return getQtPanelByDate(getTodayQtDateForApi());
+}
+
 function toggleQtWorship() {
-    const player = document.getElementById('qtWorshipPlayer');
-    if (!player) {
+    const panel = getTodayQtWorshipPanel();
+    const wrap = panel && qf(panel, 'worshipWrap');
+    if (!wrap) {
         showToast('QT 찬양 플레이어 준비 중입니다.', 'info');
         return;
     }
-    const willOpen = player.classList.contains('hidden');
-    player.classList.toggle('hidden', !willOpen);
+    const willOpen = wrap.classList.contains('hidden');
+    wrap.classList.toggle('hidden', !willOpen);
     qtWorshipState.open = willOpen;
     showToast(willOpen ? '찬양 플레이어를 열었습니다.' : '찬양 플레이어를 닫았습니다.', 'success');
 }
 
 function toggleQtWorshipPlay() {
-    const icon = document.getElementById('qtWorshipPlayIcon');
+    const panel = getTodayQtWorshipPanel();
+    const icon = panel && qf(panel, 'worshipPlayIcon');
     if (!icon) return;
 
     qtWorshipState.playing = !qtWorshipState.playing;
@@ -3591,13 +4271,13 @@ function toggleQtWorshipPlay() {
     icon.classList.toggle('fa-play', !qtWorshipState.playing);
     icon.classList.toggle('fa-pause', qtWorshipState.playing);
 
-    // Currently: UI-only (no actual media) - avoids silent clicks.
     showToast(qtWorshipState.playing ? '찬양 재생(미리보기) 시작' : '찬양 재생(미리보기) 중지', 'info');
 }
 
 function toggleQtWorshipMute() {
     qtWorshipState.muted = !qtWorshipState.muted;
-    const muteIcon = document.getElementById('qtWorshipMuteIcon');
+    const panel = getTodayQtWorshipPanel();
+    const muteIcon = panel && qf(panel, 'worshipMuteIcon');
     if (muteIcon) {
         muteIcon.classList.toggle('fa-volume-up', !qtWorshipState.muted);
         muteIcon.classList.toggle('fa-volume-mute', qtWorshipState.muted);
@@ -3608,16 +4288,22 @@ function toggleQtWorshipMute() {
 function setQtWorshipVolume(vol) {
     const v = Math.max(0, Math.min(100, Number(vol)));
     qtWorshipState.volume = v;
-
-    const label = document.getElementById('qtWorshipVolumeLabel');
+    const panel = getTodayQtWorshipPanel();
+    const label = panel && qf(panel, 'worshipVolumeLabel');
     if (label) label.textContent = `${v}%`;
-
-    const muteIcon = document.getElementById('qtWorshipMuteIcon');
+    const muteIcon = panel && qf(panel, 'worshipMuteIcon');
     if (muteIcon) {
         const shouldMute = v === 0;
         muteIcon.classList.toggle('fa-volume-up', !shouldMute);
         muteIcon.classList.toggle('fa-volume-mute', shouldMute);
     }
+}
+
+function setQtWorshipVolumeFromPanel(el) {
+    if (!el) return;
+    const panel = el.closest('.qt-panel-instance');
+    if (!panel || panelQtDate(panel) !== normalizeQtDateKey(getTodayQtDateForApi())) return;
+    setQtWorshipVolume(el.value);
 }
 
 function showQtAlarmModal() {
@@ -3631,26 +4317,30 @@ function showQtInviteModal() {
 }
 
 function saveQtApply() {
-    const input = document.getElementById('qtApplyInput');
+    const d = normalizeQtDateKey(window.__activeQtDate || getTodayQtDateForApi());
+    const panel = getQtPanelByDate(d);
+    const input = panel && qf(panel, 'applyInput');
     if (!input) return;
     const val = input.value.trim();
     if (!val) {
         showToast('적용 내용을 입력해주세요.', 'error');
         return;
     }
-    localStorage.setItem(getQtStorageKey('apply'), val);
+    localStorage.setItem(getQtStorageKey('apply', d), val);
     showToast('적용 내용을 저장했어요.', 'success');
 }
 
 function saveQtPrayer() {
-    const input = document.getElementById('qtPrayerInput');
+    const d = normalizeQtDateKey(window.__activeQtDate || getTodayQtDateForApi());
+    const panel = getQtPanelByDate(d);
+    const input = panel && qf(panel, 'prayerInput');
     if (!input) return;
     const val = input.value.trim();
     if (!val) {
         showToast('기도 제목을 입력해주세요.', 'error');
         return;
     }
-    localStorage.setItem(getQtStorageKey('prayer'), val);
+    localStorage.setItem(getQtStorageKey('prayer', d), val);
     showToast('마침기도 내용을 저장했어요.', 'success');
 }
 
@@ -3688,12 +4378,12 @@ async function handleLogin() {
             const user = response.data.user;
             console.log('로그인 성공:', user);
             
-            currentUserId = user.id;
+            currentUserId = user.id != null ? Number(user.id) : null;
             currentUser = user;
             resetLastKnownCombinedScore();
 
             // Save to localStorage
-            localStorage.setItem('currentUserId', user.id);
+            localStorage.setItem('currentUserId', String(user.id));
             localStorage.setItem('currentUserEmail', user.email);
             persistLoginCredentialsIfRequested(trimmedEmail, password);
 
@@ -3801,8 +4491,8 @@ function logout() {
     const newPostCard = document.getElementById('newPostCard');
     if (newPostCard) newPostCard.classList.remove('hidden');
 
-    const qtPanel = document.getElementById('qtPanel');
-    if (qtPanel) qtPanel.classList.add('hidden');
+    const qtPanelsWrap = document.getElementById('qtPanelsWrap');
+    if (qtPanelsWrap) qtPanelsWrap.classList.add('hidden');
 
     const postsFeed = document.getElementById('postsFeed');
     if (postsFeed) postsFeed.innerHTML = '';
@@ -3920,6 +4610,8 @@ function updateAuthUI() {
         if (adminPanelBtnMobile) {
             adminPanelBtnMobile.classList.toggle('hidden', !isAdmin);
         }
+
+        syncQtSimButtonTitles();
 
         // Save to localStorage for admin panel access
         localStorage.setItem('currentUserId', currentUserId);
@@ -4057,37 +4749,69 @@ async function createPost() {
         return;
     }
 
-    const content = document.getElementById('newPostContent').value;
-    const imageFile = document.getElementById('postImageFile').files[0];
-    const videoFile = document.getElementById('postVideoFile').files[0];
+    const contentEl = document.getElementById('newPostContent');
+    const imageInputEl = document.getElementById('postImageFile');
+    const videoInputEl = document.getElementById('postVideoFile');
+    if (!contentEl || !imageInputEl || !videoInputEl) {
+        showToast('포스팅 입력 요소를 찾지 못했습니다. 화면을 새로고침해 주세요.', 'error');
+        return;
+    }
+
+    const content = String(contentEl.value || '').trim();
+    const imageFiles = selectedPostImages.length > 0
+        ? selectedPostImages
+            .slice()
+            .sort((a, b) => a.seq - b.seq)
+            .map((item) => item.file)
+            .slice(0, 4)
+        : (imageInputEl.files[0] ? [imageInputEl.files[0]] : []);
+    const videoFile = videoInputEl.files[0];
+    const visibilityEl = document.getElementById('newPostVisibility');
+    const visibilityScope = visibilityEl && visibilityEl.value === 'friends' ? 'friends' : 'public';
     
     // Get shared post ID if exists
     const sharedPostPreview = document.getElementById('sharedPostPreview');
     const sharedPostId = sharedPostPreview.dataset.sharedPostId || null;
 
-    if (!content && !imageFile && !videoFile && !sharedPostId) {
+    if (!content && imageFiles.length === 0 && !videoFile && !sharedPostId) {
         alert('내용, 사진, 동영상 또는 공유할 포스팅을 입력해주세요.');
         return;
     }
 
     // Disable post button
     const postBtn = document.getElementById('createPostBtn');
-    const originalBtnText = postBtn.innerHTML;
-    postBtn.disabled = true;
-    postBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>업로드 중...';
-    postBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    const originalBtnText = postBtn ? postBtn.innerHTML : '';
+    if (postBtn) {
+        postBtn.disabled = true;
+        postBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>업로드 중...';
+        postBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
 
+    let response;
     try {
         // 1. Create post with shared_post_id and background_color
-        const response = await axios.post('/api/posts', {
+        response = await axios.post('/api/posts', {
             user_id: currentUserId,
             content: content || '',
             verse_reference: null,
             shared_post_id: sharedPostId,
             is_prayer_request: 0,
-            background_color: selectedBackgroundColor
+            background_color: selectedBackgroundColor,
+            visibility_scope: visibilityScope
         });
+    } catch (error) {
+        console.error('Error creating post (API):', error);
+        const message = error?.response?.data?.error || '게시물 작성에 실패했습니다.';
+        showToast(message, 'error');
+        if (postBtn) {
+            postBtn.disabled = false;
+            postBtn.innerHTML = originalBtnText;
+            postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        return;
+    }
 
+    try {
         const postId = response.data.id;
 
         // 백엔드에서 업데이트된 점수를 받아 동기화
@@ -4109,17 +4833,17 @@ async function createPost() {
             showToastWithColor('포스팅 작성! 활동 점수 +10점', selectedBackgroundColor);
         }
 
-        // 2. Upload image if selected
-        if (imageFile) {
-            const formData = new FormData();
-            formData.append('image', imageFile);
-            
-            try {
-                await axios.post('/api/posts/' + postId + '/image', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-            } catch (uploadError) {
-                console.error('Image upload error:', uploadError);
+        // 2. Upload images (최대 4장)
+        if (imageFiles.length > 0) {
+            for (let i = 0; i < imageFiles.length; i++) {
+                const formData = new FormData();
+                formData.append('image', imageFiles[i]);
+                formData.append('order', String(i));
+                try {
+                    await axios.post('/api/posts/' + postId + '/image', formData);
+                } catch (uploadError) {
+                    console.error('Image upload error:', uploadError);
+                }
             }
         }
 
@@ -4138,7 +4862,6 @@ async function createPost() {
             
             try {
                 await axios.post('/api/posts/' + postId + '/video', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
                     onUploadProgress: function(progressEvent) {
                         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                         progressBar.style.width = percentCompleted + '%';
@@ -4174,61 +4897,142 @@ async function createPost() {
             }
         }
 
-        document.getElementById('newPostContent').value = '';
+        contentEl.value = '';
+        contentEl.style.height = 'auto';
         removePostImage();
         removePostVideo();
         removeSharedPost(); // Clear shared post preview
         resetBackgroundColor(); // Clear selected background color
         
         // Re-enable button
-        postBtn.disabled = false;
-        postBtn.innerHTML = originalBtnText;
-        postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        
+        if (postBtn) {
+            postBtn.disabled = false;
+            postBtn.innerHTML = originalBtnText;
+            postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // 포스팅 성공 후에는 항상 노멀 메인 피드에서 즉시 확인되도록 복귀
+        if (filterUserId) {
+            filterUserId = null;
+        }
+        const profileView = document.getElementById('profileView');
+        if (profileView) profileView.classList.add('hidden');
+        const postsFeed = document.getElementById('postsFeed');
+        if (postsFeed) postsFeed.classList.remove('hidden');
+        const postsFeedWrapper = document.getElementById('postsFeedWrapper');
+        if (postsFeedWrapper) postsFeedWrapper.classList.remove('hidden');
+        if (typeof setSocialHeaderButtonActive === 'function') setSocialHeaderButtonActive('friends');
+
         await loadPosts();
+        const centerFeedColumn = document.getElementById('centerFeedColumn');
+        if (centerFeedColumn) centerFeedColumn.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-        console.error('Error creating post:', error);
-        alert('게시물 작성에 실패했습니다.');
-        
+        console.error('Post created but post-processing failed:', error);
+
         // Re-enable button
-        postBtn.disabled = false;
-        postBtn.innerHTML = originalBtnText;
-        postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (postBtn) {
+            postBtn.disabled = false;
+            postBtn.innerHTML = originalBtnText;
+            postBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        try {
+            await loadPosts();
+        } catch (_) {}
     }
 }
 
 // Preview post image
 function previewPostImage(event) {
-    const file = event.target.files[0];
-    if (file) {
-        if (file.size > 10 * 1024 * 1024) {
-            alert('파일 크기는 10MB를 초과할 수 없습니다.');
-            event.target.value = '';
-            return;
-        }
-        
+    const files = Array.from((event && event.target && event.target.files) ? event.target.files : []);
+    if (!files.length) return;
+
+    const validFiles = [];
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         if (!file.type.startsWith('image/')) {
-            alert('이미지 파일만 업로드할 수 있습니다.');
-            event.target.value = '';
-            return;
+            showToast('이미지 파일만 업로드할 수 있습니다.', 'error');
+            continue;
         }
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const preview = document.getElementById('postImagePreview');
-            const container = document.getElementById('postImagePreviewContainer');
-            preview.src = e.target.result;
-            container.classList.remove('hidden');
-        };
-        reader.readAsDataURL(file);
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('파일 크기는 10MB를 초과할 수 없습니다.', 'error');
+            continue;
+        }
+        validFiles.push(file);
     }
+
+    const remaining = Math.max(0, 4 - selectedPostImages.length);
+    if (remaining <= 0) {
+        showToast('사진은 최대 4장까지 첨부할 수 있습니다.', 'warning');
+        if (event && event.target) event.target.value = '';
+        return;
+    }
+
+    const toAdd = validFiles.slice(0, remaining).map((file) => ({
+        file,
+        seq: ++selectedPostImageSeq
+    }));
+    selectedPostImages = selectedPostImages.concat(toAdd);
+    renderPostImagePreviews();
+
+    if (validFiles.length > remaining) {
+        showToast('사진은 최대 4장까지만 첨부됩니다.', 'info');
+    }
+
+    if (event && event.target) event.target.value = '';
 }
 
 // Remove post image
 function removePostImage() {
-    document.getElementById('postImageFile').value = '';
-    document.getElementById('postImagePreview').src = '';
-    document.getElementById('postImagePreviewContainer').classList.add('hidden');
+    const fileEl = document.getElementById('postImageFile');
+    const preview = document.getElementById('postImagePreview');
+    const container = document.getElementById('postImagePreviewContainer');
+    const listEl = document.getElementById('postImagePreviewList');
+    const countEl = document.getElementById('postImagePreviewCount');
+    selectedPostImages = [];
+    selectedPostImageSeq = 0;
+    if (fileEl) fileEl.value = '';
+    if (preview) preview.src = '';
+    if (listEl) listEl.innerHTML = '';
+    if (countEl) countEl.textContent = '0/4';
+    if (container) container.classList.add('hidden');
+}
+
+function removePostImageAt(index) {
+    const ordered = selectedPostImages.slice().sort((a, b) => a.seq - b.seq);
+    if (index < 0 || index >= ordered.length) return;
+    const targetSeq = ordered[index].seq;
+    selectedPostImages = selectedPostImages.filter((item) => item.seq !== targetSeq);
+    renderPostImagePreviews();
+}
+
+function renderPostImagePreviews() {
+    const container = document.getElementById('postImagePreviewContainer');
+    const listEl = document.getElementById('postImagePreviewList');
+    const countEl = document.getElementById('postImagePreviewCount');
+    if (!container || !listEl || !countEl) return;
+
+    const ordered = selectedPostImages.slice().sort((a, b) => a.seq - b.seq);
+    countEl.textContent = `${ordered.length}/4`;
+
+    if (!ordered.length) {
+        listEl.innerHTML = '';
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+    listEl.innerHTML = ordered.map((item, idx) => {
+        const url = URL.createObjectURL(item.file);
+        return `
+            <div class="inline-block mr-2 mb-2 relative">
+                <img src="${url}" alt="preview-${idx}" class="w-20 h-20 rounded-lg object-cover border border-gray-200" />
+                <span class="absolute left-1 top-1 min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">${idx + 1}</span>
+                <button type="button" onclick="removePostImageAt(${idx})" class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] hover:bg-red-600 transition">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
 }
 
 // Preview post video
@@ -4398,13 +5202,13 @@ async function refreshComments(postId) {
             const html = `
                 <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-200">
                     ${commentsHtml}
-                    <div class="flex space-x-2 mt-3">
-                        <input 
+                    <div class="flex space-x-2 mt-3 items-end">
+                        <textarea 
                             id="comment-input-${postId}"
-                            type="text"
+                            rows="1"
                             placeholder="댓글을 작성하세요..."
-                            class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                        />
+                            class="flex-1 p-2 border rounded-lg text-sm resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        ></textarea>
                         <button 
                             id="comment-submit-${postId}"
                             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
@@ -4425,8 +5229,13 @@ async function refreshComments(postId) {
             }
             
             if (inputField) {
-                inputField.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') createComment(postId);
+                commentAutoGrow(inputField);
+                inputField.addEventListener('input', () => commentAutoGrow(inputField));
+                inputField.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        createComment(postId);
+                    }
                 });
             }
         } catch (error) {
@@ -4746,11 +5555,8 @@ async function sharePost(postId) {
         // Verse reference removed - not a feature
         const verseHtml = '';
         
-        const imageHtml = post.image_url ? `
-            <div class="mt-2">
-                <img src="${toCanonicalSiteUrl(post.image_url)}" alt="Post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
-            </div>
-        ` : '';
+        const sharePreviewImageUrls = parsePostImageUrls(post.image_url);
+        const imageHtml = renderOrderedImageLayout(sharePreviewImageUrls, 'max-h-48', 'mt-2');
         
         const videoHtml = post.video_url ? `
             <div class="mt-2">
@@ -4928,13 +5734,13 @@ async function loadComments(postId) {
             const html = `
                 <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-200">
                     ${commentsHtml}
-                    <div class="flex space-x-2 mt-3">
-                        <input 
+                    <div class="flex space-x-2 mt-3 items-end">
+                        <textarea 
                             id="comment-input-${postId}"
-                            type="text"
+                            rows="1"
                             placeholder="댓글을 작성하세요..."
-                            class="flex-1 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
-                        />
+                            class="flex-1 p-2 border rounded-lg text-sm resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                        ></textarea>
                         <button 
                             id="comment-submit-${postId}"
                             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
@@ -4956,8 +5762,13 @@ async function loadComments(postId) {
             }
             
             if (inputField) {
-                inputField.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') createComment(postId);
+                commentAutoGrow(inputField);
+                inputField.addEventListener('input', () => commentAutoGrow(inputField));
+                inputField.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        createComment(postId);
+                    }
                 });
             }
         } catch (error) {
@@ -4971,7 +5782,7 @@ async function loadComments(postId) {
 // Create comment
 async function createComment(postId) {
     const input = document.getElementById(`comment-input-${postId}`);
-    const content = input.value;
+    const content = String((input && input.value) || '').trim();
 
     if (!content) {
         alert('댓글 내용을 입력해주세요.');
@@ -5021,6 +5832,7 @@ async function createComment(postId) {
         }
         
         input.value = '';
+        input.style.height = 'auto';
         refreshComments(postId); // Use refreshComments instead of loadComments to keep comments open
         // Don't call loadPosts() to keep comments section open
     } catch (error) {
@@ -5155,11 +5967,8 @@ async function loadPosts() {
             // Verse reference removed - not a feature
             const verseHtml = '';
             
-            const imageHtml = post.image_url ? `
-                <div class="mt-3">
-                    <img src="${post.image_url}" alt="Post image" class="w-full rounded-lg max-h-96 object-cover" onerror="this.style.display='none'" />
-                </div>
-            ` : '';
+            const postImageUrls = parsePostImageUrls(post.image_url);
+            const imageHtml = renderOrderedImageLayout(postImageUrls, 'max-h-96', 'mt-3');
             
             const videoHtml = post.video_url ? `
                 <div class="mt-3">
@@ -5188,11 +5997,8 @@ async function loadPosts() {
                 // Shared verse reference removed - not a feature
                 const sharedVerseHtml = '';
                 
-                const sharedImageHtml = post.shared_image_url ? `
-                    <div class="mt-2 max-w-full">
-                        <img src="${toCanonicalSiteUrl(post.shared_image_url)}" alt="Shared post image" class="w-full rounded-lg max-h-48 object-cover" onerror="this.style.display='none'" />
-                    </div>
-                ` : '';
+                const sharedImageUrls = parsePostImageUrls(post.shared_image_url);
+                const sharedImageHtml = renderOrderedImageLayout(sharedImageUrls, 'max-h-48', 'mt-2', 'max-w-full');
                 
                 const sharedVideoHtml = post.shared_video_url ? `
                     <div class="mt-2 max-w-full">
@@ -5235,6 +6041,9 @@ async function loadPosts() {
             
             // Background color style
             const backgroundStyle = post.background_color ? `style="background-color: ${post.background_color};"` : '';
+            const visibilityBadgeHtml = post.visibility_scope === 'friends'
+                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
+                : '';
             
             postsHtml += `
                 <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1" ${backgroundStyle}>
@@ -5246,7 +6055,7 @@ async function loadPosts() {
                         <div class="flex-1 min-w-0">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, \`${post.user_name}\`)" title="클릭하여 ${post.user_name} 님의 포스팅만 보기">${post.user_name}</h4>
+                                    <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, \`${post.user_name}\`)" title="클릭하여 ${post.user_name} 님의 포스팅만 보기">${post.user_name}${visibilityBadgeHtml}</h4>
                                     <p class="text-sm text-gray-500">${post.user_church || ''}</p>
                                 </div>
                                 <div class="flex items-center space-x-2">
@@ -5501,51 +6310,70 @@ function showToastWithColor(message, backgroundColor) {
 }
 
 // Auto-login from localStorage
+async function finishAutoLoginSession(user, { showCelebration = true, logPrefix = '자동 로그인 성공' } = {}) {
+    if (!user) return;
+    currentUserId = user.id != null ? Number(user.id) : null;
+    currentUser = user;
+    resetLastKnownCombinedScore();
+    localStorage.setItem('currentUserId', String(user.id));
+    if (user.email) localStorage.setItem('currentUserEmail', user.email);
+    updateAuthUI();
+    await loadUserScores();
+    await loadFriendsList();
+    await loadNotifications(false);
+    startNotificationPolling();
+    loadPosts();
+    console.log(logPrefix + ':', currentUser.name, '(역할:', currentUser.role + ')');
+    if (showCelebration) await showLoginRewardCelebrationModal(currentUser);
+}
+
 async function autoLogin() {
     const savedUserId = localStorage.getItem('currentUserId');
     const savedEmail = localStorage.getItem('currentUserEmail');
-    
-    if (savedUserId && savedEmail) {
-        try {
-            // Use /api/login endpoint (handles admin auto-creation)
-            const response = await axios.post('/api/login', {
-                email: savedEmail
-            });
-            
-            if (response.data.user) {
-                // User exists, restore session
-                currentUserId = response.data.user.id;
-                currentUser = response.data.user;
-                resetLastKnownCombinedScore();
 
-                // Update localStorage with latest data
-                localStorage.setItem('currentUserId', response.data.user.id);
-                
-                updateAuthUI();
-                
-                // Load user scores from API
-                await loadUserScores();
-                
-                // Load friends list
-                await loadFriendsList();
-                
-                // Load notifications (don't mark as read yet)
-                await loadNotifications(false);
-                
-                // Start notification polling
-                startNotificationPolling();
-                
-                loadPosts();
-                console.log('자동 로그인 성공:', currentUser.name, '(역할:', currentUser.role + ')');
-                await showLoginRewardCelebrationModal(currentUser);
+    if (!savedUserId || !savedEmail) return;
+
+    const emailNorm = (s) => String(s || '').trim().toLowerCase();
+
+    try {
+        const remember = localStorage.getItem(LS_LOGIN_REMEMBER) === '1';
+        const savedPassword = localStorage.getItem(LS_SAVED_LOGIN_PASSWORD);
+
+        if (remember && savedPassword) {
+            const response = await axios.post('/api/login', {
+                email: savedEmail,
+                password: savedPassword
+            });
+            if (response.data.user) {
+                await finishAutoLoginSession(response.data.user, {
+                    showCelebration: true,
+                    logPrefix: '자동 로그인 성공'
+                });
             }
-        } catch (error) {
-            // Error fetching user, clear localStorage
-            console.error('자동 로그인 실패:', error);
+            return;
+        }
+
+        // 비밀번호 미저장 시 /api/login 호출 시 400만 유발하므로, 프로필 GET으로 세션만 복원
+        const userRes = await axios.get(`/api/users/${encodeURIComponent(savedUserId)}`, {
+            params: { current_user_id: savedUserId }
+        });
+        const user = userRes.data?.user;
+        if (!user) return;
+        if (emailNorm(user.email) !== emailNorm(savedEmail)) {
             localStorage.removeItem('currentUserId');
             localStorage.removeItem('currentUserEmail');
             localStorage.removeItem('currentUser');
+            return;
         }
+        await finishAutoLoginSession(user, {
+            showCelebration: false,
+            logPrefix: '자동 로그인(캐시 복원) 성공'
+        });
+    } catch (error) {
+        console.error('자동 로그인 실패:', error);
+        localStorage.removeItem('currentUserId');
+        localStorage.removeItem('currentUserEmail');
+        localStorage.removeItem('currentUser');
     }
 }
 
@@ -5612,19 +6440,32 @@ async function fillProfileViewPanelForUser(user) {
     let friendCount = 0;
     let isFriend = false;
     let hasPendingRequest = false;
+    let hasIncomingPendingRequest = false;
+    let pendingRequestId = null;
     try {
         const friendsResponse = await axios.get(`/api/friends/${userId}`);
         friendCount = friendsResponse.data.friends?.length || 0;
         if (currentUserId && currentUserId !== userId) {
-            const myFriendsResponse = await axios.get(`/api/friends/${currentUserId}`);
-            const myFriends = myFriendsResponse.data.friends || [];
-            isFriend = myFriends.some((f) => f.id === userId);
+            const statusRes = await axios.get('/api/friendship/status', {
+                params: {
+                    fromUserId: Number(currentUserId),
+                    toUserId: Number(userId)
+                }
+            });
+            const relationStatus = String(statusRes.data?.status || 'none');
+            const relationDirection = String(statusRes.data?.direction || '');
+            pendingRequestId = statusRes.data?.requestId ? Number(statusRes.data.requestId) : null;
+            isFriend = relationStatus === 'accepted';
+            hasPendingRequest = relationStatus === 'pending' && relationDirection === 'outgoing';
+            hasIncomingPendingRequest = relationStatus === 'pending' && relationDirection === 'incoming';
             try {
                 const notificationsResponse = await axios.get(`/api/notifications/${userId}`);
                 const notifications = notificationsResponse.data.notifications || [];
-                hasPendingRequest = notifications.some(
+                if (!hasPendingRequest) {
+                    hasPendingRequest = notifications.some(
                     (n) => n.type === 'friend_request' && n.from_user_id === currentUserId
-                );
+                    );
+                }
             } catch (e2) {
                 /* ignore */
             }
@@ -5651,7 +6492,7 @@ async function fillProfileViewPanelForUser(user) {
     const roleName =
         user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
 
-    const isOwnProfile = currentUserId && currentUserId === user.id;
+    const isOwnProfile = currentUserId != null && Number(currentUserId) === Number(user.id);
     let privacySettings = {};
     try {
         privacySettings = user.privacy_settings ? JSON.parse(user.privacy_settings) : {};
@@ -5665,8 +6506,32 @@ async function fillProfileViewPanelForUser(user) {
     const showCareerInfo = isOwnProfile || privacySettings.career_info === true;
     const showScores = isOwnProfile || privacySettings.scores === true;
 
-    const nameJs = JSON.stringify(user.name || '');
+    const safeNameForOnclick = String(user.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const av = user.avatar_url ? toCanonicalSiteUrl(user.avatar_url) : '';
+    let friendActionHtml = '';
+    if (!isOwnProfile && currentUserId) {
+        if (isFriend) {
+            friendActionHtml = `<button type="button" disabled class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold"><i class="fas fa-user-check mr-2"></i>친구</button>`;
+        } else if (hasIncomingPendingRequest && pendingRequestId) {
+            friendActionHtml = `
+                <div class="w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 shadow-sm">
+                    <div class="text-[11px] text-blue-700 font-semibold mb-2"><i class="fas fa-user-clock mr-1"></i>${user.name}님 요청</div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="acceptFriendRequest(${pendingRequestId}, null, ${user.id})" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-semibold">
+                            <i class="fas fa-check mr-1"></i>승인
+                        </button>
+                        <button type="button" onclick="rejectFriendRequest(${pendingRequestId}, ${user.id})" class="flex-1 px-3 py-2 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition text-sm font-semibold">
+                            <i class="fas fa-times mr-1"></i>거부
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (hasPendingRequest) {
+            friendActionHtml = `<button type="button" disabled class="w-full px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-clock mr-1"></i>친구</div><div class="text-sm">승인 대기중</div></div></button>`;
+        } else {
+            friendActionHtml = `<button type="button" onclick="sendFriendRequest(${user.id}, '${safeNameForOnclick}')" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-user-plus mr-1"></i>친구</div><div class="text-sm">제안 전송</div></div></button>`;
+        }
+    }
 
     const faithQuestions = [
         '1. 예수님이 창조주 하나님임을 믿습니까?',
@@ -5686,10 +6551,10 @@ async function fillProfileViewPanelForUser(user) {
                 <div class="md:col-span-1">
                     <div class="bg-gray-50 rounded-lg p-6 text-center">
                         <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
-                            ${user.role === 'admin'
-                                ? '<i class="fas fa-crown text-yellow-400"></i>'
-                                : user.avatar_url
-                                  ? `<img src="${av}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                            ${user.avatar_url
+                                ? `<img src="${av}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+                                : user.role === 'admin'
+                                  ? '<i class="fas fa-crown text-yellow-400"></i>'
                                   : '<i class="fas fa-user"></i>'}
                         </div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
@@ -5700,16 +6565,7 @@ async function fillProfileViewPanelForUser(user) {
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                             <p><i class="fas fa-user-friends text-pink-500 mr-1"></i>친구 ${friendCount}명</p>
                         </div>
-                        ${!isOwnProfile && currentUserId
-                            ? `
-                        <div class="mt-3">
-                            ${isFriend
-                                ? `<button type="button" disabled class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold"><i class="fas fa-user-check mr-2"></i>친구</button>`
-                                : hasPendingRequest
-                                  ? `<button type="button" disabled class="w-full px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-clock mr-1"></i>친구</div><div class="text-sm">승인 대기중</div></div></button>`
-                                  : `<button type="button" onclick="sendFriendRequest(${user.id}, ${nameJs})" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-md font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-user-plus mr-1"></i>친구</div><div class="text-sm">제안 전송</div></div></button>`}
-                        </div>`
-                            : ''}
+                        ${friendActionHtml ? `<div class="mt-3">${friendActionHtml}</div>` : ''}
                     </div>
                 </div>
                 <div class="md:col-span-2 space-y-4">
@@ -5957,15 +6813,54 @@ function hideProfile() {
 
 // Go to home (main feed)
 function goToHome() {
+    if (typeof closeFriendMessenger === 'function') closeFriendMessenger();
     if (filterUserId) {
-        clearUserFilter();
-        return;
+        clearUserFilter(true);
     }
+
+    // Always restore normal main feed view state.
+    const qtPanelsWrapHome = document.getElementById('qtPanelsWrap');
+    if (qtPanelsWrapHome) qtPanelsWrapHome.classList.add('hidden');
+    if (typeof hideAllQtSections === 'function') hideAllQtSections();
+    if (typeof setQtHeaderButtonActive === 'function') setQtHeaderButtonActive(false);
+    if (typeof setQtButtonActive === 'function') {
+        setQtButtonActive('prayer', false);
+        setQtButtonActive('read', false);
+        setQtButtonActive('apply', false);
+        setQtButtonActive('prayer2', false);
+    }
+
+    const postFocusOverlay = document.getElementById('postFocusOverlay');
+    if (postFocusOverlay) postFocusOverlay.classList.add('hidden');
+
+    const rightSidebar = document.getElementById('rightSidebar');
+    if (rightSidebar) rightSidebar.classList.remove('reactors-only', 'mobile-fullscreen-overlay');
+    const reactorsTab = document.getElementById('reactorsTabContent');
+    if (reactorsTab) reactorsTab.classList.add('hidden');
+
+    const friendsContent = document.getElementById('friendsTabContent');
+    const notificationsContent = document.getElementById('notificationsTabContent');
+    if (friendsContent) friendsContent.classList.remove('hidden');
+    if (notificationsContent) notificationsContent.classList.add('hidden');
+    if (typeof setSocialHeaderButtonActive === 'function') setSocialHeaderButtonActive('friends');
+
+    const postsFeed = document.getElementById('postsFeed');
+    const postsFeedWrapper = document.getElementById('postsFeedWrapper');
+    if (postsFeed) postsFeed.classList.remove('hidden');
+    if (postsFeedWrapper) postsFeedWrapper.classList.remove('hidden');
+    const newPostCard = document.getElementById('newPostCard');
+    if (newPostCard) newPostCard.classList.remove('hidden');
+
     const profileView = document.getElementById('profileView');
     if (profileView && !profileView.classList.contains('hidden')) {
         hideProfile();
     } else {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const centerFeedColumn = document.getElementById('centerFeedColumn');
+    if (centerFeedColumn) {
+        centerFeedColumn.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }
 
@@ -6182,6 +7077,17 @@ async function filterByUser(userId, userName) {
         return;
     }
 
+    // QT 패널이 열려 있으면 닫고 피드 요소 복원 + QT 버튼 비활성화
+    const qtPanelsWrap = document.getElementById('qtPanelsWrap');
+    if (qtPanelsWrap && !qtPanelsWrap.classList.contains('hidden')) {
+        qtPanelsWrap.classList.add('hidden');
+        if (typeof setQtHeaderButtonActive === 'function') setQtHeaderButtonActive(false);
+        const mainFeedPart1 = document.getElementById('mainFeedPart1');
+        if (mainFeedPart1) mainFeedPart1.classList.remove('hidden');
+        const postsFeedWrapper = document.getElementById('postsFeedWrapper');
+        if (postsFeedWrapper) postsFeedWrapper.classList.remove('hidden');
+    }
+
     filterUserId = userId;
     console.log('✅ Global filterUserId set to:', filterUserId);
 
@@ -6211,7 +7117,7 @@ window.filterMyPosts = function() {
     void filterByUser(currentUserId, currentUser.name);
 };
 
-function clearUserFilter() {
+function clearUserFilter(silent = false) {
     console.log('🔴 clearUserFilter called!');
 
     const wasFiltered = filterUserId !== null;
@@ -6224,7 +7130,7 @@ function clearUserFilter() {
     hideUserProfileCover();
     loadPosts();
 
-    if (wasFiltered) {
+    if (wasFiltered && !silent) {
         showToast('전체 포스팅을 표시합니다.', 'success');
     }
 }
@@ -6357,7 +7263,7 @@ async function showUserProfileCover(userId) {
         // Show/hide edit cover button (only for own profile)
         const editCoverBtn = document.getElementById('editCoverPhotoBtn');
         if (editCoverBtn) {
-            if (currentUserId && parseInt(currentUserId) === userId) {
+            if (currentUserId != null && Number(currentUserId) === Number(userId)) {
                 editCoverBtn.classList.remove('hidden');
             } else {
                 editCoverBtn.classList.add('hidden');
@@ -6457,11 +7363,7 @@ async function uploadCover() {
     formData.append('cover', file);
     
     try {
-        const response = await axios.post('/api/users/' + currentUserId + '/cover', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        const response = await axios.post('/api/users/' + currentUserId + '/cover', formData);
         
         return response.data.cover_url;
     } catch (error) {
@@ -6512,12 +7414,12 @@ function updateSidebarFriendsList() {
     
     container.innerHTML = friendsList.map(friend => `
         <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition">
-            <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition"
+            <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition"
                  onclick="showUserProfileModal(${friend.id})"
                  title="${friend.name} 프로필 보기">
                 ${friend.avatar_url
                     ? `<img src="${toCanonicalSiteUrl(friend.avatar_url)}" alt="${friend.name}" class="w-full h-full object-cover" />`
-                    : `<i class="fas fa-user text-gray-500"></i>`
+                    : `<i class="fas fa-user text-white"></i>`
                 }
             </div>
             <div class="flex-1 min-w-0">
@@ -6530,6 +7432,13 @@ function updateSidebarFriendsList() {
                     ${friend.church || friend.denomination || '교회 정보 없음'}
                 </div>
             </div>
+            <button
+                type="button"
+                onclick="openFriendMessenger(${friend.id}, \`${friend.name}\`, \`${friend.avatar_url || ''}\`)"
+                class="w-9 h-9 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
+                title="${friend.name} 님에게 메시지 보내기">
+                <i class="fas fa-comment-dots text-sm"></i>
+            </button>
         </div>
     `).join('');
 }
@@ -6537,6 +7446,407 @@ function updateSidebarFriendsList() {
 // Check if user is a friend
 function isFriend(userId) {
     return friendsList.some(friend => friend.id === userId);
+}
+
+let friendMessengerTargetId = null;
+let friendMessengerPollTimer = null;
+let friendMessengerImageFile = null;
+let friendMessengerVideoFile = null;
+/** 피드백 알림 등으로 연 직후: 이 메시지 id 근처에 스크롤 유지 (폴링 시 맨 아래로 덮어쓰지 않음) */
+let friendMessengerAnchorMessageId = null;
+
+function friendMessengerAutoGrow(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+    el.style.overflowY = 'hidden';
+}
+
+function commentAutoGrow(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+    el.style.overflowY = 'hidden';
+}
+
+function createPostAutoGrow(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+    el.style.overflowY = 'hidden';
+}
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function parsePostImageUrls(imageUrlValue) {
+    if (!imageUrlValue) return [];
+    const raw = String(imageUrlValue).trim();
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            return parsed.map((v) => String(v || '').trim()).filter(Boolean);
+        }
+    } catch (_) {}
+    return [raw];
+}
+
+function renderOrderedImageLayout(urls, maxHeightClass, marginTopClass = 'mt-3', wrapperExtraClass = '') {
+    if (!urls || !urls.length) return '';
+    const safeUrls = urls.map((u) => toCanonicalSiteUrl(u));
+    const isLarge = String(maxHeightClass || '').includes('96');
+    const singleCellH = isLarge ? 'h-[26rem]' : 'h-52';
+    const pairCellH = isLarge ? 'h-[14rem]' : 'h-32';
+    const topCellH3 = isLarge ? 'h-[18rem]' : 'h-40';
+    const bottomCellH3 = isLarge ? 'h-[12rem]' : 'h-28';
+    const frame = (u, hClass, extra = '') => `
+        <div class="w-full ${hClass} flex items-center justify-center overflow-hidden rounded-lg bg-white ${extra}">
+            <img src="${u}" alt="Post image" class="max-w-full max-h-full object-contain" onerror="this.style.display='none'" />
+        </div>
+    `;
+
+    if (safeUrls.length === 1) {
+        return `
+            <div class="${marginTopClass} ${wrapperExtraClass}">
+                ${frame(safeUrls[0], singleCellH)}
+            </div>
+        `;
+    }
+
+    if (safeUrls.length === 2) {
+        return `
+            <div class="${marginTopClass} flex items-center gap-2 ${wrapperExtraClass}">
+                <div class="w-1/2">${frame(safeUrls[0], pairCellH)}</div>
+                <div class="w-1/2">${frame(safeUrls[1], pairCellH)}</div>
+            </div>
+        `;
+    }
+
+    if (safeUrls.length === 3) {
+        // 첨부 순서 유지 + 누운 T 레이아웃(상단 1장, 하단 2장)
+        // 하단 셀 높이를 고정해 HVH의 우하단 H도 세로 중앙 정렬되도록 함.
+        return `
+            <div class="${marginTopClass} ${wrapperExtraClass}">
+                <div class="w-full mb-2">${frame(safeUrls[0], topCellH3)}</div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="w-full">${frame(safeUrls[1], bottomCellH3)}</div>
+                    <div class="w-full">${frame(safeUrls[2], bottomCellH3)}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 4장 이상(실사용은 최대 4장): 첨부 순서대로 2x2
+    return `
+        <div class="${marginTopClass} grid grid-cols-2 gap-2 ${wrapperExtraClass}">
+            ${safeUrls.slice(0, 4).map((u) => frame(u, pairCellH)).join('')}
+        </div>
+    `;
+}
+
+function formatFriendMessengerTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '';
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+}
+
+function applyFriendMessageHighlightBubble(messageId) {
+    const id = Number(messageId);
+    if (!Number.isFinite(id) || id <= 0) return;
+    document.querySelectorAll('.friend-msg-bubble').forEach((b) => {
+        b.classList.remove('ring-2', 'ring-amber-400', 'ring-offset-2', 'shadow-md');
+    });
+    const el = document.getElementById(`friend-msg-${id}`);
+    const bubble = el && el.querySelector('.friend-msg-bubble');
+    if (!bubble) return;
+    bubble.classList.add('ring-2', 'ring-amber-400', 'ring-offset-2', 'shadow-md');
+    setTimeout(() => {
+        bubble.classList.remove('ring-2', 'ring-amber-400', 'ring-offset-2', 'shadow-md');
+    }, 2200);
+}
+
+/** 스크롤 영역 기준 해당 메시지 행을 보이는 상단에 최대한 붙임 */
+function snapFriendMessengerScrollToMessageId(messageId, opts) {
+    const listEl = document.getElementById('friendMessengerMessages');
+    if (!listEl || messageId == null || !Number.isFinite(Number(messageId)) || Number(messageId) <= 0) {
+        return false;
+    }
+    const id = Number(messageId);
+    const el = document.getElementById(`friend-msg-${id}`);
+    if (!el) return false;
+    const pad = opts && typeof opts.pad === 'number' ? opts.pad : 6;
+    const delta = el.getBoundingClientRect().top - listEl.getBoundingClientRect().top - pad;
+    const nextTop = Math.max(0, listEl.scrollTop + delta);
+    if (opts && opts.smooth) {
+        listEl.scrollTo({ top: nextTop, behavior: 'smooth' });
+    } else {
+        listEl.scrollTop = nextTop;
+    }
+    return true;
+}
+
+/** 레이아웃·폰트 로드 후에도 말풍선이 헤더 바로 아래에 오도록 여러 번 보정 */
+function scheduleFriendMessengerSnapToMessage(messageId, withHighlight) {
+    const id = Number(messageId);
+    if (!Number.isFinite(id) || id <= 0) return;
+    const delays = [0, 24, 72, 160, 320];
+    delays.forEach((ms, i) => {
+        setTimeout(() => {
+            snapFriendMessengerScrollToMessageId(id, { smooth: false });
+            if (withHighlight && i === 1) {
+                applyFriendMessageHighlightBubble(id);
+            }
+        }, ms);
+    });
+}
+
+function closeFriendMessenger() {
+    const modal = document.getElementById('friendMessengerModal');
+    if (modal) modal.classList.add('hidden');
+    friendMessengerTargetId = null;
+    friendMessengerAnchorMessageId = null;
+    removeFriendMessengerAttachment();
+    if (friendMessengerPollTimer) {
+        clearInterval(friendMessengerPollTimer);
+        friendMessengerPollTimer = null;
+    }
+}
+
+function pickFriendMessengerImage() {
+    const input = document.getElementById('friendMessengerImageInput');
+    if (input) input.click();
+}
+
+function pickFriendMessengerVideo() {
+    const input = document.getElementById('friendMessengerVideoInput');
+    if (input) input.click();
+}
+
+function setupFriendMessengerFileInputs() {
+    const imgInput = document.getElementById('friendMessengerImageInput');
+    const vidInput = document.getElementById('friendMessengerVideoInput');
+    const preview = document.getElementById('friendMessengerPreview');
+    const imgPreview = document.getElementById('friendMessengerImagePreview');
+    const vidPreview = document.getElementById('friendMessengerVideoPreview');
+    if (!imgInput || !vidInput || !preview || !imgPreview || !vidPreview) return;
+
+    if (imgInput.dataset.bound === '1') return;
+    imgInput.dataset.bound = '1';
+    vidInput.dataset.bound = '1';
+
+    imgInput.onchange = function () {
+        const f = imgInput.files && imgInput.files[0];
+        if (!f) return;
+        if (!f.type.startsWith('image/')) {
+            showToast('이미지 파일만 전송할 수 있습니다.', 'error');
+            imgInput.value = '';
+            return;
+        }
+        if (f.size > 10 * 1024 * 1024) {
+            showToast('이미지는 10MB 이하여야 합니다.', 'error');
+            imgInput.value = '';
+            return;
+        }
+        friendMessengerVideoFile = null;
+        vidInput.value = '';
+        friendMessengerImageFile = f;
+        vidPreview.src = '';
+        vidPreview.classList.add('hidden');
+        imgPreview.src = URL.createObjectURL(f);
+        imgPreview.classList.remove('hidden');
+        preview.classList.remove('hidden');
+    };
+
+    vidInput.onchange = function () {
+        const f = vidInput.files && vidInput.files[0];
+        if (!f) return;
+        if (!f.type.startsWith('video/')) {
+            showToast('동영상 파일만 전송할 수 있습니다.', 'error');
+            vidInput.value = '';
+            return;
+        }
+        if (f.size > 100 * 1024 * 1024) {
+            showToast('동영상은 100MB 이하여야 합니다.', 'error');
+            vidInput.value = '';
+            return;
+        }
+        friendMessengerImageFile = null;
+        imgInput.value = '';
+        friendMessengerVideoFile = f;
+        imgPreview.src = '';
+        imgPreview.classList.add('hidden');
+        vidPreview.src = URL.createObjectURL(f);
+        vidPreview.classList.remove('hidden');
+        preview.classList.remove('hidden');
+    };
+}
+
+function removeFriendMessengerAttachment() {
+    friendMessengerImageFile = null;
+    friendMessengerVideoFile = null;
+    const imgInput = document.getElementById('friendMessengerImageInput');
+    const vidInput = document.getElementById('friendMessengerVideoInput');
+    const preview = document.getElementById('friendMessengerPreview');
+    const imgPreview = document.getElementById('friendMessengerImagePreview');
+    const vidPreview = document.getElementById('friendMessengerVideoPreview');
+    if (imgInput) imgInput.value = '';
+    if (vidInput) vidInput.value = '';
+    if (imgPreview) { imgPreview.src = ''; imgPreview.classList.add('hidden'); }
+    if (vidPreview) { vidPreview.src = ''; vidPreview.classList.add('hidden'); }
+    if (preview) preview.classList.add('hidden');
+}
+
+async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
+    if (!currentUserId || !friendMessengerTargetId) return;
+    const listEl = document.getElementById('friendMessengerMessages');
+    if (!listEl) return;
+    const isPoll = fromPoll === true;
+    const targetId =
+        scrollToMessageId != null && Number.isFinite(Number(scrollToMessageId)) ? Number(scrollToMessageId) : null;
+    try {
+        const res = await axios.get(`/api/messages/${currentUserId}/${friendMessengerTargetId}`);
+        const messages = (res.data && res.data.messages) ? res.data.messages : [];
+        if (!messages.length) {
+            listEl.innerHTML = `<div class="text-center text-gray-400 text-sm py-6">첫 메시지를 보내보세요.</div>`;
+            return;
+        }
+        listEl.innerHTML = messages.map((msg) => {
+            const mine = Number(msg.sender_id) === Number(currentUserId);
+            const mid = msg.id != null ? Number(msg.id) : 0;
+            const rowId = mid ? `friend-msg-${mid}` : '';
+            const imageUrl = msg.image_url ? toCanonicalSiteUrl(msg.image_url) : '';
+            const videoUrl = msg.video_url ? toCanonicalSiteUrl(msg.video_url) : '';
+            const imgHtml = msg.image_url
+                ? `<img src="${imageUrl}" alt="사진" class="max-w-full max-h-52 rounded-lg mt-2 border border-gray-200 bg-white object-contain cursor-pointer" onclick="window.open(this.src, '_blank')" />`
+                : '';
+            const vidHtml = msg.video_url
+                ? `<video controls class="max-w-full max-h-52 rounded-lg mt-2 border border-gray-200 bg-white"><source src="${videoUrl}"></video>`
+                : '';
+            const mediaDownloadHtml = `
+                ${msg.image_url ? `
+                    <div class="mt-2">
+                        <a href="${imageUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
+                            <i class="fas fa-download mr-1"></i>사진 다운로드
+                        </a>
+                    </div>
+                ` : ''}
+                ${msg.video_url ? `
+                    <div class="mt-2">
+                        <a href="${videoUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
+                            <i class="fas fa-download mr-1"></i>동영상 다운로드
+                        </a>
+                    </div>
+                ` : ''}
+            `;
+            return `
+                <div id="${rowId || ''}" class="flex scroll-mt-2 ${mine ? 'justify-end' : 'justify-start'} friend-msg-row" data-msg-id="${mid || ''}">
+                    <div class="max-w-[78%] px-3 py-2 rounded-2xl friend-msg-bubble transition-shadow duration-300 ${mine ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'}">
+                        ${msg.content ? `<div class="text-sm leading-snug break-words whitespace-pre-wrap">${escapeHtml(msg.content || '')}</div>` : ''}
+                        ${imgHtml}
+                        ${vidHtml}
+                        ${mediaDownloadHtml}
+                        <div class="mt-1 text-[10px] ${mine ? 'text-blue-100' : 'text-gray-400'} text-right">${formatFriendMessengerTime(msg.created_at)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        if (targetId) {
+            friendMessengerAnchorMessageId = targetId;
+            scheduleFriendMessengerSnapToMessage(targetId, true);
+        } else if (isPoll && friendMessengerAnchorMessageId) {
+            const ok = snapFriendMessengerScrollToMessageId(friendMessengerAnchorMessageId, { smooth: false });
+            if (!ok) {
+                listEl.scrollTop = listEl.scrollHeight;
+            }
+        } else {
+            listEl.scrollTop = listEl.scrollHeight;
+        }
+    } catch (error) {
+        console.error('Failed to load friend messages:', error);
+        listEl.innerHTML = `<div class="text-center text-red-400 text-sm py-6">메시지를 불러오지 못했습니다.</div>`;
+    }
+}
+
+function openFriendMessenger(friendId, friendName, friendAvatarUrl, scrollToMessageId) {
+    if (!currentUserId) {
+        showLoginModal();
+        return;
+    }
+    friendMessengerTargetId = Number(friendId);
+
+    const modal = document.getElementById('friendMessengerModal');
+    const titleEl = document.getElementById('friendMessengerTitle');
+    const avatarEl = document.getElementById('friendMessengerAvatar');
+    const inputEl = document.getElementById('friendMessengerInput');
+
+    if (titleEl) titleEl.textContent = `${friendName} 님`;
+    if (avatarEl) {
+        if (friendAvatarUrl) {
+            avatarEl.innerHTML = `<img src="${toCanonicalSiteUrl(friendAvatarUrl)}" alt="${friendName}" class="w-full h-full object-cover" />`;
+        } else {
+            avatarEl.innerHTML = '<i class="fas fa-user text-xs"></i>';
+        }
+    }
+    if (modal) modal.classList.remove('hidden');
+    if (inputEl) {
+        inputEl.focus();
+        friendMessengerAutoGrow(inputEl);
+    }
+    setupFriendMessengerFileInputs();
+    removeFriendMessengerAttachment();
+
+    const sid =
+        scrollToMessageId != null && Number.isFinite(Number(scrollToMessageId)) ? Number(scrollToMessageId) : null;
+    friendMessengerAnchorMessageId = sid;
+    void loadFriendMessengerMessages(sid, false);
+    if (friendMessengerPollTimer) clearInterval(friendMessengerPollTimer);
+    friendMessengerPollTimer = setInterval(() => {
+        void loadFriendMessengerMessages(null, true);
+    }, 4000);
+}
+
+async function sendFriendMessage() {
+    if (!currentUserId || !friendMessengerTargetId) return;
+    const inputEl = document.getElementById('friendMessengerInput');
+    if (!inputEl) return;
+    const content = String(inputEl.value || '').trim();
+    if (!content && !friendMessengerImageFile && !friendMessengerVideoFile) return;
+    try {
+        if (friendMessengerImageFile || friendMessengerVideoFile) {
+            const formData = new FormData();
+            formData.append('senderId', String(currentUserId));
+            formData.append('receiverId', String(friendMessengerTargetId));
+            formData.append('content', content || '');
+            if (friendMessengerImageFile) formData.append('image', friendMessengerImageFile);
+            if (friendMessengerVideoFile) formData.append('video', friendMessengerVideoFile);
+            await axios.post('/api/messages', formData);
+            removeFriendMessengerAttachment();
+        } else {
+            await axios.post('/api/messages', {
+                senderId: currentUserId,
+                receiverId: friendMessengerTargetId,
+                content
+            });
+        }
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+        inputEl.style.overflowY = 'hidden';
+        friendMessengerAnchorMessageId = null;
+        await loadFriendMessengerMessages(null, false);
+    } catch (error) {
+        console.error('Failed to send friend message:', error);
+        showToast('메시지 전송에 실패했습니다.', 'error');
+    }
 }
 
 
@@ -6632,10 +7942,45 @@ async function loadNotifications(markAsRead = false) {
     }
 }
 
+function ensureSidebarNotificationsClickDelegation() {
+    const container = document.getElementById('sidebarNotificationsList');
+    if (!container || container.dataset.ntfClickDeleg === '1') return;
+    container.dataset.ntfClickDeleg = '1';
+    container.addEventListener('click', (e) => {
+        const row = e.target.closest('[data-feedback-notif="1"]');
+        if (!row) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const nid = Number(row.getAttribute('data-notification-id'));
+        const fid = Number(row.getAttribute('data-from-user-id'));
+        let fname = '';
+        let favatar = '';
+        try {
+            fname = decodeURIComponent(row.getAttribute('data-from-name') || '');
+        } catch (_) {
+            fname = row.getAttribute('data-from-name') || '';
+        }
+        try {
+            favatar = decodeURIComponent(row.getAttribute('data-from-avatar') || '');
+        } catch (_) {
+            favatar = row.getAttribute('data-from-avatar') || '';
+        }
+        if (!Number.isFinite(fid) || fid <= 0) {
+            showToast('회원 정보가 올바르지 않습니다.', 'error');
+            return;
+        }
+        const fmidRaw = row.getAttribute('data-friend-message-id');
+        const fmid =
+            fmidRaw && String(fmidRaw).trim() !== '' && Number.isFinite(Number(fmidRaw)) ? Number(fmidRaw) : null;
+        void openFeedbackFromNotification(nid, fid, fname, favatar, fmid);
+    });
+}
+
 // Update sidebar notifications list UI
 function updateSidebarNotificationsList() {
     const container = document.getElementById('sidebarNotificationsList');
     if (!container) return;
+    ensureSidebarNotificationsClickDelegation();
     const notificationsContent = document.getElementById('notificationsTabContent');
     
     if (!notificationsList || notificationsList.length === 0) {
@@ -6674,7 +8019,7 @@ function updateSidebarNotificationsList() {
                         </p>
                         <div class="flex space-x-2">
                             <button 
-                                onclick="acceptFriendRequest(${notification.id}, '${notification.from_user_name}')"
+                                onclick="acceptFriendRequest(${notification.id})"
                                 class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-semibold">
                                 수락
                             </button>
@@ -6745,6 +8090,52 @@ function updateSidebarNotificationsList() {
                     </div>
                 </div>
             `;
+        } else if (notification.type === 'feedback') {
+            const encName = encodeURIComponent(notification.from_user_name || '');
+            const encAvatar = encodeURIComponent(notification.from_user_avatar || '');
+            const previewRaw = String(notification.preview_text || '').trim();
+            const previewBlock = previewRaw
+                ? `<p class="text-xs text-gray-600 mt-1.5 line-clamp-3 leading-snug">「${escapeHtml(previewRaw)}」</p>`
+                : `<p class="text-xs text-gray-500 mt-1.5 italic">내용 요약 없음 · 메신저에서 확인하세요</p>`;
+            const nid = Number(notification.id);
+            const fid = Number(notification.from_user_id);
+            const fmId =
+                notification.friend_message_id != null &&
+                Number.isFinite(Number(notification.friend_message_id)) &&
+                Number(notification.friend_message_id) > 0
+                    ? Number(notification.friend_message_id)
+                    : '';
+            return `
+                <div
+                    data-feedback-notif="1"
+                    data-notification-id="${nid}"
+                    data-from-user-id="${fid}"
+                    data-friend-message-id="${fmId}"
+                    data-from-name="${encName}"
+                    data-from-avatar="${encAvatar}"
+                    class="flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition hover:brightness-[0.98] active:scale-[0.99] ${notification.is_read ? 'bg-amber-50/40 border-amber-100' : 'bg-amber-50 border-amber-300 shadow-sm'}"
+                    role="button"
+                    tabindex="0"
+                >
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center border border-amber-200">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-900 font-semibold mb-0.5">
+                            피드백 · <span class="font-bold">${escapeHtml(notification.from_user_name || '회원')}</span>
+                        </p>
+                        ${previewBlock}
+                        <p class="text-xs text-amber-800 font-medium mt-1.5">
+                            <i class="fas fa-comments mr-0.5"></i>탭하여 메신저에서 전체 보기
+                        </p>
+                        <p class="text-xs text-gray-400 mt-1">
+                            ${formatNotificationTime(notification.created_at)}
+                        </p>
+                    </div>
+                </div>
+            `;
         }
         
         return `
@@ -6776,10 +8167,46 @@ function getNotificationIcon(type) {
         'comment': 'comment',
         'like': 'heart',
         'post': 'file-alt',
-        'mention': 'at'
+        'mention': 'at',
+        feedback: 'lightbulb'
     };
     return icons[type] || 'bell';
 }
+
+async function openFeedbackFromNotification(
+    notificationId,
+    fromUserId,
+    fromUserName,
+    fromUserAvatar,
+    friendMessageId
+) {
+    if (!currentUserId || !Number.isFinite(fromUserId) || fromUserId <= 0) return;
+    const openMsgr =
+        typeof window.openFriendMessenger === 'function' ? window.openFriendMessenger : openFriendMessenger;
+    const scrollMid =
+        friendMessageId != null && Number.isFinite(Number(friendMessageId)) && Number(friendMessageId) > 0
+            ? Number(friendMessageId)
+            : null;
+    openMsgr(fromUserId, fromUserName || '회원', fromUserAvatar || '', scrollMid);
+    try {
+        if (Number.isFinite(notificationId) && notificationId > 0) {
+            await axios.post('/api/notifications/read-one', {
+                userId: currentUserId,
+                notificationId: Number(notificationId)
+            });
+        }
+    } catch (e) {
+        console.warn('mark notification read failed', e);
+    }
+    const i = notificationsList.findIndex((n) => Number(n.id) === Number(notificationId));
+    if (i >= 0) {
+        notificationsList[i] = { ...notificationsList[i], is_read: true };
+        updateSidebarNotificationsList();
+        updateNotificationBadge();
+    }
+}
+
+window.openFeedbackFromNotification = openFeedbackFromNotification;
 
 // Format notification time
 function formatNotificationTime(dateString) {
@@ -6800,26 +8227,14 @@ function formatNotificationTime(dateString) {
 // Update notification badge (red dot)
 function updateNotificationBadge() {
     const badge = document.getElementById('notificationDot');
-    console.log('🔔 updateNotificationBadge called');
-    console.log('  - Badge element:', badge ? 'found' : 'NOT FOUND');
-    console.log('  - notificationsList:', notificationsList ? notificationsList.length : 'null');
-    
-    if (!badge) {
-        console.error('❌ notificationDot element not found!');
-        return;
-    }
-    
-    // Check if there are any unread notifications
-    const hasUnread = notificationsList && notificationsList.some(n => !n.is_read);
-    console.log('  - hasUnread:', hasUnread);
-    console.log('  - Unread count:', notificationsList ? notificationsList.filter(n => !n.is_read).length : 0);
-    
+    const badgeMob = document.getElementById('notificationDotMobile');
+    const hasUnread = notificationsList && notificationsList.some((n) => !n.is_read);
     if (hasUnread) {
-        badge.classList.remove('hidden');
-        console.log('  ✅ Red dot SHOWN');
+        if (badge) badge.classList.remove('hidden');
+        if (badgeMob) badgeMob.classList.remove('hidden');
     } else {
-        badge.classList.add('hidden');
-        console.log('  ❌ Red dot HIDDEN');
+        if (badge) badge.classList.add('hidden');
+        if (badgeMob) badgeMob.classList.add('hidden');
     }
 }
 
@@ -6884,6 +8299,16 @@ async function sendFriendRequest(toUserId, toUserName) {
         showToast('로그인이 필요합니다', 'error');
         return;
     }
+    const toId = Number(toUserId);
+    const fromId = Number(currentUserId);
+    if (!Number.isFinite(toId) || !Number.isFinite(fromId)) {
+        showToast('대상 사용자 정보가 올바르지 않습니다.', 'error');
+        return;
+    }
+    if (toId === fromId) {
+        showToast('본인에게는 친구 제안을 보낼 수 없습니다.', 'error');
+        return;
+    }
     
     if (!confirm(`${toUserName}님에게 친구 제안을 보내시겠습니까?`)) {
         return;
@@ -6891,26 +8316,42 @@ async function sendFriendRequest(toUserId, toUserName) {
     
     try {
         const response = await axios.post('/api/friend-request', {
-            fromUserId: currentUserId,
-            toUserId: toUserId
+            fromUserId: fromId,
+            toUserId: toId
         });
         
         showToast(response.data.message, 'success');
         
         // Refresh profile modal to update button state
-        await showUserProfileModal(toUserId);
+        await showUserProfileModal(toId);
     } catch (error) {
         console.error('Failed to send friend request:', error);
         const message = error.response?.data?.error || '친구 제안 전송에 실패했습니다';
+        if (message.includes('이미 친구 제안을 보냈습니다')) {
+            showToast(message, 'info');
+            await showUserProfileModal(toId);
+            return;
+        }
+        if (message.includes('상대방이 먼저 보낸 친구 요청이 있습니다')) {
+            showToast('상대가 먼저 보낸 요청이 있습니다. 알림에서 승인/거절해 주세요.', 'info');
+            await loadNotifications(false);
+            await showUserProfileModal(toId);
+            return;
+        }
+        if (message.includes('대상 가입자를 찾을 수 없습니다')) {
+            showToast('대상 계정을 찾을 수 없어 전송할 수 없습니다.', 'error');
+            return;
+        }
         showToast(message, 'error');
     }
 }
 
 // Accept friend request
-async function acceptFriendRequest(requestId, fromUserName) {
+async function acceptFriendRequest(requestId, fromUserName, refreshProfileUserId) {
     try {
         const response = await axios.post('/api/friend-request/accept', {
-            requestId: requestId
+            requestId: requestId,
+            actionUserId: Number(currentUserId)
         });
         
         showToast(response.data.message, 'success');
@@ -6918,26 +8359,35 @@ async function acceptFriendRequest(requestId, fromUserName) {
         // Reload notifications and friends list (don't mark as read)
         await loadNotifications(false);
         await loadFriendsList();
+        if (refreshProfileUserId) {
+            await showUserProfileModal(refreshProfileUserId);
+        }
     } catch (error) {
         console.error('Failed to accept friend request:', error);
-        showToast('친구 제안 승인에 실패했습니다', 'error');
+        const message = error.response?.data?.error || '친구 제안 승인에 실패했습니다';
+        showToast(message, 'error');
     }
 }
 
 // Reject friend request
-async function rejectFriendRequest(requestId) {
+async function rejectFriendRequest(requestId, refreshProfileUserId) {
     try {
         const response = await axios.post('/api/friend-request/reject', {
-            requestId: requestId
+            requestId: requestId,
+            actionUserId: Number(currentUserId)
         });
         
         showToast(response.data.message, 'success');
         
         // Reload notifications (don't mark as read)
         await loadNotifications(false);
+        if (refreshProfileUserId) {
+            await showUserProfileModal(refreshProfileUserId);
+        }
     } catch (error) {
         console.error('Failed to reject friend request:', error);
-        showToast('친구 제안 거절에 실패했습니다', 'error');
+        const message = error.response?.data?.error || '친구 제안 거절에 실패했습니다';
+        showToast(message, 'error');
     }
 }
 
@@ -6947,6 +8397,7 @@ async function rejectFriendRequest(requestId) {
 window.createPost = createPost;
 window.handleLogin = handleLogin;
 window.handleSignup = handleSignup;
+window.previewSignupCover = previewSignupCover;
 window.logout = logout;
 window.toggleLike = toggleLike;
 window.deletePost = deletePost;
@@ -6973,11 +8424,21 @@ window.resetBackgroundColor = resetBackgroundColor;
 window.previewPostImage = previewPostImage;
 window.previewPostVideo = previewPostVideo;
 window.removePostImage = removePostImage;
+window.removePostImageAt = removePostImageAt;
 window.removePostVideo = removePostVideo;
 window.removeSharedPost = removeSharedPost;
 window.loadPosts = loadPosts;
 window.loadFriendsList = loadFriendsList;
 window.loadNotifications = loadNotifications;
+window.openFriendMessenger = openFriendMessenger;
+window.sendFriendMessage = sendFriendMessage;
+window.closeFriendMessenger = closeFriendMessenger;
+window.friendMessengerAutoGrow = friendMessengerAutoGrow;
+window.pickFriendMessengerImage = pickFriendMessengerImage;
+window.pickFriendMessengerVideo = pickFriendMessengerVideo;
+window.removeFriendMessengerAttachment = removeFriendMessengerAttachment;
+
+window.createPostAutoGrow = createPostAutoGrow;
 window.toggleFriendsList = toggleFriendsList;
 window.toggleNotifications = toggleNotifications;
 window.toggleQtPanel = toggleQtPanel;
@@ -6986,6 +8447,7 @@ window.toggleQtWorship = toggleQtWorship;
 window.toggleQtWorshipPlay = toggleQtWorshipPlay;
 window.toggleQtWorshipMute = toggleQtWorshipMute;
 window.setQtWorshipVolume = setQtWorshipVolume;
+window.setQtWorshipVolumeFromPanel = setQtWorshipVolumeFromPanel;
 window.showQtAlarmModal = showQtAlarmModal;
 window.showQtInviteModal = showQtInviteModal;
 window.saveQtApply = saveQtApply;

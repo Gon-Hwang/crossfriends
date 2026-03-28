@@ -5,6 +5,221 @@ import type { Bindings, Post, Comment, User, PrayerRequest, PrayerResponse } fro
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+/** R2 키에 쓸 파일명만 허용 (경로 조각·.. 제거) */
+function sanitizeR2Filename(raw: string): string | null {
+  const base = String(raw || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .pop() || ''
+  const s = base.replace(/\.\./g, '').trim()
+  if (!s || s.length > 220) return null
+  return s
+}
+
+/** Workers 런타임에서 multipart 항목이 File이 아닌 Blob이거나 instanceof File이 실패하는 경우가 있어 Blob 기준으로 본다 */
+function isUploadBlobPart(v: unknown): v is Blob {
+  return (
+    v != null &&
+    typeof v === 'object' &&
+    typeof (v as Blob).arrayBuffer === 'function' &&
+    typeof (v as Blob).size === 'number'
+  )
+}
+
+function mimeOrNameSuggestsImage(part: Blob): boolean {
+  const t = (part.type || '').toLowerCase()
+  if (t.startsWith('image/')) return true
+  const n = 'name' in part && typeof (part as { name?: unknown }).name === 'string' ? String((part as File).name) : ''
+  if (n && /\.(jpe?g|png|gif|webp|heic|heif|avif|bmp|svg)$/i.test(n)) return true
+  return t === '' || t === 'application/octet-stream'
+}
+
+function uploadImageFilename(part: Blob, userId: string): string {
+  const n = 'name' in part && typeof (part as { name?: unknown }).name === 'string' ? String((part as File).name || '') : ''
+  const fromDot = n.includes('.') ? n.split('.').pop() || '' : ''
+  if (fromDot && /^[a-z0-9]{2,8}$/i.test(fromDot)) return `${userId}-${Date.now()}.${fromDot}`
+  const ct = (part.type || '').toLowerCase()
+  if (ct.includes('png')) return `${userId}-${Date.now()}.png`
+  if (ct.includes('webp')) return `${userId}-${Date.now()}.webp`
+  if (ct.includes('gif')) return `${userId}-${Date.now()}.gif`
+  if (ct.includes('svg')) return `${userId}-${Date.now()}.svg`
+  if (ct.includes('heic')) return `${userId}-${Date.now()}.heic`
+  if (ct.includes('heif')) return `${userId}-${Date.now()}.heif`
+  return `${userId}-${Date.now()}.jpg`
+}
+
+/** R2 미바인딩·get 실패 시 예외 대신 404 (브라우저 콘솔 500 폭주 방지) */
+function guessContentType(key: string): string {
+  const ext = key.split('.').pop()?.toLowerCase() || ''
+  const map: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    gif: 'image/gif', webp: 'image/webp', heic: 'image/heic',
+    heif: 'image/heif', avif: 'image/avif', bmp: 'image/bmp', svg: 'image/svg+xml'
+  }
+  return map[ext] || 'image/jpeg'
+}
+
+async function serveR2Object(c: { env: Bindings; notFound: () => Response }, objectKey: string): Promise<Response> {
+  const r2 = (c.env as unknown as { R2?: R2Bucket }).R2
+  if (!r2) {
+    console.warn('[R2] binding missing for', objectKey)
+    return c.notFound()
+  }
+  try {
+    const object = await r2.get(objectKey)
+    if (!object) return c.notFound()
+    const headers = new Headers()
+    try {
+      object.writeHttpMetadata(headers)
+    } catch {
+      // Miniflare 로컬에서 writeHttpMetadata 직렬화 오류 시 확장자로 추론
+      headers.set('Content-Type', guessContentType(objectKey))
+    }
+    headers.set('Cache-Control', 'public, max-age=31536000')
+    return new Response(object.body, { headers })
+  } catch (err) {
+    console.error('[R2] get failed', objectKey, err)
+    return c.notFound()
+  }
+}
+
+function blobDataToArrayBuffer(data: unknown): ArrayBuffer | null {
+  if (data == null) return null
+  if (data instanceof ArrayBuffer) return data
+  if (data instanceof Uint8Array) {
+    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+  }
+  return null
+}
+
+async function readMediaFallbackRow(
+  DB: D1Database,
+  storageKey: string
+): Promise<{ body: ArrayBuffer; contentType: string } | null> {
+  try {
+    const row = (await DB.prepare(
+      'SELECT blob_data, content_type FROM media_fallback WHERE storage_key = ?'
+    )
+      .bind(storageKey)
+      .first()) as { blob_data?: unknown; content_type?: string } | null
+    const body = row?.blob_data != null ? blobDataToArrayBuffer(row.blob_data) : null
+    if (!body) return null
+    return { body, contentType: row.content_type || 'application/octet-stream' }
+  } catch (e) {
+    console.warn('[media_fallback] read error', storageKey, e)
+    return null
+  }
+}
+
+/** R2 우선, 없거나 미스 시 D1 media_fallback (로컬 Vite·R2 미바인딩 대비) */
+async function serveR2OrMediaFallback(
+  c: { env: Bindings; notFound: () => Response },
+  objectKey: string
+): Promise<Response> {
+  const r2 = (c.env as unknown as { R2?: R2Bucket }).R2
+  if (r2) {
+    try {
+      const object = await r2.get(objectKey)
+      if (object) {
+        const headers = new Headers()
+        try {
+          object.writeHttpMetadata(headers)
+        } catch {
+          // Miniflare 로컬에서 writeHttpMetadata 직렬화 오류 시 확장자로 추론
+          headers.set('Content-Type', guessContentType(objectKey))
+        }
+        headers.set('Cache-Control', 'public, max-age=31536000')
+        return new Response(object.body, { headers })
+      }
+    } catch (err) {
+      console.error('[R2] get failed', objectKey, err)
+    }
+  }
+  const { DB } = c.env
+  const fb = await readMediaFallbackRow(DB, objectKey)
+  if (fb) {
+    return new Response(fb.body, {
+      headers: {
+        'Content-Type': fb.contentType,
+        'Cache-Control': 'public, max-age=3600'
+      }
+    })
+  }
+  return c.notFound()
+}
+
+/** 레거시 URL·키 불일치 시 여러 키를 순서대로 시도 (R2 + D1) */
+async function serveFirstR2OrMediaFallback(
+  c: { env: Bindings; notFound: () => Response },
+  keys: string[]
+): Promise<Response> {
+  for (const objectKey of keys) {
+    const res = await serveR2OrMediaFallback(c, objectKey)
+    if (res.status !== 404) return res
+  }
+  return c.notFound()
+}
+
+/** 로컬 Miniflare D1에서 동시 요청 시 SQLITE_BUSY 발생 시 재시도 */
+async function retryD1<T>(fn: () => Promise<T>, maxRetries = 5, delayMs = 60): Promise<T> {
+  let lastError: unknown
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastError = e
+      const msg = String((e as Error)?.message || '')
+      const isTransient =
+        msg.includes('SQLITE_BUSY') ||
+        msg.includes('database is locked') ||
+        msg.includes('internal error')
+      if (isTransient && i < maxRetries - 1) {
+        await new Promise<void>(r => setTimeout(r, delayMs * (i + 1)))
+        continue
+      }
+      throw e
+    }
+  }
+  throw lastError
+}
+
+async function putR2OrMediaFallback(
+  c: { env: Bindings },
+  DB: D1Database,
+  storageKey: string,
+  arrayBuffer: ArrayBuffer,
+  contentType: string
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const r2 = (c.env as unknown as { R2?: R2Bucket }).R2
+  if (r2) {
+    try {
+      await r2.put(storageKey, arrayBuffer, {
+        httpMetadata: { contentType }
+      })
+      return { ok: true }
+    } catch (e) {
+      console.error('[R2] put failed, falling back to D1', storageKey, e)
+    }
+  }
+  try {
+    await retryD1(() =>
+      DB.prepare(
+        'INSERT OR REPLACE INTO media_fallback (storage_key, blob_data, content_type) VALUES (?, ?, ?)'
+      )
+        .bind(storageKey, arrayBuffer, contentType)
+        .run()
+    )
+    return { ok: true }
+  } catch (e) {
+    console.error('[media_fallback] INSERT failed', e)
+    return {
+      ok: false,
+      message:
+        '이미지 저장에 실패했습니다. 로컬이면 `npm run db:migrate:local` 로 DB를 최신으로 맞춘 뒤 다시 시도해 주세요. (또는 R2 바인딩을 확인하세요.)'
+    }
+  }
+}
+
 function bufToBase64(buf: ArrayBuffer) {
   const bytes = new Uint8Array(buf)
   let binary = ''
@@ -221,8 +436,12 @@ app.get('/api/users/:id', async (c) => {
     return c.json({ error: 'User not found' }, 404)
   }
   
-  // If viewing own profile or no privacy settings, return all data
-  const isOwnProfile = currentUserId && parseInt(currentUserId) === user.id
+  // If viewing own profile or no privacy settings, return all data (id 타입 불일치 방지)
+  const viewer =
+    currentUserId != null && String(currentUserId).trim() !== ''
+      ? Number(currentUserId)
+      : NaN
+  const isOwnProfile = Number.isFinite(viewer) && viewer === Number(user.id)
   
   // Calculate ministry score (종합점수 = 성경점수 + 기도점수 + 활동점수)
   const ministryScore = (user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)
@@ -528,8 +747,15 @@ app.post('/api/users', async (c) => {
   const result = await DB.prepare(
     'INSERT INTO users (email, name, password_salt, password_hash, password_updated_at, bio, church, pastor, denomination, location, position, gender, faith_answers, role, marital_status, address, phone) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   ).bind(email, name, saltB64, hashB64, bio || null, church || null, pastor || null, denomination || null, location || null, position || null, gender || null, faith_answers || null, role, marital_status || null, address || null, phone || null).run()
-  
-  return c.json({ id: result.meta.last_row_id, email, name, role }, 201)
+
+  const rawId = result.meta.last_row_id
+  const newUserId = rawId != null ? Number(rawId) : NaN
+  if (!Number.isFinite(newUserId)) {
+    console.error('[signup] invalid last_row_id:', rawId, result.meta)
+    return c.json({ error: '가입 처리 중 오류가 발생했습니다. 다시 시도해 주세요.' }, 500)
+  }
+
+  return c.json({ id: newUserId, email, name, role }, 201)
 })
 
 // Update user
@@ -538,55 +764,61 @@ app.put('/api/users/:id', async (c) => {
   const id = c.req.param('id')
   const { name, bio, gender, church, pastor, position, faith_answers, elementary_school, middle_school, high_school, university, university_major, masters, masters_major, phd, phd_major, universities, masters_degrees, phd_degrees, careers, marital_status, address, phone, privacy_settings } = await c.req.json()
   
-  await DB.prepare(
-    'UPDATE users SET name = ?, bio = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, address = ?, phone = ?, privacy_settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-  ).bind(name, bio || null, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, address || null, phone || null, privacy_settings || null, id).run()
-  
+  await retryD1(() =>
+    DB.prepare(
+      'UPDATE users SET name = ?, bio = ?, gender = ?, church = ?, pastor = ?, position = ?, faith_answers = ?, elementary_school = ?, middle_school = ?, high_school = ?, university = ?, university_major = ?, masters = ?, masters_major = ?, phd = ?, phd_major = ?, universities = ?, masters_degrees = ?, phd_degrees = ?, careers = ?, marital_status = ?, address = ?, phone = ?, privacy_settings = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).bind(name, bio || null, gender || null, church || null, pastor || null, position || null, faith_answers || null, elementary_school || null, middle_school || null, high_school || null, university || null, university_major || null, masters || null, masters_major || null, phd || null, phd_major || null, universities || null, masters_degrees || null, phd_degrees || null, careers || null, marital_status || null, address || null, phone || null, privacy_settings || null, id).run()
+  )
+
   return c.json({ success: true })
 })
 
 // Upload avatar
 app.post('/api/users/:id/avatar', async (c) => {
-  const { DB, R2 } = c.env
-  const userId = c.req.param('id')
-  
+  const { DB } = c.env
+  const userIdRaw = c.req.param('id')
+  const userId = Number.parseInt(String(userIdRaw), 10)
+  if (!Number.isFinite(userId)) {
+    return c.json({ error: 'Invalid user id' }, 400)
+  }
+
   try {
     const formData = await c.req.formData()
     const file = formData.get('avatar')
-    
-    if (!file || !(file instanceof File)) {
+
+    if (!isUploadBlobPart(file)) {
       return c.json({ error: 'No file uploaded' }, 400)
     }
-    
+
     // Check file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       return c.json({ error: 'File too large (max 5MB)' }, 400)
     }
-    
-    // Check file type
-    if (!file.type.startsWith('image/')) {
+
+    if (!mimeOrNameSuggestsImage(file)) {
       return c.json({ error: 'Invalid file type' }, 400)
     }
-    
-    // Generate unique filename
-    const ext = file.name.split('.').pop()
-    const filename = `${userId}-${Date.now()}.${ext}`
+
+    const filename = uploadImageFilename(file, String(userId))
     const fullPath = `avatars/${filename}`
     
-    // Upload to R2
     const arrayBuffer = await file.arrayBuffer()
-    await R2.put(fullPath, arrayBuffer, {
-      httpMetadata: {
-        contentType: file.type
-      }
-    })
+    const avatarCt = file.type && String(file.type).trim() ? file.type : 'image/jpeg'
+    const stored = await putR2OrMediaFallback(c, DB, fullPath, arrayBuffer, avatarCt)
+    if (!stored.ok) {
+      return c.json({ error: stored.message }, 500)
+    }
     
     // Update user avatar_url in database
     const avatarUrl = `/api/avatars/avatars/${filename}`
-    await DB.prepare(
-      'UPDATE users SET avatar_url = ? WHERE id = ?'
-    ).bind(avatarUrl, userId).run()
-    
+    const upd = await retryD1(() =>
+      DB.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').bind(avatarUrl, userId).run()
+    )
+    const avatarRowChanges = (upd.meta as { changes?: number }).changes
+    if (avatarRowChanges === 0) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
     return c.json({ avatar_url: avatarUrl }, 200)
   } catch (error) {
     console.error('Avatar upload error:', error)
@@ -614,46 +846,50 @@ app.delete('/api/users/:id/avatar', async (c) => {
 
 // Upload cover photo
 app.post('/api/users/:id/cover', async (c) => {
-  const { DB, R2 } = c.env
-  const userId = c.req.param('id')
-  
+  const { DB } = c.env
+  const userIdRaw = c.req.param('id')
+  const userId = Number.parseInt(String(userIdRaw), 10)
+  if (!Number.isFinite(userId)) {
+    return c.json({ error: 'Invalid user id' }, 400)
+  }
+
   try {
     const formData = await c.req.formData()
     const file = formData.get('cover')
-    
-    if (!file || !(file instanceof File)) {
+
+    if (!isUploadBlobPart(file)) {
       return c.json({ error: 'No file uploaded' }, 400)
     }
-    
+
     // Check file size (10MB)
     if (file.size > 10 * 1024 * 1024) {
       return c.json({ error: 'File too large (max 10MB)' }, 400)
     }
-    
-    // Check file type
-    if (!file.type.startsWith('image/')) {
+
+    if (!mimeOrNameSuggestsImage(file)) {
       return c.json({ error: 'Invalid file type' }, 400)
     }
-    
-    // Generate unique filename
-    const ext = file.name.split('.').pop()
-    const filename = `${userId}-${Date.now()}.${ext}`
+
+    const filename = uploadImageFilename(file, String(userId))
     const fullPath = `covers/${filename}`
     
-    // Upload to R2
     const arrayBuffer = await file.arrayBuffer()
-    await R2.put(fullPath, arrayBuffer, {
-      httpMetadata: {
-        contentType: file.type
-      }
-    })
+    const coverCt = file.type && String(file.type).trim() ? file.type : 'image/jpeg'
+    const stored = await putR2OrMediaFallback(c, DB, fullPath, arrayBuffer, coverCt)
+    if (!stored.ok) {
+      return c.json({ error: stored.message }, 500)
+    }
     
     // Update user cover_url in database
     const coverUrl = `/api/covers/covers/${filename}`
-    await DB.prepare(
-      'UPDATE users SET cover_url = ? WHERE id = ?'
-    ).bind(coverUrl, userId).run()
-    
+    const upd = await retryD1(() =>
+      DB.prepare('UPDATE users SET cover_url = ? WHERE id = ?').bind(coverUrl, userId).run()
+    )
+    const coverRowChanges = (upd.meta as { changes?: number }).changes
+    if (coverRowChanges === 0) {
+      return c.json({ error: 'User not found' }, 404)
+    }
+
     return c.json({ cover_url: coverUrl }, 200)
   } catch (error) {
     console.error('Cover upload error:', error)
@@ -681,53 +917,37 @@ app.delete('/api/users/:id/cover', async (c) => {
 
 // Get cover from R2
 app.get('/api/covers/covers/:filename', async (c) => {
-  const { R2 } = c.env
-  const filename = c.req.param('filename')
-  
-  const object = await R2.get(`covers/${filename}`)
-  if (!object) {
-    return c.notFound()
-  }
-  
-  const headers = new Headers()
-  object.writeHttpMetadata(headers)
-  headers.set('Cache-Control', 'public, max-age=31536000')
-  
-  return new Response(object.body, { headers })
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe) return c.notFound()
+  return serveR2OrMediaFallback(c, `covers/${safe}`)
+})
+
+// 레거시: DB에 /api/covers/:filename (중간 covers 한 번만) 로 저장된 커버
+app.get('/api/covers/:filename', async (c) => {
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe || safe === 'covers') return c.notFound()
+  return serveR2OrMediaFallback(c, `covers/${safe}`)
 })
 
 // Get avatar from R2
 app.get('/api/avatars/avatars/:filename', async (c) => {
-  const { R2 } = c.env
-  const filename = c.req.param('filename')
-  
-  const object = await R2.get(`avatars/${filename}`)
-  if (!object) {
-    return c.notFound()
-  }
-  
-  const headers = new Headers()
-  object.writeHttpMetadata(headers)
-  headers.set('Cache-Control', 'public, max-age=31536000')
-  
-  return new Response(object.body, { headers })
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe) return c.notFound()
+  return serveR2OrMediaFallback(c, `avatars/${safe}`)
+})
+
+// 레거시: DB에 /api/avatar/:filename 형태로 저장된 프로필 사진
+app.get('/api/avatar/:filename', async (c) => {
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe) return c.notFound()
+  return serveFirstR2OrMediaFallback(c, [`avatars/${safe}`, `avatar/${safe}`])
 })
 
 // Get post image from R2
 app.get('/api/images/posts/:filename', async (c) => {
-  const { R2 } = c.env
-  const filename = c.req.param('filename')
-  
-  const object = await R2.get(`posts/${filename}`)
-  if (!object) {
-    return c.notFound()
-  }
-  
-  const headers = new Headers()
-  object.writeHttpMetadata(headers)
-  headers.set('Cache-Control', 'public, max-age=31536000')
-  
-  return new Response(object.body, { headers })
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe) return c.notFound()
+  return serveR2Object(c, `posts/${safe}`)
 })
 
 
@@ -738,23 +958,47 @@ app.get('/api/images/posts/:filename', async (c) => {
 // Get all posts with user info, likes count, and comments count
 app.get('/api/posts', async (c) => {
   const { DB } = c.env
+  try {
+    await DB.prepare("ALTER TABLE posts ADD COLUMN visibility_scope TEXT NOT NULL DEFAULT 'public'").run()
+  } catch (_) {
+    // already exists
+  }
   const currentUserId = c.req.query('user_id') // For checking if current user liked the post
   const filterUserId = c.req.query('filter_user_id') // For filtering by specific user
+  const viewerId = Number(currentUserId || 0)
   
   console.log('🔍 API /api/posts called with:', { currentUserId, filterUserId });
   
   // Build WHERE clause and bind params
   // CRITICAL: Bind params must match the order of ? in SQL query
   // SQL order: is_liked (?), is_prayed (?), WHERE clause (?)
-  let whereClause = ''
+  let whereClause = `
+    WHERE (
+      COALESCE(p.visibility_scope, 'public') = 'public'
+      OR p.user_id = ?
+      OR (
+        COALESCE(p.visibility_scope, 'public') = 'friends'
+        AND EXISTS (
+          SELECT 1
+          FROM friendships f
+          WHERE f.status = 'accepted'
+            AND (
+              (f.user_id = p.user_id AND f.friend_id = ?)
+              OR (f.friend_id = p.user_id AND f.user_id = ?)
+            )
+        )
+      )
+    )
+  `
   let bindParams: any[] = []
   
   // First two params are always for is_liked and is_prayed subqueries
   bindParams.push(currentUserId || 0, currentUserId || 0)
+  bindParams.push(viewerId, viewerId, viewerId)
   
   if (filterUserId) {
-    whereClause = 'WHERE p.user_id = ?'
-    bindParams.push(filterUserId)  // Third param for WHERE clause
+    whereClause += ' AND p.user_id = ?'
+    bindParams.push(filterUserId)
     console.log('✅ Applying filter for user_id:', filterUserId);
   } else {
     console.log('📋 No filter applied, returning all posts');
@@ -829,11 +1073,17 @@ app.get('/api/posts/:id', async (c) => {
 // Create new post
 app.post('/api/posts', async (c) => {
   const { DB } = c.env
-  const { user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color } = await c.req.json()
+  try {
+    await DB.prepare("ALTER TABLE posts ADD COLUMN visibility_scope TEXT NOT NULL DEFAULT 'public'").run()
+  } catch (_) {
+    // already exists
+  }
+  const { user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color, visibility_scope } = await c.req.json()
+  const scope = visibility_scope === 'friends' ? 'friends' : 'public'
   
   const result = await DB.prepare(
-    'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0, background_color || null).run()
+    'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color, visibility_scope) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(user_id, content, image_url || null, verse_reference || null, shared_post_id || null, is_prayer_request || 0, background_color || null, scope).run()
   
   let updatedScores = {}
   
@@ -892,7 +1142,7 @@ app.post('/api/posts', async (c) => {
     }
   }
   
-  return c.json({ id: result.meta.last_row_id, user_id, content, ...updatedScores }, 201)
+  return c.json({ id: result.meta.last_row_id, user_id, content, visibility_scope: scope, ...updatedScores }, 201)
 })
 
 // Upload post image
@@ -903,6 +1153,8 @@ app.post('/api/posts/:id/image', async (c) => {
   try {
     const formData = await c.req.formData()
     const file = formData.get('image')
+    const orderRaw = formData.get('order')
+    const order = Number(orderRaw)
     
     if (!file || !(file instanceof File)) {
       return c.json({ error: 'No file uploaded' }, 400)
@@ -931,13 +1183,38 @@ app.post('/api/posts/:id/image', async (c) => {
       }
     })
     
-    // Update post image_url in database
+    // Update post image_url in database (단일/다중 호환: 최대 4장 누적 저장)
     const imageUrl = `/api/images/posts/${filename}`
+    const postRow = await DB.prepare('SELECT image_url FROM posts WHERE id = ?').bind(postId).first()
+    const rawImageUrl = postRow?.image_url ? String(postRow.image_url) : ''
+    let imageUrls: string[] = []
+    if (rawImageUrl) {
+      try {
+        const parsed = JSON.parse(rawImageUrl)
+        if (Array.isArray(parsed)) {
+          imageUrls = parsed.map((v: any) => String(v || '')).filter(Boolean)
+        } else {
+          imageUrls = [rawImageUrl]
+        }
+      } catch (_) {
+        imageUrls = [rawImageUrl]
+      }
+    }
+    if (Number.isFinite(order) && order >= 0) {
+      const idx = Math.min(3, Math.floor(order))
+      while (imageUrls.length <= idx) imageUrls.push('')
+      imageUrls[idx] = imageUrl
+      imageUrls = imageUrls.filter(Boolean)
+    } else {
+      imageUrls.push(imageUrl)
+    }
+    imageUrls = imageUrls.slice(0, 4)
+    const imageUrlForDb = imageUrls.length === 1 ? imageUrls[0] : JSON.stringify(imageUrls)
     await DB.prepare(
       'UPDATE posts SET image_url = ? WHERE id = ?'
-    ).bind(imageUrl, postId).run()
+    ).bind(imageUrlForDb, postId).run()
     
-    return c.json({ success: true, image_url: imageUrl })
+    return c.json({ success: true, image_url: imageUrl, image_urls: imageUrls })
   } catch (error) {
     console.error('Image upload error:', error)
     return c.json({ error: 'Upload failed' }, 500)
@@ -995,19 +1272,17 @@ app.post('/api/posts/:id/video', async (c) => {
 
 // Get post video from R2
 app.get('/api/videos/posts/:filename', async (c) => {
-  const { R2 } = c.env
-  const filename = c.req.param('filename')
-  
-  const object = await R2.get(`videos/${filename}`)
-  if (!object) {
-    return c.notFound()
-  }
-  
-  const headers = new Headers()
-  object.writeHttpMetadata(headers)
-  headers.set('Cache-Control', 'public, max-age=31536000')
-  
-  return new Response(object.body, { headers })
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe) return c.notFound()
+  return serveR2Object(c, `videos/${safe}`)
+})
+
+// 레거시: DB에 /api/videos/:filename (posts 세그먼트 없음) 로 저장된 동영상
+app.get('/api/videos/:filename', async (c) => {
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe) return c.notFound()
+  if (safe === 'posts') return c.notFound()
+  return serveR2Object(c, `videos/${safe}`)
 })
 
 // Update post
@@ -1596,8 +1871,89 @@ app.post('/api/prayers/:id/responses', async (c) => {
 })
 
 // =====================
-// QT Bible Proxy (Duranno)
+// QT Bible Proxy (Duranno) + 날짜 시뮬용 랜덤 본문 (bible-api.com WEB)
 // =====================
+
+const QT_SIM_BOOK_POOL: { slug: string; chapters: number }[] = [
+  { slug: 'genesis', chapters: 50 },
+  { slug: 'exodus', chapters: 40 },
+  { slug: 'matthew', chapters: 28 },
+  { slug: 'mark', chapters: 16 },
+  { slug: 'luke', chapters: 24 },
+  { slug: 'john', chapters: 21 },
+  { slug: 'acts', chapters: 28 },
+  { slug: 'romans', chapters: 16 },
+  { slug: '1 corinthians', chapters: 16 },
+  { slug: 'psalms', chapters: 150 },
+  { slug: 'proverbs', chapters: 31 },
+  { slug: 'philippians', chapters: 4 },
+  { slug: 'colossians', chapters: 4 },
+  { slug: 'ephesians', chapters: 6 },
+  { slug: 'hebrews', chapters: 13 },
+  { slug: 'james', chapters: 5 },
+  { slug: '1 peter', chapters: 5 },
+  { slug: 'revelation', chapters: 22 },
+]
+
+function qtSimSeededUnit(qtDate: string, salt: number): number {
+  let h = 2166136261 ^ (salt * 2654435761)
+  for (let i = 0; i < qtDate.length; i++) {
+    h ^= qtDate.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  h ^= h >>> 16
+  h = Math.imul(h, 2246822507)
+  h ^= h >>> 13
+  h = Math.imul(h, 3266489909)
+  h ^= h >>> 16
+  return (h >>> 0) / 4294967296
+}
+
+async function fetchQtSimBibleFromWeb(qtDate: string): Promise<{
+  passageRef: string
+  passageTitle: string
+  reference: string
+  scripture: string
+}> {
+  const bi = Math.floor(qtSimSeededUnit(qtDate, 11) * QT_SIM_BOOK_POOL.length)
+  const book = QT_SIM_BOOK_POOL[bi]!
+  const ch = 1 + Math.floor(qtSimSeededUnit(qtDate, 12) * book.chapters)
+  const vStart = 1 + Math.floor(qtSimSeededUnit(qtDate, 13) * 20)
+  const nVerses = 3 + Math.floor(qtSimSeededUnit(qtDate, 14) * 6)
+  const vEnd = vStart + nVerses
+  const bookPath = book.slug.replace(/\s+/g, '+')
+  const apiUrl = `https://bible-api.com/${bookPath}+${ch}:${vStart}-${vEnd}`
+
+  const resp = await fetch(apiUrl)
+  if (!resp.ok) {
+    throw new Error(`bible-api.com HTTP ${resp.status}`)
+  }
+  const data = (await resp.json()) as {
+    reference?: string
+    text?: string
+    verses?: Array<{ verse: number; text: string }>
+  }
+
+  const lines: string[] = []
+  if (Array.isArray(data.verses) && data.verses.length) {
+    for (const v of data.verses) {
+      const t = String(v.text || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (t) lines.push(`${v.verse} ${t}`)
+    }
+  }
+  const scripture =
+    lines.length > 0 ? lines.join('\n') : String(data.text || '').replace(/\s+/g, ' ').trim()
+
+  const ref = String(data.reference || '').trim()
+  const passageRef = ref || `${book.slug} ${ch}:${vStart}~${vEnd}`
+  const passageTitle = '날짜 시뮬 본문 (bible-api.com · World English Bible)'
+  const reference = `(시뮬 · WEB 영문) ${passageRef}`
+
+  return { passageRef, passageTitle, reference, scripture }
+}
+
 app.get('/api/qt/bible', async (c) => {
   const qtDateRaw = c.req.query('qtDate')
   if (!qtDateRaw || typeof qtDateRaw !== 'string') {
@@ -1611,6 +1967,26 @@ app.get('/api/qt/bible', async (c) => {
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(qtDate)) {
     return c.json({ error: 'qtDate format must be YYYY-MM-DD' }, 400)
+  }
+
+  const simRaw = c.req.query('sim')
+  const useSim = simRaw === '1' || simRaw === 'true'
+  if (useSim) {
+    try {
+      const parts = await fetchQtSimBibleFromWeb(qtDate)
+      c.header('Cache-Control', 'private, no-store')
+      return c.json({ qtDate, ...parts, sim: true })
+    } catch (e) {
+      console.error('qt sim bible', e)
+      return c.json(
+        {
+          error: 'Failed to fetch sim bible',
+          qtDate,
+          detail: e instanceof Error ? e.message : String(e),
+        },
+        502
+      )
+    }
   }
 
   const url = `https://www.duranno.com/qt/view/bible.asp?qtDate=${encodeURIComponent(qtDate)}`
@@ -1696,6 +2072,165 @@ app.get('/api/qt/bible', async (c) => {
         .trim()
 
   return c.json({ qtDate, passageRef, passageTitle, reference, scripture })
+})
+
+// =====================
+// QT diary logs (적용 / 마침기도)
+// =====================
+app.get('/api/qt/logs', async (c) => {
+  const { DB } = c.env
+  const userId = Number(c.req.query('user_id') || 0)
+  if (!userId) return c.json({ error: 'user_id required' }, 400)
+
+  const { results } = await DB.prepare(
+    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, created_at, updated_at
+     FROM qt_logs WHERE user_id = ? ORDER BY qt_date DESC`
+  )
+    .bind(userId)
+    .all()
+
+  const logs = (results || []).map((row: Record<string, unknown>) => ({
+    ...row,
+    qt_date: String(row.qt_date ?? '')
+      .trim()
+      .slice(0, 10)
+  }))
+
+  c.header('Cache-Control', 'private, no-store, max-age=0')
+  c.header('Pragma', 'no-cache')
+  return c.json({ logs })
+})
+
+app.post('/api/qt/logs/upsert', async (c) => {
+  const { DB } = c.env
+  const body = await c.req.json()
+  const userId = Number(body.user_id || 0)
+  const qtDate = String(body.qt_date || '').trim()
+  if (!userId || !/^\d{4}-\d{2}-\d{2}$/.test(qtDate)) {
+    return c.json({ error: 'user_id and qt_date (YYYY-MM-DD) required' }, 400)
+  }
+
+  const existing = (await DB.prepare('SELECT * FROM qt_logs WHERE user_id = ? AND qt_date = ?').bind(userId, qtDate).first()) as Record<string, unknown> | null
+
+  const nextApply = body.apply_text !== undefined ? String(body.apply_text) : (existing?.apply_text != null ? String(existing.apply_text) : '')
+  const nextClose =
+    body.closing_prayer_text !== undefined
+      ? String(body.closing_prayer_text)
+      : existing?.closing_prayer_text != null
+        ? String(existing.closing_prayer_text)
+        : ''
+  const nextVerse =
+    body.verse_reference_raw !== undefined
+      ? String(body.verse_reference_raw || '')
+      : existing?.verse_reference_raw != null
+        ? String(existing.verse_reference_raw)
+        : ''
+  const nextApplyPost =
+    body.apply_post_id !== undefined ? (body.apply_post_id == null ? null : Number(body.apply_post_id)) : existing?.apply_post_id != null ? Number(existing.apply_post_id) : null
+  const nextClosePost =
+    body.closing_post_id !== undefined
+      ? body.closing_post_id == null
+        ? null
+        : Number(body.closing_post_id)
+      : existing?.closing_post_id != null
+        ? Number(existing.closing_post_id)
+        : null
+
+  if (!nextApply.trim() && !nextClose.trim()) {
+    return c.json({ error: 'apply_text or closing_prayer_text required' }, 400)
+  }
+
+  if (existing) {
+    await DB.prepare(
+      `UPDATE qt_logs SET apply_text = ?, closing_prayer_text = ?, verse_reference_raw = ?, apply_post_id = ?, closing_post_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`
+    )
+      .bind(
+        nextApply || null,
+        nextClose || null,
+        nextVerse || null,
+        nextApplyPost,
+        nextClosePost,
+        existing.id
+      )
+      .run()
+    const row = await DB.prepare(
+      `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, created_at, updated_at FROM qt_logs WHERE id = ?`
+    )
+      .bind(existing.id)
+      .first()
+    c.header('Cache-Control', 'private, no-store')
+    return c.json({ log: row })
+  }
+
+  const ins = await DB.prepare(
+    `INSERT INTO qt_logs (user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+  )
+    .bind(userId, qtDate, nextApply || null, nextClose || null, nextVerse || null, nextApplyPost, nextClosePost)
+    .run()
+
+  const row = await DB.prepare(
+    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, created_at, updated_at FROM qt_logs WHERE id = ?`
+  )
+    .bind(ins.meta.last_row_id)
+    .first()
+  c.header('Cache-Control', 'private, no-store')
+  return c.json({ log: row })
+})
+
+/** JSON POST 삭제 — 일부 환경에서 DELETE/쿼리가 불안정할 때 사용 */
+app.post('/api/qt/logs/remove', async (c) => {
+  const { DB } = c.env
+  const body = (await c.req.json().catch(() => ({}))) as { id?: number | string; actor_user_id?: number | string }
+  const id = Number(body?.id || 0)
+  const actorId = Number(body?.actor_user_id || 0)
+  if (!id || !actorId) return c.json({ error: 'id and actor_user_id required' }, 400)
+
+  const log = (await DB.prepare('SELECT user_id FROM qt_logs WHERE id = ?').bind(id).first()) as { user_id: number } | null
+  if (!log) return c.json({ error: 'Not found' }, 404)
+
+  const actor = (await DB.prepare('SELECT role FROM users WHERE id = ?').bind(actorId).first()) as { role: string } | null
+  if (!actor) return c.json({ error: 'Actor not found' }, 404)
+
+  const logOwnerId = Number(log.user_id)
+  const isOwner = logOwnerId === actorId
+  const isStaff = actor.role === 'admin' || actor.role === 'moderator'
+  if (!isOwner && !isStaff) return c.json({ error: 'Forbidden' }, 403)
+
+  await DB.prepare('DELETE FROM qt_logs WHERE id = ?').bind(id).run()
+  c.header('Cache-Control', 'private, no-store')
+  return c.json({ success: true })
+})
+
+app.delete('/api/qt/logs/:id', async (c) => {
+  const { DB } = c.env
+  const id = Number(c.req.param('id') || 0)
+  let actorId = Number(c.req.query('actor_user_id') || 0)
+  if (!actorId) {
+    try {
+      const body = (await c.req.json()) as { actor_user_id?: number | string }
+      actorId = Number(body?.actor_user_id || 0)
+    } catch {
+      // DELETE 본문이 없거나 JSON이 아닌 환경 대비
+    }
+  }
+  if (!id || !actorId) return c.json({ error: 'id and actor_user_id required' }, 400)
+
+  const log = (await DB.prepare('SELECT user_id FROM qt_logs WHERE id = ?').bind(id).first()) as { user_id: number } | null
+  if (!log) return c.json({ error: 'Not found' }, 404)
+
+  const actor = (await DB.prepare('SELECT role FROM users WHERE id = ?').bind(actorId).first()) as { role: string } | null
+  if (!actor) return c.json({ error: 'Actor not found' }, 404)
+
+  const logOwnerId = Number(log.user_id)
+  const isOwner = logOwnerId === actorId
+  const isStaff = actor.role === 'admin' || actor.role === 'moderator'
+  if (!isOwner && !isStaff) return c.json({ error: 'Forbidden' }, 403)
+
+  await DB.prepare('DELETE FROM qt_logs WHERE id = ?').bind(id).run()
+  c.header('Cache-Control', 'private, no-store')
+  return c.json({ success: true })
 })
 
 // =====================
@@ -2906,14 +3441,108 @@ app.get('/api/friends/:userId', async (c) => {
   }
 })
 
+// Check friendship status between two users
+app.get('/api/friendship/status', async (c) => {
+  const { DB } = c.env
+  const fromUserId = Number(c.req.query('fromUserId'))
+  const toUserId = Number(c.req.query('toUserId'))
+
+  if (!Number.isFinite(fromUserId) || !Number.isFinite(toUserId)) {
+    return c.json({ error: 'Invalid user ids', status: 'none' }, 400)
+  }
+
+  try {
+    const row = await DB.prepare(`
+      SELECT id, user_id, friend_id, status
+      FROM friendships
+      WHERE (user_id = ? AND friend_id = ?)
+         OR (user_id = ? AND friend_id = ?)
+      ORDER BY id DESC
+      LIMIT 1
+    `).bind(fromUserId, toUserId, toUserId, fromUserId).first()
+
+    if (!row) {
+      return c.json({ status: 'none', direction: null })
+    }
+
+    const direction = row.user_id === fromUserId ? 'outgoing' : 'incoming'
+    return c.json({ status: row.status, direction, requestId: row.id })
+  } catch (error) {
+    console.error('Failed to fetch friendship status:', error)
+    return c.json({ error: 'Failed to fetch friendship status', status: 'none' }, 500)
+  }
+})
+
 // Get user's notifications
 app.get('/api/notifications/:userId', async (c) => {
   const { DB } = c.env
   const userId = c.req.param('userId')
-  
+
+  const mapDbNotificationRow = (n: any, extras: { preview_text?: string; friend_message_id?: number | null }) => ({
+    id: n.id,
+    type: n.type,
+    from_user_id: n.from_user_id,
+    from_user_name: n.from_user_name,
+    from_user_avatar: n.from_user_avatar,
+    post_id: n.post_id,
+    comment_id: n.comment_id,
+    post_content: n.post_content,
+    preview_text: extras.preview_text ?? '',
+    friend_message_id: extras.friend_message_id ?? null,
+    created_at: n.created_at,
+    is_read: n.is_read === 1
+  })
+
   try {
-    // Get all notifications (comments, likes, friend requests)
-    const { results: dbNotifications } = await DB.prepare(`
+    let dbNotifications: any[] = []
+    try {
+      const { results } = await DB.prepare(`
+      SELECT 
+        n.id,
+        n.type,
+        n.from_user_id,
+        n.post_id,
+        n.comment_id,
+        n.is_read,
+        n.created_at,
+        n.preview_text,
+        n.friend_message_id,
+        u.name as from_user_name,
+        u.avatar_url as from_user_avatar,
+        p.content as post_content
+      FROM notifications n
+      JOIN users u ON u.id = n.from_user_id
+      LEFT JOIN posts p ON p.id = n.post_id
+      WHERE n.user_id = ?
+      ORDER BY n.created_at DESC
+      LIMIT 50
+    `).bind(userId).all()
+      dbNotifications = results || []
+    } catch {
+      try {
+        const { results } = await DB.prepare(`
+      SELECT 
+        n.id,
+        n.type,
+        n.from_user_id,
+        n.post_id,
+        n.comment_id,
+        n.is_read,
+        n.created_at,
+        n.preview_text,
+        u.name as from_user_name,
+        u.avatar_url as from_user_avatar,
+        p.content as post_content
+      FROM notifications n
+      JOIN users u ON u.id = n.from_user_id
+      LEFT JOIN posts p ON p.id = n.post_id
+      WHERE n.user_id = ?
+      ORDER BY n.created_at DESC
+      LIMIT 50
+    `).bind(userId).all()
+        dbNotifications = results || []
+      } catch {
+        const { results } = await DB.prepare(`
       SELECT 
         n.id,
         n.type,
@@ -2932,6 +3561,9 @@ app.get('/api/notifications/:userId', async (c) => {
       ORDER BY n.created_at DESC
       LIMIT 50
     `).bind(userId).all()
+        dbNotifications = results || []
+      }
+    }
     
     // Get friend requests (pending friendships)
     const { results: friendRequests } = await DB.prepare(`
@@ -2960,19 +3592,15 @@ app.get('/api/notifications/:userId', async (c) => {
       is_read: false
     }))
     
-    // Convert database notifications to notification format
-    const notifications = dbNotifications.map((n: any) => ({
-      id: n.id,
-      type: n.type,
-      from_user_id: n.from_user_id,
-      from_user_name: n.from_user_name,
-      from_user_avatar: n.from_user_avatar,
-      post_id: n.post_id,
-      comment_id: n.comment_id,
-      post_content: n.post_content,
-      created_at: n.created_at,
-      is_read: n.is_read === 1
-    }))
+    const notifications = dbNotifications.map((n: any) =>
+      mapDbNotificationRow(n, {
+        preview_text: n.preview_text != null ? String(n.preview_text) : '',
+        friend_message_id:
+          n.friend_message_id != null && n.friend_message_id !== ''
+            ? Number(n.friend_message_id)
+            : null
+      })
+    )
     
     // Combine all notifications and sort by date
     const allNotifications = [...notifications, ...friendRequestNotifications]
@@ -2985,25 +3613,353 @@ app.get('/api/notifications/:userId', async (c) => {
   }
 })
 
+// =====================
+// Friend Messenger APIs
+// =====================
+async function ensureFriendMessagesTable(DB: any) {
+  await DB.prepare(`
+    CREATE TABLE IF NOT EXISTS friend_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sender_id INTEGER NOT NULL,
+      receiver_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      image_url TEXT,
+      video_url TEXT,
+      created_at TEXT NOT NULL
+    )
+  `).run()
+
+  // Local DBs created before media support: add columns if missing.
+  try {
+    await DB.prepare('ALTER TABLE friend_messages ADD COLUMN image_url TEXT').run()
+  } catch (_) {
+    // already exists
+  }
+  try {
+    await DB.prepare('ALTER TABLE friend_messages ADD COLUMN video_url TEXT').run()
+  } catch (_) {
+    // already exists
+  }
+}
+
+// Get friend message media from R2
+app.get('/api/messages/media/:filename', async (c) => {
+  const safe = sanitizeR2Filename(c.req.param('filename'))
+  if (!safe) return c.notFound()
+  return serveR2Object(c, `messages/${safe}`)
+})
+
+// Get 1:1 messages between two users
+app.get('/api/messages/:userId/:friendId', async (c) => {
+  const { DB } = c.env
+  const userId = Number(c.req.param('userId'))
+  const friendId = Number(c.req.param('friendId'))
+
+  if (!Number.isFinite(userId) || !Number.isFinite(friendId)) {
+    return c.json({ error: 'Invalid user ids', messages: [] }, 400)
+  }
+
+  try {
+    await ensureFriendMessagesTable(DB)
+
+    const { results } = await DB.prepare(`
+      SELECT id, sender_id, receiver_id, content, image_url, video_url, created_at
+      FROM friend_messages
+      WHERE (sender_id = ? AND receiver_id = ?)
+         OR (sender_id = ? AND receiver_id = ?)
+      ORDER BY datetime(created_at) ASC, id ASC
+      LIMIT 200
+    `).bind(userId, friendId, friendId, userId).all()
+
+    return c.json({ messages: results || [] })
+  } catch (error) {
+    console.error('Failed to fetch friend messages:', error)
+    return c.json({ error: 'Failed to fetch friend messages', messages: [] }, 500)
+  }
+})
+
+// Web version compatibility: same as /api/messages/:userId/:friendId
+app.get('/api/messages/:userId/with/:friendId', async (c) => {
+  const userId = c.req.param('userId')
+  const friendId = c.req.param('friendId')
+  // Delegate by rewriting params via manual call
+  return await app.fetch(new Request(new URL(`/api/messages/${userId}/${friendId}`, c.req.url).toString(), c.req.raw), c.env, c.executionCtx)
+})
+
+// Send 1:1 message
+app.post('/api/messages', async (c) => {
+  const { DB, R2 } = c.env
+  const ct = String(c.req.header('content-type') || '').toLowerCase()
+  const isMultipart = ct.includes('multipart/form-data')
+
+  try {
+    await ensureFriendMessagesTable(DB)
+
+    let senderId = NaN
+    let receiverId = NaN
+    let content = ''
+    let imageUrl: string | null = null
+    let videoUrl: string | null = null
+
+    if (isMultipart) {
+      const form = await c.req.formData()
+      const sid = form.get('senderId') ?? form.get('sender_id')
+      const rid = form.get('receiverId') ?? form.get('receiver_id')
+      senderId = Number(sid)
+      receiverId = Number(rid)
+      content = String(form.get('content') || '').trim()
+
+      const image = form.get('image')
+      const video = form.get('video')
+
+      if (image && image instanceof File) {
+        if (!image.type.startsWith('image/')) return c.json({ error: 'Invalid file type' }, 400)
+        if (image.size > 10 * 1024 * 1024) return c.json({ error: 'File too large (max 10MB)' }, 400)
+        const ext = image.name.split('.').pop() || 'png'
+        const filename = `${senderId}-${receiverId}-${Date.now()}-${crypto.randomUUID()}.${ext}`
+        const fullPath = `messages/${filename}`
+        const arrayBuffer = await image.arrayBuffer()
+        await R2.put(fullPath, arrayBuffer, { httpMetadata: { contentType: image.type } })
+        imageUrl = `/api/messages/media/${filename}`
+      }
+
+      if (video && video instanceof File) {
+        if (!video.type.startsWith('video/')) return c.json({ error: 'Invalid file type' }, 400)
+        if (video.size > 100 * 1024 * 1024) return c.json({ error: 'File too large (max 100MB)' }, 400)
+        const ext = video.name.split('.').pop() || 'mp4'
+        const filename = `${senderId}-${receiverId}-${Date.now()}-${crypto.randomUUID()}.${ext}`
+        const fullPath = `messages/${filename}`
+        const arrayBuffer = await video.arrayBuffer()
+        await R2.put(fullPath, arrayBuffer, { httpMetadata: { contentType: video.type } })
+        videoUrl = `/api/messages/media/${filename}`
+      }
+    } else {
+      const body = await c.req.json()
+      // Support both local (senderId/receiverId) and web (sender_id/receiver_id)
+      senderId = Number(body?.senderId ?? body?.sender_id)
+      receiverId = Number(body?.receiverId ?? body?.receiver_id)
+      const contentRaw = typeof body?.content === 'string' ? body.content : ''
+      content = contentRaw.trim()
+    }
+
+    if (!Number.isFinite(senderId) || !Number.isFinite(receiverId)) {
+      return c.json({ error: 'senderId and receiverId are required' }, 400)
+    }
+    if (!content && !imageUrl && !videoUrl) {
+      return c.json({ error: 'content or media is required' }, 400)
+    }
+
+    const now = new Date().toISOString()
+    await DB.prepare(`
+      INSERT INTO friend_messages (sender_id, receiver_id, content, image_url, video_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(senderId, receiverId, content || '', imageUrl, videoUrl, now).run()
+
+    return c.json({ success: true, message: '메시지를 보냈습니다' })
+  } catch (error) {
+    console.error('Failed to send friend message:', error)
+    return c.json({ error: 'Failed to send friend message' }, 500)
+  }
+})
+
+/** 피드백 → 관리자(또는 운영자) 앱 내 메신저(friend_messages)로 전달. 수신자 id는 클라이언트에 노출하지 않음 */
+app.post('/api/feedback', async (c) => {
+  const { DB, R2 } = c.env
+  const ct = String(c.req.header('content-type') || '').toLowerCase()
+  const isMultipart = ct.includes('multipart/form-data')
+
+  try {
+    await ensureFriendMessagesTable(DB)
+
+    let userId = NaN
+    let content = ''
+    let imageUrl: string | null = null
+    let videoUrl: string | null = null
+
+    if (isMultipart) {
+      const form = await c.req.formData()
+      userId = Number(form.get('user_id') ?? form.get('userId'))
+      content = String(form.get('content') || '').trim()
+
+      const image = form.get('image')
+      const video = form.get('video')
+
+      if (image && image instanceof File) {
+        if (!image.type.startsWith('image/')) return c.json({ error: 'Invalid file type' }, 400)
+        if (image.size > 10 * 1024 * 1024) return c.json({ error: 'File too large (max 10MB)' }, 400)
+        const ext = image.name.split('.').pop() || 'png'
+        const filename = `feedback-${userId}-${Date.now()}-${crypto.randomUUID()}.${ext}`
+        const fullPath = `messages/${filename}`
+        const arrayBuffer = await image.arrayBuffer()
+        await R2.put(fullPath, arrayBuffer, { httpMetadata: { contentType: image.type } })
+        imageUrl = `/api/messages/media/${filename}`
+      }
+
+      if (video && video instanceof File) {
+        if (!video.type.startsWith('video/')) return c.json({ error: 'Invalid file type' }, 400)
+        if (video.size > 100 * 1024 * 1024) return c.json({ error: 'File too large (max 100MB)' }, 400)
+        const ext = video.name.split('.').pop() || 'mp4'
+        const filename = `feedback-${userId}-${Date.now()}-${crypto.randomUUID()}.${ext}`
+        const fullPath = `messages/${filename}`
+        const arrayBuffer = await video.arrayBuffer()
+        await R2.put(fullPath, arrayBuffer, { httpMetadata: { contentType: video.type } })
+        videoUrl = `/api/messages/media/${filename}`
+      }
+    } else {
+      const body = await c.req.json()
+      userId = Number(body?.user_id ?? body?.userId)
+      const contentRaw = typeof body?.content === 'string' ? body.content : ''
+      content = contentRaw.trim()
+    }
+
+    if (!Number.isFinite(userId)) {
+      return c.json({ error: 'user_id required' }, 400)
+    }
+    const senderOk = await DB.prepare('SELECT id FROM users WHERE id = ?').bind(userId).first()
+    if (!senderOk) {
+      return c.json({ error: 'Invalid user' }, 401)
+    }
+
+    if (!content && !imageUrl && !videoUrl) {
+      return c.json({ error: '내용 또는 첨부가 필요합니다' }, 400)
+    }
+
+    const adminRow = (await DB.prepare(`SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1`).first()) as { id: number } | null
+    let receiverId = adminRow?.id
+    if (receiverId == null) {
+      const modRow = (await DB.prepare(`SELECT id FROM users WHERE role = 'moderator' ORDER BY id ASC LIMIT 1`).first()) as {
+        id: number
+      } | null
+      receiverId = modRow?.id
+    }
+    if (receiverId == null) {
+      return c.json({ error: '관리자 수신 계정이 없습니다' }, 503)
+    }
+    if (Number(receiverId) === userId) {
+      return c.json({ error: '관리자 전용 기능입니다' }, 400)
+    }
+
+    const bodyText =
+      content.trim().length > 0 ? `[피드백]\n${content.trim()}` : '[피드백]\n(첨부만 전송)'
+
+    let previewText = ''
+    if (content.trim().length > 0) {
+      const t = content.trim().replace(/\s+/g, ' ')
+      previewText = t.length > 140 ? `${t.slice(0, 140)}…` : t
+    } else if (imageUrl && videoUrl) {
+      previewText = '사진·동영상 첨부'
+    } else if (imageUrl) {
+      previewText = '사진 첨부'
+    } else if (videoUrl) {
+      previewText = '동영상 첨부'
+    }
+
+    const now = new Date().toISOString()
+    const msgIns = await DB.prepare(`
+      INSERT INTO friend_messages (sender_id, receiver_id, content, image_url, video_url, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `)
+      .bind(userId, receiverId, bodyText, imageUrl, videoUrl, now)
+      .run()
+
+    const friendMessageId = Number(msgIns.meta?.last_row_id) || 0
+
+    const insFull = async () => {
+      await DB.prepare(`
+        INSERT INTO notifications (user_id, from_user_id, type, post_id, comment_id, is_read, created_at, preview_text, friend_message_id)
+        VALUES (?, ?, 'feedback', NULL, NULL, 0, ?, ?, ?)
+      `)
+        .bind(receiverId, userId, now, previewText || null, friendMessageId || null)
+        .run()
+    }
+    const insPreview = async () => {
+      await DB.prepare(`
+        INSERT INTO notifications (user_id, from_user_id, type, post_id, comment_id, is_read, created_at, preview_text)
+        VALUES (?, ?, 'feedback', NULL, NULL, 0, ?, ?)
+      `)
+        .bind(receiverId, userId, now, previewText || null)
+        .run()
+    }
+    const insLegacy = async () => {
+      await DB.prepare(`
+        INSERT INTO notifications (user_id, from_user_id, type, post_id, comment_id, is_read, created_at)
+        VALUES (?, ?, 'feedback', NULL, NULL, 0, ?)
+      `)
+        .bind(receiverId, userId, now)
+        .run()
+    }
+
+    try {
+      await insFull()
+    } catch {
+      try {
+        await insPreview()
+      } catch {
+        try {
+          await insLegacy()
+        } catch (notifErr) {
+          console.error('Feedback notification insert failed:', notifErr)
+        }
+      }
+    }
+
+    c.header('Cache-Control', 'private, no-store')
+    return c.json({ success: true, message: '피드백이 전달되었습니다' })
+  } catch (error) {
+    console.error('Failed to send feedback:', error)
+    return c.json({ error: '피드백 전송에 실패했습니다' }, 500)
+  }
+})
+
 // Send friend request
 app.post('/api/friend-request', async (c) => {
   const { DB } = c.env
   const { fromUserId, toUserId } = await c.req.json()
+  const fromId = Number(fromUserId)
+  const toId = Number(toUserId)
+  if (!Number.isFinite(fromId) || !Number.isFinite(toId)) {
+    return c.json({ error: '사용자 정보가 올바르지 않습니다' }, 400)
+  }
+  if (fromId === toId) {
+    return c.json({ error: '본인에게 친구 제안을 보낼 수 없습니다' }, 400)
+  }
   
   try {
+    // FK 오류 대신 명확한 안내를 위해 사용자 존재를 먼저 확인
+    const sender = await DB.prepare('SELECT id FROM users WHERE id = ?').bind(fromId).first()
+    const receiver = await DB.prepare('SELECT id FROM users WHERE id = ?').bind(toId).first()
+    if (!sender) {
+      return c.json({ error: '로그인 정보가 유효하지 않습니다. 다시 로그인해 주세요.' }, 401)
+    }
+    if (!receiver) {
+      return c.json({ error: '대상 가입자를 찾을 수 없습니다.' }, 404)
+    }
+
     // Check if friendship already exists
     const { results: existing } = await DB.prepare(`
       SELECT id, status FROM friendships
       WHERE (user_id = ? AND friend_id = ?)
          OR (user_id = ? AND friend_id = ?)
-    `).bind(fromUserId, toUserId, toUserId, fromUserId).all()
+    `).bind(fromId, toId, toId, fromId).all()
     
     if (existing && existing.length > 0) {
       const friendship = existing[0] as any
       if (friendship.status === 'accepted') {
         return c.json({ error: '이미 친구입니다' }, 400)
       } else if (friendship.status === 'pending') {
+        if (Number(friendship.user_id) !== fromId) {
+          return c.json({ error: '상대방이 먼저 보낸 친구 요청이 있습니다. 알림에서 승인하거나 거절해 주세요.' }, 400)
+        }
         return c.json({ error: '이미 친구 제안을 보냈습니다' }, 400)
+      } else if (friendship.status === 'rejected') {
+        // 예전에 거절된 요청은 재사용해서 재요청 가능하게 처리
+        const now = new Date().toISOString()
+        await DB.prepare(`
+          UPDATE friendships
+          SET user_id = ?, friend_id = ?, status = 'pending', updated_at = ?
+          WHERE id = ?
+        `).bind(fromId, toId, now, friendship.id).run()
+        return c.json({ success: true, message: '친구 제안을 다시 보냈습니다' })
       }
     }
     
@@ -3012,7 +3968,7 @@ app.post('/api/friend-request', async (c) => {
     await DB.prepare(`
       INSERT INTO friendships (user_id, friend_id, status, created_at, updated_at)
       VALUES (?, ?, 'pending', ?, ?)
-    `).bind(fromUserId, toUserId, now, now).run()
+    `).bind(fromId, toId, now, now).run()
     
     return c.json({ success: true, message: '친구 제안을 보냈습니다' })
   } catch (error) {
@@ -3024,15 +3980,22 @@ app.post('/api/friend-request', async (c) => {
 // Accept friend request
 app.post('/api/friend-request/accept', async (c) => {
   const { DB } = c.env
-  const { requestId } = await c.req.json()
+  const { requestId, actionUserId } = await c.req.json()
+  const actionId = Number(actionUserId)
+  if (!Number.isFinite(actionId)) {
+    return c.json({ error: '로그인 정보가 유효하지 않습니다. 다시 로그인해 주세요.' }, 401)
+  }
   
   try {
     const now = new Date().toISOString()
-    await DB.prepare(`
+    const result = await DB.prepare(`
       UPDATE friendships
       SET status = 'accepted', updated_at = ?
-      WHERE id = ? AND status = 'pending'
-    `).bind(now, requestId).run()
+      WHERE id = ? AND status = 'pending' AND friend_id = ?
+    `).bind(now, requestId, actionId).run()
+    if (!result.success || (result.meta?.changes ?? 0) === 0) {
+      return c.json({ error: '승인 가능한 친구 요청이 없습니다.' }, 404)
+    }
     
     return c.json({ success: true, message: '친구 제안을 승인했습니다' })
   } catch (error) {
@@ -3044,13 +4007,20 @@ app.post('/api/friend-request/accept', async (c) => {
 // Reject friend request
 app.post('/api/friend-request/reject', async (c) => {
   const { DB } = c.env
-  const { requestId } = await c.req.json()
+  const { requestId, actionUserId } = await c.req.json()
+  const actionId = Number(actionUserId)
+  if (!Number.isFinite(actionId)) {
+    return c.json({ error: '로그인 정보가 유효하지 않습니다. 다시 로그인해 주세요.' }, 401)
+  }
   
   try {
-    await DB.prepare(`
+    const result = await DB.prepare(`
       DELETE FROM friendships
-      WHERE id = ? AND status = 'pending'
-    `).bind(requestId).run()
+      WHERE id = ? AND status = 'pending' AND friend_id = ?
+    `).bind(requestId, actionId).run()
+    if (!result.success || (result.meta?.changes ?? 0) === 0) {
+      return c.json({ error: '거절 가능한 친구 요청이 없습니다.' }, 404)
+    }
     
     return c.json({ success: true, message: '친구 제안을 거절했습니다' })
   } catch (error) {
@@ -3075,6 +4045,24 @@ app.post('/api/notifications/mark-read', async (c) => {
   } catch (error) {
     console.error('Failed to mark notifications as read:', error)
     return c.json({ error: 'Failed to mark notifications as read' }, 500)
+  }
+})
+
+/** 단일 알림 읽음 (피드백 알림 클릭 후 메신저 이동 등) */
+app.post('/api/notifications/read-one', async (c) => {
+  const { DB } = c.env
+  const body = (await c.req.json().catch(() => ({}))) as { userId?: number | string; notificationId?: number | string }
+  const uid = Number(body.userId)
+  const nid = Number(body.notificationId)
+  if (!Number.isFinite(uid) || !Number.isFinite(nid)) {
+    return c.json({ error: 'userId and notificationId required' }, 400)
+  }
+  try {
+    await DB.prepare(`UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?`).bind(nid, uid).run()
+    return c.json({ success: true })
+  } catch (error) {
+    console.error('Failed to mark notification read:', error)
+    return c.json({ error: 'Failed to mark notification read' }, 500)
   }
 })
 
@@ -5174,7 +6162,8 @@ app.get('/', (c) => {
                 scrollbar-gutter: stable;
             }
             :root {
-                --panel-scrollbar-gap: 10px; /* 좌/중/우 패널 스크롤바-콘텐츠 공통 간격 */
+                --panel-scrollbar-gap: 8px; /* 좌/중/우 패널 스크롤바-콘텐츠 공통 간격 (프로덕션과 동일) */
+                --panel-scrollbar-width: 8px; /* 커스텀 스크롤바 폭 */
             }
             /* Right sidebar: unify spacing between content and vertical scrollbar */
             #sidebarFriendsList,
@@ -5330,12 +6319,7 @@ app.get('/', (c) => {
             
             /* PC: 좌/중앙/우 독립 스크롤 - 포스팅 스크롤해도 사이드바 고정 */
             @media (min-width: 1024px) {
-                html, body {
-                    height: 100%;
-                    overflow: hidden !important; /* 맨 오른쪽(페이지) 스크롤 제거 */
-                }
                 .main-content-wrapper {
-                    /* 좌/중/우 BAR 각각 독립 스크롤 */
                     height: calc(100vh - 4rem);
                     overflow: hidden;
                     display: flex;
@@ -5352,33 +6336,23 @@ app.get('/', (c) => {
                     min-height: 0;
                     overscroll-behavior: contain;
                 }
-                /* 리워드 BAR: 바깥 스크롤 제거(삼각형 원인), 안쪽 sidebar-scroll만 스크롤 유지 */
-                #leftSidebar.scroll-independent {
-                    overflow: hidden !important;
-                }
-                #leftSidebar .sidebar-scroll {
-                    max-height: calc(100vh - 6rem) !important;
-                    overflow-y: auto !important;
-                }
-                /* 오른쪽 BAR(친구/알림): 패널 내부는 그대로, BAR가 스크롤 담당 */
-                #rightSidebarInner,
-                #friendsTabContent,
-                #notificationsTabContent,
-                #sidebarFriendsList,
-                #sidebarNotificationsList {
-                    overflow: visible;
-                    max-height: none;
-                }
-                /* 좌/중/우 스크롤 영역 간격을 오른쪽 기준으로 통일 */
+                /* 좌/중/우 스크롤 영역 간격을 오른쪽 기준으로 통일 (crossfriends.org 레이아웃과 동일) */
                 #leftSidebar .sidebar-scroll,
                 #centerFeedColumn,
                 #rightSidebar {
                     scrollbar-gutter: stable;
                 }
-                .panel-scroll {
+                #leftSidebar .sidebar-scroll {
                     padding-right: var(--panel-scrollbar-gap) !important;
                     box-sizing: border-box;
-                    scrollbar-gutter: stable;
+                }
+                #centerFeedColumn {
+                    padding-right: var(--panel-scrollbar-gap);
+                    box-sizing: border-box;
+                }
+                #rightSidebarInner {
+                    padding-right: var(--panel-scrollbar-gap) !important;
+                    box-sizing: border-box;
                 }
                 /* 왼쪽 사이드바 리워드 영역 = 오른쪽 사이드바와 동일 높이 */
                 #leftSidebar .sidebar-scroll {
@@ -5391,7 +6365,8 @@ app.get('/', (c) => {
                 }
                 #friendMessengerModal,
                 #friendMessengerMessages,
-                #friendMessengerComposerWrap {
+                #friendMessengerComposerWrap,
+                #feedbackModal {
                     overflow-x: hidden !important;
                 }
                 #friendMessengerComposerRow {
@@ -5399,11 +6374,12 @@ app.get('/', (c) => {
                     min-width: 0 !important;
                 }
                 #friendMessengerInput {
-                    height: 2.2rem !important;
                     min-height: 2.2rem !important;
                     padding-top: 0.25rem !important;
                     padding-bottom: 0.25rem !important;
                     font-size: 0.95rem !important;
+                    line-height: 1.35 !important;
+                    overflow-y: hidden !important;
                 }
                 #friendMessengerImageBtn,
                 #friendMessengerVideoBtn,
@@ -5454,11 +6430,12 @@ app.get('/', (c) => {
                     min-width: 0 !important;
                 }
                 #friendMessengerInput {
-                    height: 2.15rem !important;
                     min-height: 2.15rem !important;
                     padding-top: 0.2rem !important;
                     padding-bottom: 0.2rem !important;
                     font-size: 0.94rem !important;
+                    line-height: 1.35 !important;
+                    overflow-y: hidden !important;
                 }
                 #friendMessengerImageBtn,
                 #friendMessengerVideoBtn,
@@ -5635,6 +6612,10 @@ app.get('/', (c) => {
                                 <i class="fas fa-bell text-lg"></i>
                                 <span id="notificationDotMobile" class="hidden absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
                             </button>
+                            <button type="button" id="qtDaySimBtnMobile" onclick="advanceQtDaySimulation(event)" class="hidden relative text-violet-600 hover:text-violet-800 w-10 h-10 rounded-full hover:bg-violet-50 flex items-center justify-center transition" title="">
+                                <i class="fas fa-calendar-day text-lg"></i>
+                                <span data-qt-sim-badge class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-4 px-0.5 rounded-full bg-violet-600 text-white text-[9px] leading-4 font-bold text-center"></span>
+                            </button>
                             <button onclick="goToAdmin()" id="adminPanelBtnMobile" class="hidden text-red-600 hover:text-red-800 w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center" title="관리자 패널">
                                 <i class="fas fa-shield-alt text-lg"></i>
                             </button>
@@ -5685,6 +6666,10 @@ app.get('/', (c) => {
                     </div>
                     <div class="lg:col-start-4 flex items-center justify-end gap-2">
                         <div class="flex items-center gap-2 hidden" id="userMenuRightPC">
+                            <button type="button" id="qtDaySimBtn" onclick="advanceQtDaySimulation(event)" class="hidden relative text-violet-600 hover:text-violet-800 w-11 h-11 rounded-full hover:bg-violet-50 transition flex items-center justify-center" title="">
+                                <i class="fas fa-calendar-day text-xl"></i>
+                                <span data-qt-sim-badge class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-4 px-0.5 rounded-full bg-violet-600 text-white text-[9px] leading-4 font-bold text-center"></span>
+                            </button>
                             <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 w-11 h-11 rounded-full hover:bg-red-50 transition flex items-center justify-center" title="관리자 패널">
                                 <i class="fas fa-shield-alt text-xl"></i>
                             </button>
@@ -5711,7 +6696,7 @@ app.get('/', (c) => {
             <div class="flex flex-col gap-3 sm:gap-6 lg:grid lg:grid-cols-[1.188fr_1.0715fr_1.0715fr_1fr] lg:gap-x-[2%] main-content-grid">
                 <!-- Left Sidebar - order-first on mobile: reward content at top -->
                 <div id="leftSidebar" class="lg:col-span-1 order-first lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2 scroll-independent">
-                        <div class="sticky top-20 space-y-2 sm:space-y-3 lg:min-h-full max-h-[calc(100vh-6rem)] lg:max-h-none overflow-y-auto sidebar-scroll panel-scroll">
+                        <div class="sticky top-20 space-y-2 sm:space-y-3 lg:min-h-full max-h-[calc(100vh-6rem)] lg:max-h-none overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
                         <div id="verseRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="basic" data-reward-key="basic" data-reward-target="verseRewardContent">
                             <div class="reward-card-header-line">
@@ -5977,7 +6962,7 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Center Column: Post Card + Posts (scroll together on PC) -->
-                <div id="centerFeedColumn" class="lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col scroll-independent panel-scroll mx-auto w-full max-w-[480px] lg:max-w-none space-y-4 center-feed-mobile-contents">
+                <div id="centerFeedColumn" class="lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col scroll-independent mx-auto w-full max-w-[480px] lg:max-w-none space-y-4 center-feed-mobile-contents">
                 <!-- Main Feed Part 1: Post Card - order-2 on mobile (after reward) -->
                 <div id="mainFeedPart1" class="space-y-4 order-2 lg:order-none">
                     <!-- User Profile Cover Card (Hidden by default, shown when filtering by user) -->
@@ -6097,6 +7082,7 @@ app.get('/', (c) => {
                                     placeholder="무엇을 나누고 싶으신가요?"
                                     class="w-full p-2 sm:p-3 border rounded font-size-base resize-none focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors duration-200"
                                     rows="3"
+                                    oninput="createPostAutoGrow(this)"
                                 ></textarea>
                                 
                                 <!-- Background Color Selector -->
@@ -6236,7 +7222,7 @@ app.get('/', (c) => {
                                         <label 
                                             for="postImageFile"
                                             class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-touch lg:min-h-0 lg:min-w-0"
-                                            title="사진 첨부 (최대 4장)">
+                                            title="여러 장은 원하는 순서대로 한 장씩 첨부해 주세요. (최대 4장)">
                                             <i class="fas fa-image"></i>
                                         </label>
                                         
@@ -6277,101 +7263,105 @@ app.get('/', (c) => {
 
                 <!-- Main Feed Part 2: Posts Feed & QT Panel - order-3 on mobile (after reward, post card) -->
                 <div id="postsFeedColumn" class="order-3 lg:order-none">
-                    <!-- QT Panel (hidden by default) -->
-                    <div id="qtPanel" class="hidden bg-white rounded-xl shadow-lg border-2 border-red-400 p-4 sm:p-6 mb-4">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
-                            <div class="flex items-center gap-2">
-                                <div class="text-sm text-gray-600" id="qtDate"></div>
-                                <div id="qtPassageBadge" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200" title="오늘 본문(시작 절)">
-                                    <span id="qtPassageShortRef">-</span>
-                                </div>
-                                <button id="qtAlarmBtn" onclick="showQtAlarmModal()" class="hidden px-2.5 py-1 rounded-lg text-xs font-medium transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">
-                                    <i class="fas fa-bell"></i>
-                                </button>
-                                <button onclick="showQtInviteModal()" class="px-2.5 py-1 rounded-lg text-xs font-medium transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="친구에게 QT 추천">
-                                    <i class="fas fa-envelope"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="border-l-4 border-red-600 pl-3 py-1 mb-4">
-                            <p class="font-bold text-red-600 text-sm" id="qtVerseRef"></p>
-                        </div>
-                        <div class="flex flex-nowrap gap-1 sm:gap-2 mb-4 overflow-x-auto">
-                            <button id="qtPrayerBtn" onclick="showQtSection('prayer')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
-                                시작기도
-                            </button>
-                            <button id="qtReadBtn" onclick="showQtSection('read')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
-                                <span class="sm:hidden">읽기·묵상</span>
-                                <span class="hidden sm:inline">읽기와 묵상</span>
-                            </button>
-                            <button id="qtApplyBtn" onclick="showQtSection('apply')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
-                                적용
-                            </button>
-                            <button id="qtPrayer2Btn" onclick="showQtSection('prayer2')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
-                                마침기도
-                            </button>
-                        </div>
-                        <div id="qtPrayerSection" class="qt-section hidden p-4 bg-red-50 rounded-lg border border-red-200 mb-4">
-                            <p class="text-gray-800 text-sm leading-relaxed">오늘 당신을 위한 생명의 양식입니다. 먼저 기도하며 오늘의 말씀을 잘 깨닿고 하나님의 인도함과 보호하심을 구하는 기도를 먼저 하십시오.</p>
-                        </div>
-                        <div id="qtReadSection" class="qt-section hidden p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-                            <div id="qtScriptureText" class="text-gray-800 text-sm leading-relaxed whitespace-pre-line"></div>
-                        </div>
-                        <div id="qtApplySection" class="qt-section hidden">
-                            <div id="qtApplyComposer" class="flex items-end gap-3">
-                                <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
-                                    <textarea id="qtApplyInput" rows="1" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" oninput="qtAutoGrow(this)"></textarea>
-                                </div>
-                                <button type="button" onclick="sendQtApplyPost()" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                            <div id="qtApplySavedView" class="hidden bg-white rounded-xl border-2 border-red-200 p-3">
-                                <p id="qtApplySavedText" class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></p>
-                                <div class="mt-2 flex justify-end">
-                                    <button type="button" onclick="editQtApply()" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 text-xs font-semibold transition">
-                                        수정
+                    <template id="qtPanelTemplate">
+                        <div class="qt-panel-instance bg-white rounded-xl shadow-lg border-2 border-red-400 p-4 sm:p-6" data-qt-date="" data-qt-log-id="">
+                            <div class="flex items-start justify-between gap-2 mb-4 flex-wrap">
+                                <h2 class="text-xl font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
+                                <div class="flex items-center gap-2 flex-wrap justify-end">
+                                    <div class="text-sm text-gray-600" data-qt-field="dateLabel"></div>
+                                    <div class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200" title="오늘 본문(시작 절)">
+                                        <span data-qt-field="passageShort">-</span>
+                                    </div>
+                                    <button type="button" data-qt-field="qtAlarmBtn" data-qt-act="alarm" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">
+                                        <i class="fas fa-bell text-[13px] leading-none" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" data-qt-act="invite" class="inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="친구에게 QT 추천">
+                                        <i class="fas fa-envelope text-[13px] leading-none" aria-hidden="true"></i>
+                                    </button>
+                                    <button type="button" data-qt-act="delete-log" data-qt-field="deleteLogBtn" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-white text-red-600 border border-red-300 hover:bg-red-50" title="저장된 QT 로그 삭제" aria-label="QT 로그 삭제">
+                                        <i class="fas fa-trash text-[12px] leading-none" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                        <div id="qtPrayer2Section" class="qt-section hidden mt-3">
-                            <div id="qtPrayerComposer" class="flex items-end gap-3">
-                                <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
-                                    <textarea id="qtPrayerInput" rows="1" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" oninput="qtAutoGrow(this)"></textarea>
-                                </div>
-                                <button type="button" onclick="sendQtPrayerPost()" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
-                                    <i class="fas fa-paper-plane"></i>
+                            <div class="border-l-4 border-red-600 pl-3 py-1 mb-4">
+                                <span data-qt-field="verseRefRaw" class="hidden" aria-hidden="true"></span>
+                                <p class="font-bold text-red-600 text-sm whitespace-pre-line leading-relaxed" data-qt-field="verseRef"></p>
+                            </div>
+                            <div class="flex flex-nowrap gap-1 sm:gap-2 mb-4 overflow-x-auto">
+                                <button type="button" data-qt-act="toggle-section" data-section="prayer" data-qt-sec-btn="prayer" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                    시작기도
+                                </button>
+                                <button type="button" data-qt-act="toggle-section" data-section="read" data-qt-sec-btn="read" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                    <span class="sm:hidden">읽기·묵상</span>
+                                    <span class="hidden sm:inline">읽기와 묵상</span>
+                                </button>
+                                <button type="button" data-qt-act="toggle-section" data-section="apply" data-qt-sec-btn="apply" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                    적용
+                                </button>
+                                <button type="button" data-qt-act="toggle-section" data-section="prayer2" data-qt-sec-btn="prayer2" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                    마침기도
                                 </button>
                             </div>
-                            <div id="qtPrayerSavedView" class="hidden bg-white rounded-xl border-2 border-red-200 p-3">
-                                <p id="qtPrayerSavedText" class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap"></p>
-                                <div class="mt-2 flex justify-end">
-                                    <button type="button" onclick="editQtPrayer()" class="px-3 py-1.5 rounded-lg border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 text-xs font-semibold transition">
-                                        수정
+                            <div class="qt-section hidden p-4 bg-red-50 rounded-lg border border-red-200 mb-4" data-qt-section="prayer">
+                                <p class="text-gray-800 text-sm leading-relaxed">오늘 당신을 위한 생명의 양식입니다. 먼저 기도하며 오늘의 말씀을 잘 깨닿고 하나님의 인도함과 보호하심을 구하는 기도를 먼저 하십시오.</p>
+                            </div>
+                            <div class="qt-section hidden p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4" data-qt-section="read">
+                                <div class="text-gray-800 text-sm leading-relaxed whitespace-pre-line" data-qt-field="scriptureText"></div>
+                            </div>
+                            <div class="qt-section hidden" data-qt-section="apply">
+                                <div class="flex items-end gap-3" data-qt-field="applyComposer">
+                                    <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
+                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="applyInput" oninput="qtAutoGrow(this)"></textarea>
+                                    </div>
+                                    <button type="button" data-qt-act="send-apply" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                                <div class="hidden relative bg-white rounded-xl border-2 border-red-200 p-3 mb-2" data-qt-field="applySavedView">
+                                    <p class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="applySavedText"></p>
+                                    <button type="button" data-qt-act="edit-apply" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-300 text-red-700 bg-white hover:bg-red-50 text-xs font-semibold transition shadow-md">
+                                        <i class="fas fa-pen mr-1"></i>수정
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                        <div id="qtWorshipPlayer" class="hidden mt-2 relative">
-                            <div class="flex items-center gap-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
-                                <button id="qtWorshipPlayBtn" onclick="toggleQtWorshipPlay()" class="w-12 h-12 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition flex-shrink-0">
-                                    <i id="qtWorshipPlayIcon" class="fas fa-play"></i>
-                                </button>
-                                <div class="flex-1 min-w-0">
-                                    <div class="text-sm font-medium text-gray-800 truncate">찬양</div>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <button id="qtWorshipMuteBtn" onclick="toggleQtWorshipMute()" class="text-gray-600 hover:text-gray-800 p-0.5 flex-shrink-0" title="음소거">
-                                            <i id="qtWorshipMuteIcon" class="fas fa-volume-up text-sm"></i>
-                                        </button>
-                                        <input type="range" id="qtWorshipVolumeBar" min="0" max="100" value="80" oninput="setQtWorshipVolume(this.value)" class="flex-1 h-2 accent-red-500 cursor-pointer">
-                                        <span class="text-xs text-gray-500 w-8" id="qtWorshipVolumeLabel">80%</span>
+                            <div class="qt-section hidden mt-5" data-qt-section="prayer2">
+                                <div class="flex items-end gap-3" data-qt-field="prayerComposer">
+                                    <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
+                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="prayerInput" oninput="qtAutoGrow(this)"></textarea>
+                                    </div>
+                                    <button type="button" data-qt-act="send-prayer" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                                <div class="hidden relative bg-white rounded-xl border-2 border-red-200 p-3" data-qt-field="prayerSavedView">
+                                    <p class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="prayerSavedText"></p>
+                                    <button type="button" data-qt-act="edit-prayer" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-300 text-red-700 bg-white hover:bg-red-50 text-xs font-semibold transition shadow-md">
+                                        <i class="fas fa-pen mr-1"></i>수정
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="hidden mt-2 relative" data-qt-field="worshipWrap">
+                                <div class="flex items-center gap-3 p-3 bg-gray-100 rounded-xl border border-gray-200">
+                                    <button type="button" data-qt-act="worship-play" class="w-12 h-12 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition flex-shrink-0">
+                                        <i class="fas fa-play" data-qt-field="worshipPlayIcon"></i>
+                                    </button>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-medium text-gray-800 truncate">찬양</div>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <button type="button" data-qt-act="worship-mute" class="text-gray-600 hover:text-gray-800 p-0.5 flex-shrink-0" title="음소거">
+                                                <i class="fas fa-volume-up text-sm" data-qt-field="worshipMuteIcon"></i>
+                                            </button>
+                                            <input type="range" min="0" max="100" value="80" data-qt-field="worshipVolumeBar" oninput="setQtWorshipVolumeFromPanel(this)" class="flex-1 h-2 accent-red-500 cursor-pointer" />
+                                            <span class="text-xs text-gray-500 w-8" data-qt-field="worshipVolumeLabel">80%</span>
+                                        </div>
                                     </div>
                                 </div>
+                                <div class="absolute -left-[9999px] w-1 h-1 overflow-hidden"><div data-qt-field="worshipYtAnchor"></div></div>
                             </div>
-                            <div class="absolute -left-[9999px] w-1 h-1 overflow-hidden"><div id="qtWorshipYtAnchor"></div></div>
                         </div>
+                    </template>
+                    <div id="qtPanelsWrap" class="hidden flex flex-col gap-4 mb-4">
+                        <div id="qtPanelsStack" class="flex flex-col gap-4"></div>
                     </div>
                     <!-- Posts Feed -->
                     <div class="relative" id="postsFeedWrapper">
@@ -6386,10 +7376,10 @@ app.get('/', (c) => {
                 <!-- /Center Column -->
 
                 <!-- Right Sidebar - Friend List & Notifications (same position, toggle content) -->
-                <div id="rightSidebar" class="lg:col-span-1 hidden lg:block lg:order-4 lg:col-start-4 lg:row-start-1 lg:row-span-2 panel-scroll scroll-independent" onclick="if(this.classList.contains('reactors-only')&&event.target===this)closePostReactors()">
-                    <div id="rightSidebarInner" class="relative min-h-[200px] pr-0">
+                <div id="rightSidebar" class="lg:col-span-1 hidden lg:block lg:order-4 lg:col-start-4 lg:row-start-1 lg:row-span-2 scroll-independent sidebar-scroll" onclick="if(this.classList.contains('reactors-only')&&event.target===this)closePostReactors()">
+                    <div id="rightSidebarInner" class="relative min-h-[200px] pr-0 lg:pr-2">
                         <!-- Friend List Card -->
-                        <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 friends-empty">
+                        <div id="friendsTabContent" class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 friends-empty flex flex-col min-h-0">
                             <!-- Header -->
                             <div id="friendsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
                                 <div class="flex items-center">
@@ -6431,7 +7421,7 @@ app.get('/', (c) => {
                         </div>
                         
                         <!-- Notifications Card (same position as friends, visibility toggle) -->
-                        <div id="notificationsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 notifications-empty">
+                        <div id="notificationsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 notifications-empty flex flex-col min-h-0">
                             <!-- Header -->
                             <div id="notificationsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
                                 <div class="flex items-center">
@@ -6462,6 +7452,109 @@ app.get('/', (c) => {
             <div class="w-full max-w-[100vw] sm:max-w-[95vw] lg:max-w-6xl mx-auto px-1 sm:px-4 py-4" id="postFocusContent" onclick="event.stopPropagation()">
             </div>
         </div>
+        <div id="friendMessengerModal" class="hidden fixed inset-0 z-[130] bg-black/55 flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="if(event.target===this) closeFriendMessenger()">
+            <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div id="friendMessengerAvatar" class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center overflow-hidden">
+                            <i class="fas fa-user text-xs"></i>
+                        </div>
+                        <h3 id="friendMessengerTitle" class="font-bold text-gray-800 truncate">메시지</h3>
+                    </div>
+                    <button type="button" onclick="closeFriendMessenger()" class="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="friendMessengerMessages" class="h-[52vh] sm:h-[420px] overflow-y-auto px-3 py-3 space-y-2 bg-gray-50"></div>
+                <div id="friendMessengerComposerWrap" class="border-t border-gray-200 bg-white px-3 py-2">
+                    <div id="friendMessengerPreview" class="hidden mb-2 p-2 rounded-xl border border-gray-200 bg-gray-50">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="text-xs font-semibold text-gray-600 truncate">
+                                <i class="fas fa-paperclip mr-1 text-blue-500"></i>첨부 미리보기
+                            </div>
+                            <button type="button" onclick="removeFriendMessengerAttachment()" class="w-7 h-7 rounded-full hover:bg-white text-gray-500 hover:text-gray-800 transition" title="첨부 제거">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <img id="friendMessengerImagePreview" class="hidden mt-2 max-w-full max-h-52 rounded-lg border border-gray-200 bg-white object-contain" alt="첨부 이미지 미리보기" />
+                        <video id="friendMessengerVideoPreview" class="hidden mt-2 max-w-full max-h-52 rounded-lg border border-gray-200 bg-white" controls controlsList="nodownload"></video>
+                    </div>
+                    <div id="friendMessengerComposerRow" class="flex items-center gap-2">
+                        <input id="friendMessengerImageInput" type="file" accept="image/*" class="hidden" />
+                        <input id="friendMessengerVideoInput" type="file" accept="video/*" class="hidden" />
+                        <button id="friendMessengerImageBtn" type="button" onclick="pickFriendMessengerImage()" class="w-9 h-9 rounded-full border border-gray-300 text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition" title="사진 보내기">
+                            <i class="fas fa-image text-sm"></i>
+                        </button>
+                        <button id="friendMessengerVideoBtn" type="button" onclick="pickFriendMessengerVideo()" class="w-9 h-9 rounded-full border border-gray-300 text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition" title="동영상 보내기">
+                            <i class="fas fa-video text-sm"></i>
+                        </button>
+                        <textarea id="friendMessengerInput" rows="1" maxlength="500" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 border border-gray-300 rounded-2xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400" oninput="friendMessengerAutoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFriendMessage()}"></textarea>
+                        <button id="friendMessengerSendBtn" type="button" onclick="sendFriendMessage()" class="w-10 h-9 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">
+                            <i class="fas fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 피드백 요청 → 관리자 앱 내 메신저로 전달 -->
+        <div id="feedbackModal" class="hidden fixed inset-0 z-[116] bg-black/55 flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="if(event.target===this) hideFeedbackModal()">
+            <div class="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl border border-amber-100 overflow-hidden flex flex-col max-h-[92vh]" onclick="event.stopPropagation()">
+                <div class="px-5 py-4 border-b border-amber-100 flex items-center justify-between shrink-0 bg-gradient-to-r from-white to-amber-50/30">
+                    <h3 class="font-bold text-gray-900 text-lg flex items-center gap-2.5">
+                        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                            <i class="fas fa-lightbulb"></i>
+                        </span>
+                        피드백 요청
+                    </h3>
+                    <button type="button" onclick="hideFeedbackModal()" class="w-9 h-9 rounded-full hover:bg-amber-50 text-gray-500 hover:text-gray-800 transition" title="닫기" aria-label="닫기">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="px-5 py-4 overflow-y-auto flex-1 min-h-0">
+                    <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                        관리자에게 전달할 의견/문의 내용을 입력해주세요. 앱 내 메신저로 전달됩니다.
+                    </p>
+                    <label for="feedbackModalText" class="sr-only">피드백 내용</label>
+                    <textarea
+                        id="feedbackModalText"
+                        rows="6"
+                        maxlength="2000"
+                        class="w-full px-4 py-3 rounded-xl border-2 border-amber-400 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-500 resize-y min-h-[140px]"
+                        placeholder="예) 모바일 UI 점검 부탁드립니다."
+                    ></textarea>
+                    <div id="feedbackAttachmentPreview" class="hidden mt-4 p-3 rounded-xl border border-amber-200 bg-amber-50/50">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <span class="text-xs font-semibold text-amber-900/80">
+                                <i class="fas fa-paperclip mr-1 text-amber-600"></i>첨부 미리보기
+                            </span>
+                            <button type="button" onclick="removeFeedbackAttachment()" class="text-xs font-medium text-red-600 hover:text-red-800">제거</button>
+                        </div>
+                        <img id="feedbackAttachmentImagePreview" class="hidden mt-1 max-w-full max-h-48 rounded-lg border border-amber-200/80 object-contain bg-white" alt="첨부 이미지" />
+                        <video id="feedbackAttachmentVideoPreview" class="hidden mt-1 max-w-full max-h-48 rounded-lg border border-amber-200/80 bg-black" controls controlsList="nodownload"></video>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 mt-4">
+                        <input type="file" id="feedbackImageInput" accept="image/*" class="hidden" />
+                        <input type="file" id="feedbackVideoInput" accept="video/*" class="hidden" />
+                        <button type="button" onclick="pickFeedbackImage()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-amber-300 text-amber-900 bg-white hover:bg-amber-50 transition shadow-sm">
+                            <i class="fas fa-image text-amber-600"></i>사진
+                        </button>
+                        <button type="button" onclick="pickFeedbackVideo()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-amber-300 text-amber-900 bg-white hover:bg-amber-50 transition shadow-sm">
+                            <i class="fas fa-video text-amber-600"></i>동영상
+                        </button>
+                    </div>
+                </div>
+                <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white">
+                    <button type="button" onclick="hideFeedbackModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 transition">
+                        취소
+                    </button>
+                    <button type="button" id="feedbackModalSubmitBtn" onclick="submitFeedbackToAdmin()" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 shadow-sm transition">
+                        관리자에게 전송
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Edit Post Modal -->
         <div id="editPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -6702,6 +7795,28 @@ app.get('/', (c) => {
                                     <i class="fas fa-upload mr-1"></i>사진 선택
                                 </label>
                                 <p class="text-xs text-gray-500 mt-1">JPG, PNG</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">커버 사진 <span class="text-gray-400 text-xs font-normal">(선택)</span></label>
+                        <div class="space-y-2">
+                            <input
+                                id="signupCover"
+                                type="file"
+                                accept="image/*"
+                                onchange="previewSignupCover(event)"
+                                class="hidden"
+                            />
+                            <label
+                                for="signupCover"
+                                class="cursor-pointer inline-block px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition">
+                                <i class="fas fa-image mr-1"></i>커버 선택
+                            </label>
+                            <p class="text-xs text-gray-500">가로형 권장 · 최대 10MB</p>
+                            <div id="signupCoverPreview" class="w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                                <span class="text-gray-500 text-xs">미리보기</span>
                             </div>
                         </div>
                     </div>
@@ -7384,7 +8499,7 @@ app.get('/', (c) => {
 
         <!-- 로그인·자동 로그인 시: 달성 μ·언락 리워드 축하 (매번 표시) -->
         <div id="loginRewardCelebrationModal" class="hidden fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[3px]" onclick="if (event.target === this) hideLoginRewardCelebrationModal()">
-            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-violet-200/90 max-w-md w-full max-h-[min(90vh,640px)] overflow-y-auto overflow-x-hidden login-reward-celeb-card" onclick="event.stopPropagation()">
+            <div class="relative bg-white rounded-2xl shadow-2xl border-2 border-violet-200/90 max-w-md w-full overflow-hidden login-reward-celeb-card" onclick="event.stopPropagation()">
                 <div id="loginRewardCelebrationGlow" class="pointer-events-none absolute inset-0 rounded-2xl z-0" aria-hidden="true"></div>
                 <div id="loginRewardParticleLayer" class="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl z-[30]" aria-hidden="true">
                     <span class="login-reward-firework fw-left"></span>

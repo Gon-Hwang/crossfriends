@@ -4983,13 +4983,15 @@ async function createPost() {
         // 2. Upload images (최대 4장)
         if (imageFiles.length > 0) {
             for (let i = 0; i < imageFiles.length; i++) {
-                const formData = new FormData();
-                formData.append('image', imageFiles[i]);
-                formData.append('order', String(i));
                 try {
+                    const compressed = await compressImage(imageFiles[i]);
+                    const formData = new FormData();
+                    formData.append('image', compressed);
+                    formData.append('order', String(i));
                     await axios.post('/api/posts/' + postId + '/image', formData);
                 } catch (uploadError) {
                     console.error('Image upload error:', uploadError);
+                    showToast('사진 업로드에 실패했습니다.', 'error');
                 }
             }
         }
@@ -5088,20 +5090,58 @@ async function createPost() {
     }
 }
 
+function isHeicFile(file) {
+    return file.type === 'image/heic' || file.type === 'image/heif' || /\.hei[cf]$/i.test(file.name);
+}
+
+// 이미지를 Canvas로 압축 (최대 1920px, quality 0.85) — HEIC 자동 변환, 실패 시 원본 반환
+async function compressImage(file) {
+    return new Promise((resolve) => {
+        try {
+            const reader = new FileReader();
+            reader.onerror = () => resolve(file);
+            reader.onload = (e) => {
+                try {
+                    const img = new Image();
+                    img.onerror = () => resolve(file);
+                    img.onload = () => {
+                        try {
+                            const MAX = 1920;
+                            let w = img.width, h = img.height;
+                            if (w > MAX || h > MAX) {
+                                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                                else { w = Math.round(w * MAX / h); h = MAX; }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            if (!ctx) { resolve(file); return; }
+                            ctx.drawImage(img, 0, 0, w, h);
+                            canvas.toBlob((blob) => {
+                                if (!blob) { resolve(file); return; }
+                                resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }));
+                            }, 'image/jpeg', 0.85);
+                        } catch (_) { resolve(file); }
+                    };
+                    img.src = e.target.result;
+                } catch (_) { resolve(file); }
+            };
+            reader.readAsDataURL(file);
+        } catch (_) { resolve(file); }
+    });
+}
+
 // Preview post image
-function previewPostImage(event) {
+async function previewPostImage(event) {
     const files = Array.from((event && event.target && event.target.files) ? event.target.files : []);
+    if (event && event.target) event.target.value = '';
     if (!files.length) return;
 
     const validFiles = [];
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        if (!file.type.startsWith('image/')) {
+        if (!file.type.startsWith('image/') && !isHeicFile(file)) {
             showToast('이미지 파일만 업로드할 수 있습니다.', 'error');
-            continue;
-        }
-        if (file.size > 10 * 1024 * 1024) {
-            showToast('파일 크기는 10MB를 초과할 수 없습니다.', 'error');
             continue;
         }
         validFiles.push(file);
@@ -5110,22 +5150,32 @@ function previewPostImage(event) {
     const remaining = Math.max(0, 4 - selectedPostImages.length);
     if (remaining <= 0) {
         showToast('사진은 최대 4장까지 첨부할 수 있습니다.', 'warning');
-        if (event && event.target) event.target.value = '';
         return;
     }
 
-    const toAdd = validFiles.slice(0, remaining).map((file) => ({
-        file,
-        seq: ++selectedPostImageSeq
+    const filesToAdd = validFiles.slice(0, remaining);
+    if (validFiles.length > remaining) showToast('사진은 최대 4장까지만 첨부됩니다.', 'info');
+
+    // HEIC가 있으면 변환 중 표시
+    const hasHeic = filesToAdd.some(isHeicFile);
+    if (hasHeic) showToast('사진 변환 중...', 'info');
+
+    const converted = await Promise.all(filesToAdd.map(async (file) => {
+        if (isHeicFile(file) && typeof heic2any !== 'undefined') {
+            try {
+                const blob = await Promise.race([
+                    heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
+                ]);
+                return new File([blob], file.name.replace(/\.hei[cf]$/i, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() });
+            } catch (_) { return file; }
+        }
+        return file;
     }));
+
+    const toAdd = converted.map((file) => ({ file, seq: ++selectedPostImageSeq }));
     selectedPostImages = selectedPostImages.concat(toAdd);
     renderPostImagePreviews();
-
-    if (validFiles.length > remaining) {
-        showToast('사진은 최대 4장까지만 첨부됩니다.', 'info');
-    }
-
-    if (event && event.target) event.target.value = '';
 }
 
 // Remove post image

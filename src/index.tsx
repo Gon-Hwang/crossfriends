@@ -7239,21 +7239,21 @@ app.get('/', (c) => {
                     grid-template-columns: repeat(7, minmax(0, 1fr));
                     justify-items: center;
                     align-items: start;
-                    column-gap: 0;
+                    column-gap: 20px;
                     row-gap: 0;
-                    padding-left: clamp(2px, 1vw, 8px);
+                    padding-left: 10px;
                     padding-right: clamp(2px, 1vw, 8px);
                     box-sizing: border-box;
                     /* exact: each pair gap +5% of one slot width */
                     --mobile-color-gap-expand-step: calc((100% / 7) * 0.12);
                 }
                 /* Mobile only: keep 1(중보) fixed, expand 1-2...6-7 gaps by ~5% */
-                .new-post-color-row .new-post-color-item:nth-child(2) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 1)) !important; }
-                .new-post-color-row .new-post-color-item:nth-child(3) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 2)) !important; }
-                .new-post-color-row .new-post-color-item:nth-child(4) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 3)) !important; }
-                .new-post-color-row .new-post-color-item:nth-child(5) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 4)) !important; }
-                .new-post-color-row .new-post-color-item:nth-child(6) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 5)) !important; }
-                .new-post-color-row .new-post-color-item:nth-child(7) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 6)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(2) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 1 + 5px)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(3) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 2 + 10px)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(4) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 3 + 15px)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(5) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 4 + 20px)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(6) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 5 + 25px)) !important; }
+                .new-post-color-row .new-post-color-item:nth-child(7) { transform: translateX(calc(var(--mobile-color-gap-expand-step) * 6 + 30px)) !important; }
                 /* Friends/Notifications: fixed header + scrollable body (mobile) */
                 #friendsPanelHeader,
                 #notificationsPanelHeader {
@@ -7789,8 +7789,8 @@ app.get('/', (c) => {
                                 <div class="mt-2 sm:mt-3">
                                     <div class="new-post-color-row flex flex-nowrap justify-between items-start w-full">
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
-                                            <button 
-                                                onclick="selectBackgroundColor('#F87171', this)" 
+                                            <button
+                                                onclick="selectBackgroundColor('#F87171', this)"
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #F87171;"
                                                 title="중보">
@@ -7798,8 +7798,8 @@ app.get('/', (c) => {
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">중보</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
-                                            <button 
-                                                onclick="selectBackgroundColor('#F5D4B3', this)" 
+                                            <button
+                                                onclick="selectBackgroundColor('#F5D4B3', this)"
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #FED7B0;"
                                                 title="일상">
@@ -7807,8 +7807,8 @@ app.get('/', (c) => {
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">일상</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
-                                            <button 
-                                                onclick="selectBackgroundColor('#F5E398', this)" 
+                                            <button
+                                                onclick="selectBackgroundColor('#F5E398', this)"
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #FEF08A;"
                                                 title="말씀">
@@ -7816,8 +7816,8 @@ app.get('/', (c) => {
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">말씀</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
-                                            <button 
-                                                onclick="selectBackgroundColor('#B3EDD8', this)" 
+                                            <button
+                                                onclick="selectBackgroundColor('#B3EDD8', this)"
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #BBF7D0;"
                                                 title="사역">
@@ -7825,8 +7825,8 @@ app.get('/', (c) => {
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">사역</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
-                                            <button 
-                                                onclick="selectBackgroundColor('#C4E5F8', this)" 
+                                            <button
+                                                onclick="selectBackgroundColor('#C4E5F8', this)"
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #BAE6FD;"
                                                 title="찬양">
@@ -7834,8 +7834,8 @@ app.get('/', (c) => {
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">찬양</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
-                                            <button 
-                                                onclick="selectBackgroundColor('#E2DBFB', this)" 
+                                            <button
+                                                onclick="selectBackgroundColor('#E2DBFB', this)"
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 style="background-color: #DDD6FE;"
                                                 title="교회">
@@ -7843,8 +7843,8 @@ app.get('/', (c) => {
                                             <span class="text-[10px] sm:text-xs font-medium text-gray-600">교회</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
-                                            <button 
-                                                onclick="selectBackgroundColor('#FFFFFF', this)" 
+                                            <button
+                                                onclick="selectBackgroundColor('#FFFFFF', this)"
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="자유">
                                             </button>
@@ -9727,6 +9727,7 @@ app.get('/', (c) => {
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
         <script src="/static/app.js?v=${Date.now()}"></script>
         <script>
             if ('serviceWorker' in navigator) {

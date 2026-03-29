@@ -3031,6 +3031,56 @@ app.post('/api/sermon/sync', requireAdmin, async (c) => {
   }
 })
 
+// Push notification endpoints
+app.get('/api/push/vapid-public', (c) => {
+  const key = c.env.VAPID_PUBLIC_KEY
+  return key ? c.json({ publicKey: key }) : c.json({ error: 'Push not configured' }, 503)
+})
+
+app.post('/api/push/subscribe', async (c) => {
+  const { DB } = c.env
+  const body = await c.req.json().catch(() => ({})) as any
+  const { userId, subscription } = body
+  if (!userId || !subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+    return c.json({ error: 'userId and subscription required' }, 400)
+  }
+  try {
+    await DB.prepare(`
+      INSERT OR REPLACE INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+      VALUES (?, ?, ?, ?)
+    `).bind(userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth).run()
+    return c.json({ success: true })
+  } catch (e) {
+    console.error('Push subscribe failed:', e)
+    return c.json({ error: 'Failed to save subscription' }, 500)
+  }
+})
+
+app.post('/api/push/unsubscribe', async (c) => {
+  const { DB } = c.env
+  const body = await c.req.json().catch(() => ({})) as any
+  const { userId, endpoint } = body
+  if (!userId || !endpoint) return c.json({ error: 'userId and endpoint required' }, 400)
+  await DB.prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?').bind(userId, endpoint).run()
+  return c.json({ success: true })
+})
+
+app.get('/api/push/check/:userId', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('userId')
+  const { results } = await DB.prepare(
+    "SELECT id, user_id, substr(endpoint,1,50) as endpoint_preview FROM push_subscriptions WHERE user_id = ?"
+  ).bind(userId).all()
+  return c.json({ userId, count: results?.length ?? 0, subscriptions: results ?? [] })
+})
+
+app.delete('/api/push/reset/:userId', async (c) => {
+  const { DB } = c.env
+  const userId = c.req.param('userId')
+  await DB.prepare('DELETE FROM push_subscriptions WHERE user_id = ?').bind(userId).run()
+  return c.json({ ok: true, message: '구독 초기화됨. 알림 탭에서 푸시 켜기를 다시 눌러주세요.' })
+})
+
 // QT invite - send today's QT sample + signup link to a friend
 const qtInviteVerseRef = '오늘의 QT 본문'
 

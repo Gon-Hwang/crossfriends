@@ -8049,7 +8049,121 @@ function toggleNotifications() {
     notificationsContent.classList.remove('hidden');
     setSocialHeaderButtonActive('notifications');
     loadNotifications(true);
+    updatePushButtonState();
 }
+
+// ── Push notification toggle ──────────────────────────────────────────────────
+let pushSubscription = null;
+
+async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return null;
+    try {
+        const reg = await navigator.serviceWorker.register('/sw.js?v=3', { scope: '/' });
+        const requestImmediateActivation = () => {
+            if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        };
+        if (reg.waiting) requestImmediateActivation();
+        reg.addEventListener('updatefound', () => {
+            const installing = reg.installing;
+            if (!installing) return;
+            installing.addEventListener('statechange', () => {
+                if (installing.state === 'installed') requestImmediateActivation();
+            });
+        });
+        return reg;
+    } catch (e) {
+        console.warn('Service worker registration failed:', e);
+        return null;
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const arr = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) arr[i] = rawData.charCodeAt(i);
+    return arr;
+}
+
+async function updatePushButtonState() {
+    const btn = document.getElementById('pushNotifyBtn');
+    if (!btn) return;
+    const setOnState = () => {
+        btn.classList.remove('border-gray-300', 'text-gray-600', 'bg-white');
+        btn.classList.add('border-blue-500', 'text-blue-600', 'bg-blue-100', 'hover:bg-blue-200');
+        btn.innerHTML = '<i class="fas fa-bell"></i>';
+        btn.title = '푸시 켜짐 (클릭하여 끄기)';
+    };
+    const setOffState = () => {
+        btn.classList.remove('border-blue-500', 'text-blue-600', 'bg-blue-100', 'hover:bg-blue-200');
+        btn.classList.add('border-gray-300', 'text-gray-600', 'bg-white');
+        btn.innerHTML = '<i class="fas fa-bell-slash"></i>';
+        btn.title = '푸시 꺼짐 (클릭하여 켜기)';
+    };
+    try {
+        const sw = await navigator.serviceWorker.ready;
+        const sub = await sw.pushManager.getSubscription();
+        if (sub) setOnState(); else setOffState();
+    } catch (_) { setOffState(); }
+}
+
+async function togglePushNotifications() {
+    const btn = document.getElementById('pushNotifyBtn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+    try {
+        if (!currentUserId) { showToast('로그인 후 이용해주세요.', 'warning'); return; }
+        if (!('serviceWorker' in navigator)) {
+            showToast('이 브라우저는 푸시를 지원하지 않습니다.', 'warning'); return;
+        }
+        if (!window.isSecureContext) {
+            showToast('푸시 알림은 HTTPS에서만 가능합니다.', 'warning'); return;
+        }
+        if (!('Notification' in window)) { showToast('이 브라우저는 알림을 지원하지 않습니다.', 'warning'); return; }
+        if (!('PushManager' in window)) { showToast('푸시를 지원하지 않는 브라우저입니다.', 'warning'); return; }
+        let reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) reg = await registerServiceWorker();
+        if (!reg) { showToast('서비스 워커 등록 실패. 페이지를 새로고침 후 다시 시도해주세요.', 'error'); return; }
+        await navigator.serviceWorker.ready;
+        await new Promise(r => setTimeout(r, 300));
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+            await sub.unsubscribe();
+            await axios.post('/api/push/unsubscribe', { userId: currentUserId, endpoint: sub.endpoint });
+            pushSubscription = null;
+            showToast('푸시 알림이 꺼졌습니다.', 'success');
+            updatePushButtonState();
+            return;
+        } else {
+            const res = await axios.get('/api/push/vapid-public');
+            if (!res.data?.publicKey) { showToast('푸시가 설정되지 않았습니다.', 'error'); return; }
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') { showToast('알림 권한이 필요합니다.', 'warning'); return; }
+            const newSub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(res.data.publicKey)
+            });
+            await axios.post('/api/push/subscribe', { userId: currentUserId, subscription: newSub.toJSON() });
+            pushSubscription = newSub;
+            showToast('푸시 알림이 켜졌습니다!', 'success');
+        }
+        updatePushButtonState();
+    } catch (e) {
+        console.error('Push toggle error:', e);
+        showToast('푸시 설정에 실패했습니다: ' + (e.message || '알 수 없는 오류'), 'error');
+    } finally {
+        const b = document.getElementById('pushNotifyBtn');
+        if (b) { b.disabled = false; b.style.opacity = ''; }
+    }
+}
+
+window.togglePushNotifications = togglePushNotifications;
+
+// 푸시 버튼 클릭 - 이벤트 위임
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('#pushNotifyBtn');
+    if (btn) { e.preventDefault(); e.stopPropagation(); togglePushNotifications(); }
+});
 
 // Load notifications
 async function loadNotifications(markAsRead = false) {

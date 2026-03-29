@@ -3,6 +3,8 @@ export type Bindings = {
   R2: R2Bucket;
   YOUTUBE_API_KEY?: string;
   RESEND_API_KEY?: string;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
 }
 
 export interface User {

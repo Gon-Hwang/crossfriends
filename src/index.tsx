@@ -3033,7 +3033,6 @@ app.post('/api/sermon/sync', requireAdmin, async (c) => {
 
 // QT invite - send today's QT sample + signup link to a friend
 const qtInviteVerseRef = '오늘의 QT 본문'
-const qtInviteVerseBody = '오늘의 QT 말씀은 앱에서 날짜에 맞게 제공됩니다.'
 
 app.post('/api/qt-invite', async (c) => {
   const { DB, RESEND_API_KEY } = c.env
@@ -3053,19 +3052,13 @@ app.post('/api/qt-invite', async (c) => {
   const reqOrigin = new URL(c.req.url).origin
   const origin = `${reqOrigin}/`
 
-  // Fetch today's real QT passage from internal endpoint
+  // Fetch today's real QT passage reference from internal endpoint
   let verseRef = qtInviteVerseRef
-  let verseBody = qtInviteVerseBody
   try {
     const bibleResp = await fetch(`${reqOrigin}/api/qt/bible?qtDate=${todayDate}`)
     if (bibleResp.ok) {
       const bibleData = await bibleResp.json() as any
       if (bibleData.passageRef) verseRef = bibleData.passageRef
-      if (bibleData.scripture) {
-        // Show first 5 lines to keep the email concise
-        const lines = String(bibleData.scripture).split('\n').filter(Boolean)
-        verseBody = lines.slice(0, 5).join('\n') + (lines.length > 5 ? '\n...' : '')
-      }
     }
   } catch (e) {
     console.error('qt-invite bible fetch failed:', e)
@@ -3084,8 +3077,7 @@ app.post('/api/qt-invite', async (c) => {
       <p style="color:#374151;margin:0 0 16px;line-height:1.6;">안녕하세요! CROSSfriends의 QT(Quiet Time)를 소개합니다. 오늘의 말씀으로 하루를 시작해보세요.</p>
       <div style="border-left:4px solid #dc2626;padding:12px 16px;margin:20px 0;background:#fef2f2;border-radius:0 8px 8px 0;">
         <p style="margin:0 0 4px;font-size:0.75rem;color:#6b7280;">${dateStr}</p>
-        <p style="margin:0 0 8px;font-weight:700;color:#dc2626;font-size:0.95rem;">${sanitizeText(verseRef)}</p>
-        <p style="margin:0;color:#374151;font-size:0.95rem;line-height:1.6;white-space:pre-line;">${sanitizeText(verseBody)}</p>
+        <p style="margin:0;font-weight:700;color:#dc2626;font-size:0.95rem;">${sanitizeText(verseRef)}</p>
       </div>
       <p style="color:#6b7280;font-size:0.875rem;margin:16px 0;">이것은 오늘의 샘플 QT입니다. 매일 새로운 말씀과 함께 찬양, 묵상, 적용, 기도까지 완전한 QT를 경험하세요.</p>
       <div style="text-align:center;margin:24px 0;">

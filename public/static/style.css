@@ -1,1 +1,15 @@
 h1 { font-family: Arial, Helvetica, sans-serif; }
+
+/* Fix: 모바일 터치 후 :hover 고착(sticky hover) 문제 — QT 섹션 토글 버튼 */
+@media (hover: none) {
+  [data-qt-sec-btn].bg-gray-100:hover {
+    background-color: rgb(243 244 246) !important;
+    color: rgb(55 65 81) !important;
+    border-color: rgb(209 213 219) !important;
+  }
+  [data-qt-sec-btn].bg-red-100:hover {
+    background-color: rgb(254 226 226) !important;
+    color: rgb(153 27 27) !important;
+    border-color: rgb(252 165 165) !important;
+  }
+}

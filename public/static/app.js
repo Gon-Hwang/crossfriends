@@ -10,7 +10,7 @@ function isCrossfriendsCanonicalHost() {
 function isLocalDevHost() {
     if (typeof location === 'undefined') return false;
     const h = (location.hostname || '').toLowerCase();
-    return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+    return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || /^192\.168\./.test(h) || /^10\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
 }
 
 function applyCrossfriendsAxiosBase() {

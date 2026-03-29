@@ -7392,13 +7392,13 @@ app.get('/', (c) => {
         </nav>
 
         <!-- Main Content -->
-        <div class="max-w-7xl lg:max-w-[92rem] mx-auto px-3 sm:px-4 py-3 sm:py-6 pb-10 sm:pb-12 safe-area-bottom main-content-wrapper">
+        <div class="max-w-7xl lg:max-w-[92rem] mx-auto pl-[5px] pr-0 sm:px-4 py-3 sm:py-6 pb-10 sm:pb-12 safe-area-bottom main-content-wrapper">
             <div class="flex flex-col gap-3 sm:gap-6 lg:grid lg:grid-cols-[1.188fr_1.0715fr_1.0715fr_1fr] lg:gap-x-[2%] main-content-grid">
                 <!-- Left Sidebar - order-first on mobile: reward content at top -->
                 <div id="leftSidebar" class="lg:col-span-1 order-first lg:order-none lg:col-start-1 lg:row-start-1 lg:row-span-2 scroll-independent">
                         <div class="sticky top-20 space-y-2 sm:space-y-3 lg:min-h-full max-h-[calc(100vh-6rem)] lg:max-h-none overflow-y-auto sidebar-scroll pr-0.5 sm:pr-2">
                         <!-- Today's Bible Verse -->
-                        <div id="verseRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="basic" data-reward-key="basic" data-reward-target="verseRewardContent">
+                        <div id="verseRewardSection" class="relative bg-white rounded-2xl shadow-md border border-blue-200 p-4 sm:p-5 transition-all duration-300 reward-card-collapsible" data-reward-card="basic" data-reward-key="basic" data-reward-target="verseRewardContent">
                             <div class="reward-card-header-line">
                                 <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
                                     <i class="fas fa-book-open font-size-title text-blue-600 mr-2"></i>오늘의 성경 구절
@@ -7558,7 +7558,7 @@ app.get('/', (c) => {
                         </div>
 
                         <!-- Reward2: QT Worship Unlock Section -->
-                        <div id="qtWorshipRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="reward2" data-reward-key="reward2" data-reward-target="qtWorshipRewardContent">
+                        <div id="qtWorshipRewardSection" class="relative bg-white rounded-2xl shadow-md border border-blue-200 p-4 sm:p-5 transition-all duration-300 reward-card-collapsible" data-reward-card="reward2" data-reward-key="reward2" data-reward-target="qtWorshipRewardContent">
                             <div class="reward-card-header-line">
                                 <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
                                     <i class="fas fa-music font-size-title text-blue-600 mr-2"></i>QT 찬양
@@ -7609,7 +7609,7 @@ app.get('/', (c) => {
                         </div>
 
                         <!-- Reward3: QT Alarm Unlock Section -->
-                        <div id="qtAlarmRewardSection" class="relative bg-white rounded-xl shadow-lg border-2 border-blue-300 p-4 transition-all duration-300 reward-card-collapsible" data-reward-card="reward3" data-reward-key="reward3" data-reward-target="qtAlarmRewardContent">
+                        <div id="qtAlarmRewardSection" class="relative bg-white rounded-2xl shadow-md border border-blue-200 p-4 sm:p-5 transition-all duration-300 reward-card-collapsible" data-reward-card="reward3" data-reward-key="reward3" data-reward-target="qtAlarmRewardContent">
                             <div class="reward-card-header-line">
                                 <h3 class="font-size-title font-bold text-blue-800 reward-card-header-title">
                                     <i class="fas fa-bell font-size-title text-blue-600 mr-2"></i>QT 예약
@@ -7662,7 +7662,7 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Center Column: Post Card + Posts (scroll together on PC) -->
-                <div id="centerFeedColumn" class="lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col scroll-independent mx-auto w-full max-w-[480px] lg:max-w-none space-y-4 center-feed-mobile-contents">
+                <div id="centerFeedColumn" class="lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col scroll-independent mx-auto w-full max-w-none lg:max-w-none space-y-4 center-feed-mobile-contents">
                 <!-- Main Feed Part 1: Post Card - order-2 on mobile (after reward) -->
                 <div id="mainFeedPart1" class="space-y-4 order-2 lg:order-none">
                     <!-- User Profile Cover Card (Hidden by default, shown when filtering by user) -->

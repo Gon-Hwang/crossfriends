@@ -53,11 +53,137 @@ function toCanonicalSiteUrl(url) {
 
 applyCrossfriendsAxiosBase();
 
+// 포스트 미디어·링크 미리보기 (445e329d 배포 UI와 동일)
+function normalizeExternalUrl(raw) {
+    if (!raw) return null;
+    let candidate = String(raw).trim().replace(/[)\].,!?;:]+$/g, '');
+    if (!candidate) return null;
+    if (!/^https?:\/\//i.test(candidate)) {
+        candidate = `https://${candidate}`;
+    }
+    try {
+        const parsed = new URL(candidate);
+        if (!parsed.hostname || !parsed.hostname.includes('.')) return null;
+        return parsed.toString();
+    } catch (_) {
+        return null;
+    }
+}
+
+function extractFirstUrl(text) {
+    const source = String(text || '');
+    const urlRegex = /((?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s<]*)?)/gi;
+    let match;
+    while ((match = urlRegex.exec(source)) !== null) {
+        const normalized = normalizeExternalUrl(match[1]);
+        if (normalized) return normalized;
+    }
+    return null;
+}
+
+function extractFirstYouTubeUrl(text) {
+    const source = String(text || '');
+    const anyUrl = extractFirstUrl(source);
+    if (!anyUrl) return null;
+    return parseYouTubeVideoId(anyUrl) ? anyUrl : null;
+}
+
+function parseYouTubeVideoId(url) {
+    if (!url) return null;
+    try {
+        const normalized = normalizeExternalUrl(url);
+        if (!normalized) return null;
+        const parsed = new URL(normalized);
+        const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+        if (host === 'youtu.be') {
+            return parsed.pathname.split('/').filter(Boolean)[0] || null;
+        }
+        if (host === 'youtube.com' || host === 'm.youtube.com') {
+            if (parsed.pathname === '/watch') {
+                return parsed.searchParams.get('v');
+            }
+            const seg = parsed.pathname.split('/').filter(Boolean);
+            if (seg[0] === 'shorts' || seg[0] === 'embed' || seg[0] === 'live') {
+                return seg[1] || null;
+            }
+        }
+    } catch (_) {}
+    return null;
+}
+
+function buildYouTubePreviewHtml(content) {
+    const link = extractFirstYouTubeUrl(content);
+    const videoId = parseYouTubeVideoId(link);
+    if (!link || !videoId) return '';
+    const safeLink = escapeHtml(link);
+    const thumb = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+    return `
+        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="block mt-3 rounded-lg border border-gray-300 overflow-hidden bg-white hover:border-red-400 hover:shadow-sm transition">
+            <div class="relative">
+                <img src="${thumb}" alt="YouTube preview" class="w-full object-cover" onerror="this.style.display='none'" />
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="w-12 h-12 rounded-full bg-black/70 flex items-center justify-center">
+                        <i class="fab fa-youtube text-red-500 text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="px-3 py-2">
+                <p class="text-xs font-semibold text-red-600 uppercase tracking-wide">YouTube</p>
+                <p class="text-sm text-gray-700 truncate">${safeLink}</p>
+            </div>
+        </a>
+    `;
+}
+
+function buildGenericLinkPreviewHtml(content) {
+    const link = extractFirstUrl(content);
+    if (!link) return '';
+    if (parseYouTubeVideoId(link)) return '';
+    try {
+        const parsed = new URL(link);
+        const safeLink = escapeHtml(link);
+        const host = escapeHtml(parsed.hostname.replace(/^www\./i, ''));
+        const favicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=128`;
+        return `
+            <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="block mt-3 rounded-lg border border-gray-300 overflow-hidden bg-white hover:border-blue-400 hover:shadow-sm transition">
+                <div class="px-3 py-2.5 flex items-center gap-3">
+                    <img src="${favicon}" alt="" class="w-6 h-6 rounded shrink-0" onerror="this.style.display='none'" />
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-wide truncate">${host}</p>
+                        <p class="text-sm text-gray-700 truncate">${safeLink}</p>
+                    </div>
+                    <i class="fas fa-external-link-alt text-gray-400 text-xs shrink-0"></i>
+                </div>
+            </a>
+        `;
+    } catch (_) {
+        return '';
+    }
+}
+
+function linkifyText(text) {
+    const escaped = escapeHtml(text || '');
+    return escaped.replace(
+        /((?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/[^\s<]*)?)/gi,
+        (matched) => {
+            const normalized = normalizeExternalUrl(matched);
+            if (!normalized) return matched;
+            return `<a href="${normalized}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700 underline break-all">${matched}</a>`;
+        }
+    );
+}
+
+function renderPostContentWithPreview(content, className) {
+    const linkedText = linkifyText(content || '');
+    const preview = buildYouTubePreviewHtml(content || '') || buildGenericLinkPreviewHtml(content || '');
+    return `<p class="${className}">${linkedText}</p>${preview}`;
+}
+
 let currentUserId = null;
 let currentUser = null;
 let selectedBackgroundColor = null; // 선택된 배경색
-let selectedPostImages = [];
-let selectedPostImageSeq = 0;
+const POST_MAX_IMAGE_COUNT = 4;
+let postSelectedImageFiles = [];
 let filterUserId = null; // 필터링할 사용자 ID
 
 // =====================
@@ -4887,6 +5013,811 @@ function addRoleBadge(container, role) {
     }
 }
 
+// --- 포스트 이미지: 배포(445e329d)와 동일 — 다중 URL·그리드 표시·작성 미리보기 ---
+const IMAGE_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const IMAGE_MAX_DIMENSION = 1920;
+let hasShownImageLimitGuide = false;
+let hasShownVideoLimitGuide = false;
+let heic2anyLoaderPromise = null;
+
+function splitImageUrlsConcat(raw) {
+    return String(raw || '')
+        .split('||')
+        .map((v) => v.trim())
+        .filter(Boolean);
+}
+
+function getPostImageUrls(post, prefix = '') {
+    const concatKey = `${prefix}image_urls_concat`;
+    const singleKey = `${prefix}image_url`;
+    let urls = splitImageUrlsConcat(post?.[concatKey]);
+    if (!urls.length && post?.[singleKey] != null && String(post[singleKey]).trim() !== '') {
+        urls = parsePostImageUrls(post[singleKey]);
+    }
+    return urls.slice(0, POST_MAX_IMAGE_COUNT);
+}
+
+function renderPostImagesHtml(urls, opts = {}) {
+    const list = (Array.isArray(urls) ? urls.filter(Boolean) : []).slice(0, POST_MAX_IMAGE_COUNT).map((u) => toCanonicalSiteUrl(u));
+    if (!list.length) return '';
+    const wrapperClass = opts.wrapperClass || 'mt-5';
+    const wrapperStyle = opts.wrapperStyle || '';
+    const singleClass = opts.singleClass || 'w-full object-contain';
+    const altPrefix = opts.altPrefix || 'Post image';
+    const bgColor = String(opts.bgColor || '#FFFFFF').trim();
+    const safeBgColor = /^#[0-9A-Fa-f]{6}$/.test(bgColor) ? bgColor : '#FFFFFF';
+
+    if (list.length === 1) {
+        return `
+            <div class="${wrapperClass}" ${wrapperStyle ? `style="${wrapperStyle}"` : ''}>
+                <img src="${list[0]}" alt="${altPrefix}" class="${singleClass} post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+            </div>
+        `;
+    }
+
+    if (list.length === 2) {
+        const items = list.map((url, i) => `
+            <img src="${url}" alt="${altPrefix} ${i + 1}" class="w-full h-48 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+        `).join('');
+        return `
+            <div class="${wrapperClass}" ${wrapperStyle ? `style="${wrapperStyle}"` : ''}>
+                <div class="grid grid-cols-2 gap-2">
+                    ${items}
+                </div>
+            </div>
+        `;
+    }
+
+    if (list.length === 3) {
+        return `
+            <div class="${wrapperClass}" ${wrapperStyle ? `style="${wrapperStyle}"` : ''}>
+                <div class="grid grid-cols-2 gap-2">
+                    <img src="${list[0]}" alt="${altPrefix} 1" class="w-full h-44 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+                    <img src="${list[1]}" alt="${altPrefix} 2" class="w-full h-44 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+                    <img src="${list[2]}" alt="${altPrefix} 3" class="col-span-2 w-full h-52 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="${wrapperClass}" ${wrapperStyle ? `style="${wrapperStyle}"` : ''}>
+            <div class="grid grid-cols-2 gap-2">
+                <img src="${list[0]}" alt="${altPrefix} 1" class="w-full h-44 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+                <img src="${list[1]}" alt="${altPrefix} 2" class="w-full h-44 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+                <img src="${list[2]}" alt="${altPrefix} 3" class="w-full h-44 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+                <img src="${list[3]}" alt="${altPrefix} 4" class="w-full h-44 object-contain rounded-lg border border-gray-300 post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 인용 공유로 보여 줄 원본 포스트 — 피드 단일 포스트 카드와 동일 레이아웃(사진·동영상 여백 포함).
+ * @param {'shared'|'root'} fieldMode shared: 목록 row의 shared_* 필드, root: GET /api/posts/:id 한 건
+ */
+function renderEmbeddedOriginalPostCard(post, fieldMode, options = {}) {
+    const showRemoveButton = !!options.showRemoveButton;
+    const p = fieldMode === 'shared'
+        ? {
+            user_id: post.shared_user_id,
+            user_name: post.shared_user_name,
+            user_avatar: post.shared_user_avatar,
+            user_church: post.shared_user_church,
+            user_role: post.shared_user_role,
+            created_at: post.shared_created_at,
+            content: post.shared_content,
+            background_color: post.shared_background_color,
+            video_url: post.shared_video_url,
+            imageUrls: getPostImageUrls(post, 'shared_'),
+        }
+        : {
+            user_id: post.user_id,
+            user_name: post.user_name,
+            user_avatar: post.user_avatar,
+            user_church: post.user_church,
+            user_role: post.user_role,
+            created_at: post.created_at,
+            content: post.content,
+            background_color: post.background_color,
+            video_url: post.video_url,
+            imageUrls: getPostImageUrls(post),
+        };
+
+    const bg = p.background_color || '';
+    const backgroundStyle = bg ? `style="background-color: ${bg};"` : '';
+
+    const avatarHtml = p.user_role === 'admin'
+        ? '<i class="fas fa-crown text-yellow-400 text-2xl"></i>'
+        : p.user_avatar
+            ? `<img src="${toCanonicalSiteUrl(p.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+            : '<i class="fas fa-user"></i>';
+    let roleBadgeHtml = '';
+    if (p.user_role === 'moderator') {
+        roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
+    }
+
+    const imageHtml = renderPostImagesHtml(p.imageUrls, {
+        wrapperClass: 'mt-5 -mx-6',
+        singleClass: 'w-full object-contain',
+        altPrefix: 'Post image',
+        bgColor: p.background_color || '#FFFFFF',
+    });
+
+    const videoHtml = p.video_url
+        ? `
+        <div class="mt-5 -mx-6">
+            <video controls class="w-full rounded-lg" controlsList="nodownload">
+                <source src="${toCanonicalSiteUrl(p.video_url)}" type="video/mp4">
+                동영상을 재생할 수 없습니다.
+            </video>
+        </div>
+    `
+        : '';
+
+    const nameJs = JSON.stringify(p.user_name || '');
+    const removeBtn = showRemoveButton
+        ? `
+        <div class="absolute top-2 right-2 z-10">
+            <button type="button" onclick="removeSharedPost()" class="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition shadow-md" title="공유 취소">
+                <i class="fas fa-times text-sm"></i>
+            </button>
+        </div>
+    `
+        : '';
+
+    return `
+        <div class="relative mt-3 bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300" ${backgroundStyle}>
+            ${removeBtn}
+            <div class="flex items-start space-x-4">
+                <div class="admin-badge-container">
+                    <div onclick="showUserProfileModal(${p.user_id})" class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
+                    ${roleBadgeHtml}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${p.user_id}, ${nameJs})" title="클릭하여 ${String(p.user_name || '').replace(/"/g, '&quot;')} 님의 포스팅만 보기">${p.user_name || ''}</h4>
+                            <p class="text-sm text-gray-500">${p.user_church || ''}</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <p class="text-xs text-gray-500">${formatDate(p.created_at)}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        ${renderPostContentWithPreview(p.content, 'font-size-base text-gray-800 whitespace-pre-wrap')}
+                    </div>
+                </div>
+            </div>
+            ${imageHtml}
+            ${videoHtml}
+        </div>
+    `;
+}
+
+/** 포스트 하단 툴바: 아이콘·숫자 동시 활성(원형 배경) */
+function applyPostToolbarIconActive(el, active) {
+    if (!el) return;
+    el.classList.toggle('bg-gray-200', !!active);
+    el.classList.toggle('hover:bg-gray-100', !active);
+}
+
+function applyPostToolbarCountActive(el, active) {
+    if (!el) return;
+    el.classList.toggle('bg-gray-100', !!active);
+    el.classList.toggle('bg-white', !active);
+    el.classList.toggle('border-gray-300', !!active);
+    el.classList.toggle('border-gray-200', !active);
+}
+
+function setPostToolbarCommentActive(postId, active) {
+    const icon = document.getElementById(`post-toolbar-comment-${postId}`);
+    const cnt = document.getElementById(`post-toolbar-count-comment-${postId}`);
+    applyPostToolbarIconActive(icon, active);
+    if (icon) {
+        const ic = icon.querySelector('i');
+        if (ic) ic.classList.toggle('text-blue-600', !!active);
+    }
+    applyPostToolbarCountActive(cnt, active);
+}
+
+function setPostToolbarShareActive(postId, active) {
+    const icon = document.getElementById(`post-toolbar-share-${postId}`);
+    const cnt = document.getElementById(`post-toolbar-count-share-${postId}`);
+    applyPostToolbarIconActive(icon, active);
+    if (icon) {
+        const ic = icon.querySelector('i');
+        if (ic) ic.classList.toggle('text-blue-600', !!active);
+    }
+    applyPostToolbarCountActive(cnt, active);
+}
+
+function bumpPostToolbarCount(postId, kind) {
+    const el = document.getElementById(`post-toolbar-count-${kind}-${postId}`);
+    if (!el) return;
+    const n = Number(String(el.textContent || '0').trim()) || 0;
+    el.textContent = String(n + 1);
+}
+
+/** 스크린샷형: 아이콘 | 숫자배지 | … 총 7칸(반응·댓글·공유·확대) */
+function renderPostActionsToolbar(post, isLiked) {
+    const pid = post.id;
+    const comments = Number(post.comments_count || 0);
+    const shares = Number(post.shares_count ?? post.share_count ?? 0);
+    const bg = post.background_color || '';
+
+    let reactionHandler;
+    let reactionCount;
+    let iconClass;
+    let title;
+    let activeIconCls;
+
+    if (bg === '#F87171') {
+        reactionHandler = `togglePray(${pid})`;
+        reactionCount = post.prayer_clicks_count || 0;
+        iconClass = 'fas fa-praying-hands';
+        title = '함께 기도합니다';
+        activeIconCls = post.is_prayed > 0 ? 'text-red-600' : 'text-gray-700';
+    } else if (bg === '#F5E398') {
+        reactionHandler = `toggleLike(${pid})`;
+        reactionCount = post.likes_count || 0;
+        iconClass = 'fas fa-book-bible';
+        title = '아멘!';
+        activeIconCls = isLiked ? 'text-yellow-600' : 'text-gray-700';
+    } else if (bg === '#F5D4B3') {
+        reactionHandler = `toggleLike(${pid})`;
+        reactionCount = post.likes_count || 0;
+        iconClass = 'fas fa-dove';
+        title = '샬롬';
+        activeIconCls = isLiked ? 'text-orange-600' : 'text-gray-700';
+    } else if (bg === '#B3EDD8') {
+        reactionHandler = `toggleLike(${pid})`;
+        reactionCount = post.likes_count || 0;
+        iconClass = 'fas fa-hands-helping';
+        title = '응원합니다';
+        activeIconCls = isLiked ? 'text-green-600' : 'text-gray-700';
+    } else if (bg === '#C4E5F8') {
+        reactionHandler = `toggleLike(${pid})`;
+        reactionCount = post.likes_count || 0;
+        iconClass = 'fas fa-music';
+        title = '할렐루야!';
+        activeIconCls = isLiked ? 'text-sky-600' : 'text-gray-700';
+    } else if (bg === '#E2DBFB') {
+        reactionHandler = `toggleLike(${pid})`;
+        reactionCount = post.likes_count || 0;
+        iconClass = 'fas fa-church';
+        title = '우리는 하나';
+        activeIconCls = isLiked ? 'text-violet-600' : 'text-gray-700';
+    } else {
+        reactionHandler = `toggleLike(${pid})`;
+        reactionCount = post.likes_count || 0;
+        iconClass = 'fas fa-heart';
+        title = '좋아요';
+        activeIconCls = isLiked ? 'text-pink-600' : 'text-gray-700';
+    }
+
+    const reactionActive = bg === '#F87171' ? post.is_prayed > 0 : isLiked;
+    const reactIconWrap = reactionActive ? 'bg-gray-200' : 'hover:bg-gray-100';
+    const reactCountWrap = reactionActive
+        ? 'bg-gray-100 border-gray-300 -translate-x-[10px]'
+        : '-translate-x-[10px]';
+
+    const urls = getPostImageUrls(post);
+    const hasMedia = urls.length > 0 || !!post.video_url;
+
+    const expandBtn = hasMedia
+        ? `<button type="button" onclick="openPostMediaExpand(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="미디어 크게 보기"><i class="fas fa-expand text-lg"></i></button>`
+        : `<span class="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-300" title="첨부 미디어 없음"><i class="fas fa-expand text-lg"></i></span>`;
+
+    return `
+        <div class="post-actions-toolbar mt-4 border-t border-gray-200/90 pt-3 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-gray-700">
+            <button type="button" id="post-toolbar-react-${pid}" onclick="${reactionHandler}" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition ${reactIconWrap}" title="${title}">
+                <i class="${iconClass} text-lg ${activeIconCls}"></i>
+            </button>
+            <button type="button" id="post-toolbar-count-react-${pid}" onclick="openPostEngagementPanel('react', ${pid})" class="post-toolbar-n inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm ${reactCountWrap}">${reactionCount}</button>
+            <button type="button" id="post-toolbar-comment-${pid}" onclick="loadComments(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="댓글">
+                <i class="fas fa-comment text-lg text-gray-700"></i>
+            </button>
+            <button type="button" id="post-toolbar-count-comment-${pid}" onclick="openPostEngagementPanel('comment', ${pid})" class="post-toolbar-n -translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${comments}</button>
+            <button type="button" id="post-toolbar-share-${pid}" onclick="sharePost(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="공유하기">
+                <i class="fas fa-share text-lg text-gray-700"></i>
+            </button>
+            <button type="button" id="post-toolbar-count-share-${pid}" onclick="openPostEngagementPanel('share', ${pid})" class="post-toolbar-n -translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${shares}</button>
+            ${expandBtn}
+        </div>
+    `;
+}
+
+let postMediaLightboxState = { urls: [], video: '', index: 0 };
+
+function renderPostMediaLightboxBody() {
+    const el = document.getElementById('postMediaLightbox');
+    if (!el) return;
+    const body = el.querySelector('[data-lb-body]');
+    const prev = el.querySelector('[data-lb-prev]');
+    const next = el.querySelector('[data-lb-next]');
+    if (!body) return;
+    const { urls, video, index } = postMediaLightboxState;
+
+    if (urls.length) {
+        if (prev) prev.classList.toggle('hidden', urls.length <= 1);
+        if (next) next.classList.toggle('hidden', urls.length <= 1);
+        const url = urls[Math.min(index, urls.length - 1)] || '';
+        body.innerHTML = `<img src="${url}" alt="" class="max-h-[92vh] max-w-[95vw] object-contain shadow-lg" />`;
+        return;
+    }
+    if (prev) prev.classList.add('hidden');
+    if (next) next.classList.add('hidden');
+    if (video) {
+        body.innerHTML = `<video controls autoplay playsinline class="max-h-[92vh] max-w-[95vw]" controlsList="nodownload"><source src="${video}" type="video/mp4"></video>`;
+    } else {
+        body.innerHTML = '';
+    }
+}
+
+function postMediaLightboxPrev() {
+    const n = postMediaLightboxState.urls.length;
+    if (n <= 1) return;
+    postMediaLightboxState.index = (postMediaLightboxState.index - 1 + n) % n;
+    renderPostMediaLightboxBody();
+}
+
+function postMediaLightboxNext() {
+    const n = postMediaLightboxState.urls.length;
+    if (n <= 1) return;
+    postMediaLightboxState.index = (postMediaLightboxState.index + 1) % n;
+    renderPostMediaLightboxBody();
+}
+
+function closePostMediaExpand() {
+    const el = document.getElementById('postMediaLightbox');
+    if (!el) return;
+    const body = el.querySelector('[data-lb-body]');
+    if (body) {
+        const v = body.querySelector('video');
+        if (v) {
+            try {
+                v.pause();
+            } catch (_) {}
+        }
+        body.innerHTML = '';
+    }
+    el.classList.add('hidden');
+}
+
+function openPostMediaExpand(postId) {
+    const card = document.querySelector(`[data-post-card-id="${postId}"]`);
+    if (!card) return;
+    let urls = [];
+    try {
+        const raw = card.getAttribute('data-image-urls');
+        if (raw) urls = JSON.parse(decodeURIComponent(raw));
+    } catch (_) {
+        urls = [];
+    }
+    urls = (Array.isArray(urls) ? urls : []).map((u) => toCanonicalSiteUrl(u)).filter(Boolean);
+    const vraw = card.getAttribute('data-video-url');
+    const videoUrl = vraw ? toCanonicalSiteUrl(decodeURIComponent(vraw)) : '';
+
+    if (!urls.length && !videoUrl) {
+        showToast('표시할 미디어가 없습니다.', 'info');
+        return;
+    }
+
+    postMediaLightboxState = { urls, video: videoUrl, index: 0 };
+
+    let el = document.getElementById('postMediaLightbox');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'postMediaLightbox';
+        el.className = 'fixed inset-0 z-[10050] hidden flex items-center justify-center bg-black/85 p-3';
+        el.innerHTML = `
+            <button type="button" class="absolute top-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20" data-lb-close aria-label="닫기">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <button type="button" class="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 hidden" data-lb-prev aria-label="이전"><i class="fas fa-chevron-left"></i></button>
+            <button type="button" class="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 hidden" data-lb-next aria-label="다음"><i class="fas fa-chevron-right"></i></button>
+            <div class="relative max-h-[92vh] max-w-[95vw]" data-lb-body></div>
+        `;
+        document.body.appendChild(el);
+        el.addEventListener('click', (e) => {
+            if (e.target === el) closePostMediaExpand();
+        });
+        el.querySelector('[data-lb-close]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closePostMediaExpand();
+        });
+        el.querySelector('[data-lb-prev]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            postMediaLightboxPrev();
+        });
+        el.querySelector('[data-lb-next]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            postMediaLightboxNext();
+        });
+        if (!window.__postMediaLbEsc) {
+            window.__postMediaLbEsc = true;
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                const lb = document.getElementById('postMediaLightbox');
+                if (lb && !lb.classList.contains('hidden')) closePostMediaExpand();
+            });
+        }
+    }
+
+    if (urls.length) {
+        renderPostMediaLightboxBody();
+    } else if (videoUrl) {
+        postMediaLightboxState = { urls: [], video: videoUrl, index: 0 };
+        renderPostMediaLightboxBody();
+    }
+
+    el.classList.remove('hidden');
+}
+
+function getFileExt(name) {
+    const parts = String(name || '').toLowerCase().split('.');
+    return parts.length > 1 ? parts.pop() : '';
+}
+
+function isHeicFile(file) {
+    if (!file) return false;
+    const ext = getFileExt(file.name);
+    const type = (file.type || '').toLowerCase();
+    return ext === 'heic' || ext === 'heif' || type.includes('heic') || type.includes('heif');
+}
+
+function isImageUploadCandidate(file) {
+    if (!file) return false;
+    if ((file.type || '').startsWith('image/')) return true;
+    const ext = getFileExt(file.name);
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif', 'heic', 'heif'].includes(ext);
+}
+
+function normalizeImageUploadFile(file) {
+    if (!file) return null;
+    if ((file.type || '').startsWith('image/')) return file;
+    const ext = getFileExt(file.name);
+    const mimeByExt = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+        gif: 'image/gif',
+        bmp: 'image/bmp',
+        avif: 'image/avif',
+        heic: 'image/heic',
+        heif: 'image/heif'
+    };
+    const mime = mimeByExt[ext];
+    if (!mime) return null;
+    return new File([file], file.name || `upload.${ext}`, { type: mime, lastModified: file.lastModified || Date.now() });
+}
+
+async function loadHeic2AnyLibrary() {
+    if (typeof window === 'undefined') return null;
+    if (typeof window.heic2any === 'function') return window.heic2any;
+    if (heic2anyLoaderPromise) return heic2anyLoaderPromise;
+    heic2anyLoaderPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+        script.async = true;
+        script.onload = () => {
+            if (typeof window.heic2any === 'function') resolve(window.heic2any);
+            else reject(new Error('heic2any not available'));
+        };
+        script.onerror = () => reject(new Error('heic2any load failed'));
+        document.head.appendChild(script);
+    });
+    return heic2anyLoaderPromise;
+}
+
+async function convertHeicToJpegIfNeeded(file) {
+    if (!isHeicFile(file)) return file;
+    try {
+        const heic2any = await loadHeic2AnyLibrary();
+        if (typeof heic2any !== 'function') return file;
+        const converted = await heic2any({
+            blob: file,
+            toType: 'image/jpeg',
+            quality: 0.9
+        });
+        const blob = Array.isArray(converted) ? converted[0] : converted;
+        if (!(blob instanceof Blob)) return file;
+        const base = (file.name || 'image').replace(/\.[^/.]+$/, '');
+        const jpgFile = new File([blob], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+        showToast('HEIC 사진을 JPG로 변환했습니다.', 'info');
+        return jpgFile;
+    } catch (error) {
+        console.error('HEIC convert failed:', error);
+        return file;
+    }
+}
+
+function fileToImage(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('이미지 로드 실패'));
+        };
+        img.src = url;
+    });
+}
+
+function canvasToJpegBlob(canvas, quality) {
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+    });
+}
+
+function showImageLimitGuideOnce() {
+    if (hasShownImageLimitGuide) return;
+    hasShownImageLimitGuide = true;
+    showToast('사진은 10MB 제한이며, 초과 시 자동 압축됩니다.', 'info');
+}
+
+function showVideoLimitGuideOnce() {
+    if (hasShownVideoLimitGuide) return;
+    hasShownVideoLimitGuide = true;
+    showToast('동영상은 자동 압축되지 않으며 100MB 이하만 업로드할 수 있습니다.', 'info');
+}
+
+async function compressImageFileIfNeeded(file, maxBytes = IMAGE_MAX_UPLOAD_BYTES) {
+    if (!file || !isImageUploadCandidate(file)) return file;
+    if (file.size <= maxBytes) return file;
+
+    try {
+        const img = await fileToImage(file);
+        const originW = img.naturalWidth || img.width;
+        const originH = img.naturalHeight || img.height;
+        if (!originW || !originH) return file;
+
+        const dynamicMaxDimension = file.size > 40 * 1024 * 1024 ? 1200 : (file.size > 25 * 1024 * 1024 ? 1400 : IMAGE_MAX_DIMENSION);
+        let scale = Math.min(1, dynamicMaxDimension / Math.max(originW, originH));
+        let targetW = Math.max(1, Math.round(originW * scale));
+        let targetH = Math.max(1, Math.round(originH * scale));
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return file;
+
+        let bestBlob = null;
+        const qualitySteps = [0.86, 0.76, 0.66, 0.56, 0.46, 0.36, 0.28, 0.2];
+        for (let downStep = 0; downStep < 12; downStep++) {
+            canvas.width = targetW;
+            canvas.height = targetH;
+            ctx.clearRect(0, 0, targetW, targetH);
+            ctx.drawImage(img, 0, 0, targetW, targetH);
+
+            for (const quality of qualitySteps) {
+                const blob = await canvasToJpegBlob(canvas, quality);
+                if (!blob) continue;
+                if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+                if (blob.size <= maxBytes) {
+                    const base = (file.name || 'image').replace(/\.[^/.]+$/, '');
+                    return new File([blob], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+                }
+            }
+
+            targetW = Math.max(320, Math.round(targetW * 0.72));
+            targetH = Math.max(320, Math.round(targetH * 0.72));
+            if (targetW <= 340 || targetH <= 340) break;
+        }
+
+        if (bestBlob && bestBlob.size < file.size) {
+            const base = (file.name || 'image').replace(/\.[^/.]+$/, '');
+            return new File([bestBlob], `${base}.jpg`, { type: 'image/jpeg', lastModified: Date.now() });
+        }
+        return file;
+    } catch (_) {
+        return file;
+    }
+}
+
+function getImageLimitErrorMessage(file) {
+    const name = (file?.name || '').toLowerCase();
+    if (name.endsWith('.heic') || name.endsWith('.heif') || (file?.type || '').includes('heic') || (file?.type || '').includes('heif')) {
+        return 'HEIC/HEIF 사진은 기기마다 압축 실패할 수 있습니다. JPG/PNG로 변환 후 다시 시도해주세요.';
+    }
+    return '이미지는 자동 압축 후에도 10MB를 초과합니다. 더 작은 사진으로 시도해주세요.';
+}
+
+async function prepareImageForUpload(file, opts = {}) {
+    if (!file || !isImageUploadCandidate(file)) return null;
+    const normalized = normalizeImageUploadFile(file);
+    if (!normalized) return null;
+    const converted = await convertHeicToJpegIfNeeded(normalized);
+    if (isHeicFile(normalized) && isHeicFile(converted)) {
+        showToast('HEIC 변환에 실패했습니다. JPG/PNG로 변환 후 다시 시도해주세요.', 'error');
+        return null;
+    }
+    const showLargeHint = opts.showLargeHint !== false;
+    if (showLargeHint && converted.size > IMAGE_MAX_UPLOAD_BYTES) {
+        showToast('큰 사진 감지: 업로드 전에 자동 압축을 진행합니다.', 'info');
+    }
+    const processed = await compressImageFileIfNeeded(converted);
+    if (processed === converted && converted.size > IMAGE_MAX_UPLOAD_BYTES) {
+        showToast('자동 압축을 시도했지만 이 사진 포맷/기기에서는 실패했습니다.', 'error');
+    }
+    if (processed.size > IMAGE_MAX_UPLOAD_BYTES) {
+        showToast(getImageLimitErrorMessage(processed), 'error');
+        return null;
+    }
+    if (processed.size < file.size) {
+        showToast('이미지를 자동으로 압축했습니다.', 'info');
+    }
+    return processed;
+}
+
+function removePostImageAtIndex(idx) {
+    const arr = [...postSelectedImageFiles];
+    if (idx < 0 || idx >= arr.length) return;
+    arr.splice(idx, 1);
+    const input = document.getElementById('postImageFile');
+    if (!input) return;
+    postSelectedImageFiles = arr;
+    const dt = new DataTransfer();
+    arr.forEach((f) => dt.items.add(f));
+    input.files = dt.files;
+    if (arr.length === 0) {
+        input.value = '';
+        renderPostImagePreviewFiles([]);
+        return;
+    }
+    renderPostImagePreviewFiles(arr);
+}
+
+function createPostImagePreviewCell(file, idx, wrapExtra = '', imgClass = 'w-full min-h-[6.5rem] max-h-44 object-cover') {
+    const previewBg = /^#[0-9A-Fa-f]{6}$/.test(String(selectedBackgroundColor || '')) ? selectedBackgroundColor : '#F3F4F6';
+    const wrap = document.createElement('div');
+    wrap.className = `relative overflow-hidden rounded-xl bg-gray-100 shadow-md ring-1 ring-gray-200 transition hover:ring-blue-300/50 ${wrapExtra}`.trim();
+    const src = URL.createObjectURL(file);
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = `미리보기 ${idx + 1}`;
+    img.className = imgClass;
+    img.style.backgroundColor = previewBg;
+    img.onload = () => URL.revokeObjectURL(src);
+    const badge = document.createElement('span');
+    badge.className = 'absolute bottom-2 left-2 z-[1] flex h-6 min-w-[1.5rem] items-center justify-center rounded-md bg-black/50 px-1.5 text-[10px] font-bold text-white backdrop-blur-sm';
+    badge.textContent = String(idx + 1);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'absolute top-2 right-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white shadow backdrop-blur-sm transition hover:bg-red-500';
+    btn.title = '이 사진만 제거';
+    btn.innerHTML = '<i class="fas fa-times text-xs"></i>';
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        removePostImageAtIndex(idx);
+    };
+    wrap.appendChild(img);
+    wrap.appendChild(badge);
+    wrap.appendChild(btn);
+    return wrap;
+}
+
+function renderPostImagePreviewFiles(files) {
+    const container = document.getElementById('postImagePreviewContainer');
+    const listEl = document.getElementById('postImagePreviewList');
+    const countEl = document.getElementById('postImagePreviewCount');
+    if (!container || !listEl) return;
+    if (!files || files.length === 0) {
+        listEl.innerHTML = '';
+        container.classList.add('hidden');
+        if (countEl) countEl.textContent = '0/4';
+        return;
+    }
+    const list = Array.from(files);
+    const n = list.length;
+    if (countEl) countEl.textContent = `${n}/${POST_MAX_IMAGE_COUNT}`;
+
+    listEl.innerHTML = '';
+    const grid = document.createElement('div');
+
+    if (n === 1) {
+        grid.appendChild(
+            createPostImagePreviewCell(list[0], 0, 'shadow-lg ring-2 ring-white/90', 'w-full max-h-64 object-contain')
+        );
+    } else if (n === 2) {
+        grid.className = 'grid grid-cols-2 gap-2';
+        grid.appendChild(createPostImagePreviewCell(list[0], 0, 'aspect-square', 'h-full w-full object-cover'));
+        grid.appendChild(createPostImagePreviewCell(list[1], 1, 'aspect-square', 'h-full w-full object-cover'));
+    } else if (n === 3) {
+        grid.className = 'grid grid-cols-2 gap-2';
+        grid.appendChild(createPostImagePreviewCell(list[0], 0, 'aspect-square max-h-40', 'h-full w-full object-cover'));
+        grid.appendChild(createPostImagePreviewCell(list[1], 1, 'aspect-square max-h-40', 'h-full w-full object-cover'));
+        grid.appendChild(
+            createPostImagePreviewCell(list[2], 2, 'col-span-2 max-h-52', 'w-full max-h-52 object-cover')
+        );
+    } else {
+        grid.className = 'grid grid-cols-2 gap-2';
+        for (let i = 0; i < POST_MAX_IMAGE_COUNT; i++) {
+            grid.appendChild(
+                createPostImagePreviewCell(list[i], i, 'aspect-square max-h-40', 'h-full w-full object-cover')
+            );
+        }
+    }
+
+    listEl.appendChild(grid);
+
+    const remain = POST_MAX_IMAGE_COUNT - n;
+    if (remain > 0) {
+        const slotRow = document.createElement('div');
+        slotRow.className = 'mt-2 flex flex-wrap items-center gap-2';
+        const hint = document.createElement('span');
+        hint.className = 'text-[10px] text-gray-500 sm:text-xs';
+        hint.textContent = `사진 버튼으로 ${remain}장 더 추가할 수 있어요`;
+        slotRow.appendChild(hint);
+        for (let s = 0; s < remain; s++) {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className =
+                'inline-flex h-8 min-w-[2rem] items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white/80 text-gray-400 shadow-sm transition hover:border-blue-400 hover:text-blue-500';
+            chip.innerHTML = '<i class="fas fa-plus text-xs"></i>';
+            chip.title = '사진 추가';
+            chip.onclick = () => document.getElementById('postImageFile')?.click();
+            slotRow.appendChild(chip);
+        }
+        listEl.appendChild(slotRow);
+    }
+
+    container.classList.remove('hidden');
+}
+
+async function setPostImagesFromFiles(files, opts = {}) {
+    const input = document.getElementById('postImageFile');
+    if (!input) return false;
+    const append = !!opts.append;
+    const sourceFiles = Array.isArray(files) ? files : Array.from(files || []);
+    const candidates = sourceFiles.filter((f) => !!f && isImageUploadCandidate(f));
+    if (!candidates.length) return false;
+
+    showImageLimitGuideOnce();
+    const existing = append ? [...postSelectedImageFiles] : [];
+    const totalLimit = Math.max(1, POST_MAX_IMAGE_COUNT);
+    const remain = Math.max(0, totalLimit - existing.length);
+    if (remain <= 0) {
+        showToast(`사진은 최대 ${POST_MAX_IMAGE_COUNT}장까지 업로드할 수 있습니다.`, 'warning');
+        return false;
+    }
+
+    const picked = candidates.slice(0, remain);
+    const processed = [];
+    for (const file of picked) {
+        const processedFile = await prepareImageForUpload(file);
+        if (processedFile) processed.push(processedFile);
+    }
+    if (!processed.length) return false;
+
+    const fileKey = (f) => `${f.name}__${f.size}__${f.lastModified}`;
+    const seen = new Set(existing.map(fileKey));
+    const merged = [...existing];
+    for (const file of processed) {
+        const key = fileKey(file);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(file);
+        if (merged.length >= totalLimit) break;
+    }
+
+    const dt = new DataTransfer();
+    merged.slice(0, totalLimit).forEach((file) => dt.items.add(file));
+    input.files = dt.files;
+    postSelectedImageFiles = Array.from(input.files || []);
+    removePostVideo();
+    renderPostImagePreviewFiles(postSelectedImageFiles);
+    if (candidates.length > remain) {
+        showToast(`사진은 최대 ${POST_MAX_IMAGE_COUNT}장까지 가능합니다.`, 'info');
+    }
+    return true;
+}
+
 // Toggle prayer request mode
 // Create new post
 async function createPost() {
@@ -4905,14 +5836,10 @@ async function createPost() {
     }
 
     const content = String(contentEl.value || '').trim();
-    const imageFiles = selectedPostImages.length > 0
-        ? selectedPostImages
-            .slice()
-            .sort((a, b) => a.seq - b.seq)
-            .map((item) => item.file)
-            .slice(0, 4)
-        : (imageInputEl.files[0] ? [imageInputEl.files[0]] : []);
-    const videoFile = videoInputEl.files[0];
+    const imageFiles = postSelectedImageFiles.length > 0
+        ? postSelectedImageFiles.slice(0, POST_MAX_IMAGE_COUNT)
+        : (imageInputEl.files && imageInputEl.files.length ? Array.from(imageInputEl.files).slice(0, POST_MAX_IMAGE_COUNT) : []);
+    const videoFile = selectedPostVideoFile || videoInputEl.files[0];
     const visibilityEl = document.getElementById('newPostVisibility');
     const visibilityScope = visibilityEl && visibilityEl.value === 'friends' ? 'friends' : 'public';
     
@@ -4980,18 +5907,17 @@ async function createPost() {
             showToastWithColor('포스팅 작성! 활동 점수 +10점', selectedBackgroundColor);
         }
 
-        // 2. Upload images (최대 4장)
+        // 2. Upload images (최대 4장, 미리보기 단계에서 이미 압축·변환됨)
         if (imageFiles.length > 0) {
             for (let i = 0; i < imageFiles.length; i++) {
                 try {
-                    const compressed = await compressImage(imageFiles[i]);
                     const formData = new FormData();
-                    formData.append('image', compressed);
+                    formData.append('image', imageFiles[i]);
                     formData.append('order', String(i));
                     await axios.post('/api/posts/' + postId + '/image', formData);
                 } catch (uploadError) {
                     console.error('Image upload error:', uploadError);
-                    showToast('사진 업로드에 실패했습니다.', 'error');
+                    showToast(uploadError?.response?.data?.error || '사진 업로드에 실패했습니다.', 'error');
                 }
             }
         }
@@ -5073,6 +5999,13 @@ async function createPost() {
         if (typeof setSocialHeaderButtonActive === 'function') setSocialHeaderButtonActive('friends');
 
         await loadPosts();
+        if (sharedPostId) {
+            const oid = Number(sharedPostId);
+            if (Number.isFinite(oid)) {
+                setPostToolbarShareActive(oid, true);
+                bumpPostToolbarCount(oid, 'share');
+            }
+        }
         const centerFeedColumn = document.getElementById('centerFeedColumn');
         if (centerFeedColumn) centerFeedColumn.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
@@ -5090,180 +6023,88 @@ async function createPost() {
     }
 }
 
-function isHeicFile(file) {
-    return file.type === 'image/heic' || file.type === 'image/heif' || /\.hei[cf]$/i.test(file.name);
-}
-
-// 이미지를 Canvas로 압축 (최대 1920px, quality 0.85) — HEIC 자동 변환, 실패 시 원본 반환
-async function compressImage(file) {
-    return new Promise((resolve) => {
-        try {
-            const reader = new FileReader();
-            reader.onerror = () => resolve(file);
-            reader.onload = (e) => {
-                try {
-                    const img = new Image();
-                    img.onerror = () => resolve(file);
-                    img.onload = () => {
-                        try {
-                            const MAX = 1920;
-                            let w = img.width, h = img.height;
-                            if (w > MAX || h > MAX) {
-                                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-                                else { w = Math.round(w * MAX / h); h = MAX; }
-                            }
-                            const canvas = document.createElement('canvas');
-                            canvas.width = w; canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            if (!ctx) { resolve(file); return; }
-                            ctx.drawImage(img, 0, 0, w, h);
-                            canvas.toBlob((blob) => {
-                                if (!blob) { resolve(file); return; }
-                                resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() }));
-                            }, 'image/jpeg', 0.85);
-                        } catch (_) { resolve(file); }
-                    };
-                    img.src = e.target.result;
-                } catch (_) { resolve(file); }
-            };
-            reader.readAsDataURL(file);
-        } catch (_) { resolve(file); }
-    });
-}
-
-// Preview post image
 async function previewPostImage(event) {
-    const files = Array.from((event && event.target && event.target.files) ? event.target.files : []);
-    if (event && event.target) event.target.value = '';
-    if (!files.length) return;
-
-    const validFiles = [];
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (!file.type.startsWith('image/') && !isHeicFile(file)) {
-            showToast('이미지 파일만 업로드할 수 있습니다.', 'error');
-            continue;
-        }
-        validFiles.push(file);
-    }
-
-    const remaining = Math.max(0, 4 - selectedPostImages.length);
-    if (remaining <= 0) {
-        showToast('사진은 최대 4장까지 첨부할 수 있습니다.', 'warning');
-        return;
-    }
-
-    const filesToAdd = validFiles.slice(0, remaining);
-    if (validFiles.length > remaining) showToast('사진은 최대 4장까지만 첨부됩니다.', 'info');
-
-    // HEIC가 있으면 변환 중 표시
-    const hasHeic = filesToAdd.some(isHeicFile);
-    if (hasHeic) showToast('사진 변환 중...', 'info');
-
-    const converted = await Promise.all(filesToAdd.map(async (file) => {
-        if (isHeicFile(file) && typeof heic2any !== 'undefined') {
-            try {
-                const blob = await Promise.race([
-                    heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000))
-                ]);
-                return new File([blob], file.name.replace(/\.hei[cf]$/i, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() });
-            } catch (_) { return file; }
-        }
-        return file;
-    }));
-
-    const toAdd = converted.map((file) => ({ file, seq: ++selectedPostImageSeq }));
-    selectedPostImages = selectedPostImages.concat(toAdd);
-    renderPostImagePreviews();
+    const files = Array.from(event.target.files || []);
+    if (files.length) await setPostImagesFromFiles(files, { append: true });
+    if (event.target) event.target.value = '';
 }
 
-// Remove post image
 function removePostImage() {
-    const fileEl = document.getElementById('postImageFile');
-    const preview = document.getElementById('postImagePreview');
-    const container = document.getElementById('postImagePreviewContainer');
-    const listEl = document.getElementById('postImagePreviewList');
-    const countEl = document.getElementById('postImagePreviewCount');
-    selectedPostImages = [];
-    selectedPostImageSeq = 0;
-    if (fileEl) fileEl.value = '';
-    if (preview) preview.src = '';
-    if (listEl) listEl.innerHTML = '';
-    if (countEl) countEl.textContent = '0/4';
-    if (container) container.classList.add('hidden');
-}
-
-function removePostImageAt(index) {
-    const ordered = selectedPostImages.slice().sort((a, b) => a.seq - b.seq);
-    if (index < 0 || index >= ordered.length) return;
-    const targetSeq = ordered[index].seq;
-    selectedPostImages = selectedPostImages.filter((item) => item.seq !== targetSeq);
-    renderPostImagePreviews();
-}
-
-function renderPostImagePreviews() {
-    const container = document.getElementById('postImagePreviewContainer');
-    const listEl = document.getElementById('postImagePreviewList');
-    const countEl = document.getElementById('postImagePreviewCount');
-    if (!container || !listEl || !countEl) return;
-
-    const ordered = selectedPostImages.slice().sort((a, b) => a.seq - b.seq);
-    countEl.textContent = `${ordered.length}/4`;
-
-    if (!ordered.length) {
-        listEl.innerHTML = '';
-        container.classList.add('hidden');
-        return;
-    }
-
-    container.classList.remove('hidden');
-    listEl.innerHTML = ordered.map((item, idx) => {
-        const url = URL.createObjectURL(item.file);
-        return `
-            <div class="inline-block mr-2 mb-2 relative">
-                <img src="${url}" alt="preview-${idx}" class="w-20 h-20 rounded-lg object-cover border border-gray-200" />
-                <span class="absolute left-1 top-1 min-w-[18px] h-[18px] px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">${idx + 1}</span>
-                <button type="button" onclick="removePostImageAt(${idx})" class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] hover:bg-red-600 transition">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-    }).join('');
+    const input = document.getElementById('postImageFile');
+    if (input) input.value = '';
+    postSelectedImageFiles = [];
+    renderPostImagePreviewFiles([]);
 }
 
 // Preview post video
-function previewPostVideo(event) {
-    const file = event.target.files[0];
-    if (file) {
-        if (file.size > 100 * 1024 * 1024) {
-            alert('파일 크기는 100MB를 초과할 수 없습니다.');
-            event.target.value = '';
-            return;
-        }
-        
-        if (!file.type.startsWith('video/')) {
-            alert('동영상 파일만 업로드할 수 있습니다.');
-            event.target.value = '';
-            return;
-        }
-        
-        // Hide image preview if shown
-        document.getElementById('postImagePreviewContainer').classList.add('hidden');
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const preview = document.getElementById('postVideoPreview');
-            const container = document.getElementById('postVideoPreviewContainer');
-            preview.src = e.target.result;
-            container.classList.remove('hidden');
-        };
-        reader.readAsDataURL(file);
+let selectedPostVideoFile = null;
+
+async function compressVideo(file) {
+    try {
+        if (typeof FFmpeg === 'undefined' || !FFmpeg.createFFmpeg) throw new Error('FFmpeg not loaded');
+
+        showToast('동영상 압축 중... (시간이 걸릴 수 있습니다)', 'info');
+
+        const ffmpeg = FFmpeg.createFFmpeg({ log: false });
+        if (!ffmpeg.isLoaded()) await ffmpeg.load();
+
+        const inputName = 'input.' + (file.name.split('.').pop() || 'mp4');
+        ffmpeg.FS('writeFile', inputName, await FFmpeg.fetchFile(file));
+
+        await ffmpeg.run(
+            '-i', inputName,
+            '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease',
+            '-c:v', 'libx264', '-crf', '28', '-preset', 'ultrafast',
+            '-c:a', 'aac', '-b:a', '128k',
+            '-movflags', '+faststart',
+            'output.mp4'
+        );
+
+        const data = ffmpeg.FS('readFile', 'output.mp4');
+        const blob = new Blob([data.buffer], { type: 'video/mp4' });
+        showToast('압축 완료!', 'success');
+        return new File([blob], file.name.replace(/\.[^.]+$/, '.mp4'), { type: 'video/mp4', lastModified: Date.now() });
+    } catch (e) {
+        console.error('Video compress error:', e);
+        showToast('압축 실패 — 원본으로 업로드합니다.', 'warning');
+        return file;
     }
+}
+
+async function previewPostVideo(event) {
+    const file = event.target.files[0];
+    if (event.target) event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+        showToast('동영상 파일만 업로드할 수 있습니다.', 'error');
+        return;
+    }
+
+    showVideoLimitGuideOnce();
+    removePostImage();
+
+    // 50MB 초과 시 압축
+    const needsCompress = file.size > 50 * 1024 * 1024;
+    const processedFile = needsCompress ? await compressVideo(file) : file;
+
+    if (processedFile.size > 100 * 1024 * 1024) {
+        showToast('파일 크기가 100MB를 초과합니다. 더 짧은 영상을 사용해주세요.', 'error');
+        return;
+    }
+
+    selectedPostVideoFile = processedFile;
+
+    const url = URL.createObjectURL(processedFile);
+    const preview = document.getElementById('postVideoPreview');
+    const container = document.getElementById('postVideoPreviewContainer');
+    if (preview) preview.src = url;
+    if (container) container.classList.remove('hidden');
 }
 
 // Remove post video
 function removePostVideo() {
+    selectedPostVideoFile = null;
     document.getElementById('postVideoFile').value = '';
     document.getElementById('postVideoPreview').src = '';
     document.getElementById('postVideoPreviewContainer').classList.add('hidden');
@@ -5727,81 +6568,11 @@ async function sharePost(postId) {
         const textarea = document.getElementById('newPostContent');
         textarea.focus();
         
-        // Clear any existing image/video previews (shared post will replace them)
-        const postImagePreviewContainer = document.getElementById('postImagePreviewContainer');
-        const postVideoPreviewContainer = document.getElementById('postVideoPreviewContainer');
-        postImagePreviewContainer.classList.add('hidden');
-        postVideoPreviewContainer.classList.add('hidden');
+        removePostImage();
+        removePostVideo();
         
-        // Create shared post card preview (액자 안의 액자 - 첨부파일처럼)
         const sharedPostPreview = document.getElementById('sharedPostPreview');
-        
-        // Avatar HTML - Admin shows crown icon
-        const avatarHtml = post.user_role === 'admin'
-            ? '<i class="fas fa-crown text-yellow-400 text-xl"></i>'
-            : post.user_avatar 
-                ? `<img src="${toCanonicalSiteUrl(post.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
-                : '<i class="fas fa-user"></i>';
-        
-        // Role badge for shared post (skip admin badge since they have crown icon as avatar)
-        let roleBadgeHtml = '';
-        if (post.user_role === 'moderator') {
-            roleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
-        }
-        
-        // Verse reference removed - not a feature
-        const verseHtml = '';
-        
-        const sharePreviewImageUrls = parsePostImageUrls(post.image_url);
-        const imageHtml = renderOrderedImageLayout(sharePreviewImageUrls, 'max-h-48', 'mt-2');
-        
-        const videoHtml = post.video_url ? `
-            <div class="mt-2">
-                <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
-                    <source src="${toCanonicalSiteUrl(post.video_url)}" type="video/mp4">
-                    동영상을 재생할 수 없습니다.
-                </video>
-            </div>
-        ` : '';
-        
-        // Create the shared post card (inner frame) - looks like an attachment
-        const sharedCardHtml = `
-            <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-gray-400 p-4 relative shadow-sm">
-                <div class="absolute top-2 right-2 z-10">
-                    <button 
-                        onclick="removeSharedPost()"
-                        class="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition shadow-md">
-                        <i class="fas fa-times text-xs"></i>
-                    </button>
-                </div>
-                <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-300">
-                    <i class="fas fa-quote-left text-blue-600 text-sm"></i>
-                    <span class="text-xs font-bold text-gray-700">공유된 포스팅</span>
-                </div>
-                <div class="flex items-start space-x-3">
-                    <div class="admin-badge-container">
-                        <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
-                            ${avatarHtml}
-                        </div>
-                        ${roleBadgeHtml}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center space-x-2 flex-wrap">
-                            <h4 class="font-bold text-sm text-gray-800">${post.user_name}</h4>
-                            <span class="text-xs text-gray-500">•</span>
-                            <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
-                        </div>
-                        <p class="text-xs text-gray-600 mb-2">${post.user_church || ''}</p>
-                        <p class="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">${post.content}</p>
-                        ${imageHtml}
-                        ${videoHtml}
-                        ${verseHtml}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        sharedPostPreview.innerHTML = sharedCardHtml;
+        sharedPostPreview.innerHTML = renderEmbeddedOriginalPostCard(post, 'root', { showRemoveButton: true });
         sharedPostPreview.classList.remove('hidden');
         
         // Store the shared post ID for later use
@@ -5826,9 +6597,11 @@ async function sharePost(postId) {
 // Remove shared post preview
 function removeSharedPost() {
     const sharedPostPreview = document.getElementById('sharedPostPreview');
+    const sid = sharedPostPreview.dataset.sharedPostId;
     sharedPostPreview.innerHTML = '';
     sharedPostPreview.classList.add('hidden');
     delete sharedPostPreview.dataset.sharedPostId;
+    if (sid) setPostToolbarShareActive(Number(sid), false);
 }
 
 // Load comments
@@ -5949,7 +6722,8 @@ async function loadComments(postId) {
             
             commentsDiv.innerHTML = html;
             commentsDiv.classList.remove('hidden');
-            
+            setPostToolbarCommentActive(postId, true);
+
             // Add event listeners after HTML is inserted
             const submitBtn = document.getElementById(`comment-submit-${postId}`);
             const inputField = document.getElementById(`comment-input-${postId}`);
@@ -5973,6 +6747,7 @@ async function loadComments(postId) {
         }
     } else {
         commentsDiv.classList.add('hidden');
+        setPostToolbarCommentActive(postId, false);
     }
 }
 
@@ -6031,6 +6806,8 @@ async function createComment(postId) {
         input.value = '';
         input.style.height = 'auto';
         refreshComments(postId); // Use refreshComments instead of loadComments to keep comments open
+        bumpPostToolbarCount(postId, 'comment');
+        setPostToolbarCommentActive(postId, true);
         // Don't call loadPosts() to keep comments section open
     } catch (error) {
         console.error('Error creating comment:', error);
@@ -6164,76 +6941,26 @@ async function loadPosts() {
             // Verse reference removed - not a feature
             const verseHtml = '';
             
-            const postImageUrls = parsePostImageUrls(post.image_url);
-            const imageHtml = renderOrderedImageLayout(postImageUrls, 'max-h-96', 'mt-3');
-            
+            const imageHtml = renderPostImagesHtml(getPostImageUrls(post), {
+                wrapperClass: 'mt-5 -mx-6',
+                singleClass: 'w-full object-contain',
+                altPrefix: 'Post image',
+                bgColor: post.background_color || '#FFFFFF'
+            });
+
             const videoHtml = post.video_url ? `
-                <div class="mt-3">
-                    <video controls class="w-full rounded-lg max-h-96" controlsList="nodownload">
-                        <source src="${post.video_url}" type="video/mp4">
+                <div class="mt-5 -mx-6">
+                    <video controls class="w-full rounded-lg" controlsList="nodownload">
+                        <source src="${toCanonicalSiteUrl(post.video_url)}" type="video/mp4">
                         동영상을 재생할 수 없습니다.
                     </video>
                 </div>
             ` : '';
             
-            // Shared post card (액자 안의 액자)
+            // Shared post: 원본과 동일한 카드 형태(피드 단일 포스트와 같은 레이아웃)
             let sharedPostHtml = '';
             if (post.shared_post_id) {
-                // Shared Avatar HTML - Admin shows crown icon
-                const sharedAvatarHtml = post.shared_user_role === 'admin'
-                    ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
-                    : post.shared_user_avatar 
-                        ? `<img src="${toCanonicalSiteUrl(post.shared_user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
-                        : '<i class="fas fa-user"></i>';
-                
-                let sharedRoleBadgeHtml = '';
-                if (post.shared_user_role === 'moderator') {
-                    sharedRoleBadgeHtml = '<div class="moderator-badge" title="운영자"><i class="fas fa-shield-alt"></i></div>';
-                }
-                
-                // Shared verse reference removed - not a feature
-                const sharedVerseHtml = '';
-                
-                const sharedImageUrls = parsePostImageUrls(post.shared_image_url);
-                const sharedImageHtml = renderOrderedImageLayout(sharedImageUrls, 'max-h-48', 'mt-2', 'max-w-full');
-                
-                const sharedVideoHtml = post.shared_video_url ? `
-                    <div class="mt-2 max-w-full">
-                        <video controls class="w-full rounded-lg max-h-48" controlsList="nodownload">
-                            <source src="${toCanonicalSiteUrl(post.shared_video_url)}" type="video/mp4">
-                            동영상을 재생할 수 없습니다.
-                        </video>
-                    </div>
-                ` : '';
-                
-                sharedPostHtml = `
-                    <div class="mt-3 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-gray-400 p-4 shadow-sm max-w-full overflow-hidden">
-                        <div class="flex items-center space-x-2 mb-3 pb-2 border-b border-gray-300">
-                            <i class="fas fa-quote-left text-blue-600 text-sm"></i>
-                            <span class="text-xs font-bold text-gray-700">공유된 포스팅</span>
-                        </div>
-                        <div class="flex items-start space-x-3">
-                            <div class="admin-badge-container flex-shrink-0">
-                                <div onclick="showUserProfileModal(${post.shared_user_id})" class="w-10 h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">
-                                    ${sharedAvatarHtml}
-                                </div>
-                                ${sharedRoleBadgeHtml}
-                            </div>
-                            <div class="flex-1 min-w-0 overflow-hidden">
-                                <div class="flex items-center space-x-2 flex-wrap">
-                                    <h4 class="font-bold text-sm text-gray-800 truncate cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.shared_user_id}, \`${post.shared_user_name}\`)" title="클릭하여 ${post.shared_user_name} 님의 포스팅만 보기">${post.shared_user_name}</h4>
-                                    <span class="text-xs text-gray-500 flex-shrink-0">•</span>
-                                    <p class="text-xs text-gray-500 flex-shrink-0">${formatDate(post.shared_created_at)}</p>
-                                </div>
-                                <p class="text-xs text-gray-600 mb-2 truncate">${post.shared_user_church || ''}</p>
-                                <p class="mt-2 text-sm text-gray-800 whitespace-pre-wrap break-words leading-relaxed">${post.shared_content}</p>
-                                ${sharedImageHtml}
-                                ${sharedVideoHtml}
-                                ${sharedVerseHtml}
-                            </div>
-                        </div>
-                    </div>
-                `;
+                sharedPostHtml = renderEmbeddedOriginalPostCard(post, 'shared');
             }
             
             // Background color style
@@ -6242,8 +6969,11 @@ async function loadPosts() {
                 ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
                 : '';
             
+            const postCardImageUrlsJson = encodeURIComponent(JSON.stringify(getPostImageUrls(post)));
+            const postCardVideoUrlAttr = post.video_url ? encodeURIComponent(toCanonicalSiteUrl(post.video_url)) : '';
+
             postsHtml += `
-                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1" ${backgroundStyle}>
+                <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1" data-post-card-id="${post.id}" data-image-urls="${postCardImageUrlsJson}" data-video-url="${postCardVideoUrlAttr}" ${backgroundStyle}>
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
                             <div onclick="showUserProfileModal(${post.user_id})" class="w-12 h-12 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
@@ -6297,7 +7027,7 @@ async function loadPosts() {
                             
                             <!-- Post Content Display -->
                             <div id="post-content-display-${post.id}" class="mt-3">
-                                <p class="text-gray-800 whitespace-pre-wrap">${post.content}</p>
+                                ${renderPostContentWithPreview(post.content, 'font-size-base text-gray-800 whitespace-pre-wrap')}
                             </div>
                             
                             <!-- Post Content Edit Form (Hidden by default) -->
@@ -6320,73 +7050,17 @@ async function loadPosts() {
                                     </button>
                                 </div>
                             </div>
-                            
-                            ${imageHtml}
-                            ${videoHtml}
-                            ${verseHtml}
-                            ${sharedPostHtml}
-                            <div class="mt-4 flex items-center space-x-6 text-gray-600">
-                                ${post.background_color === '#F87171' ? `
-                                    <!-- 중보 기도: 함께 기도합니다 -->
-                                    <button onclick="togglePray(${post.id})" class="flex items-center space-x-2 ${post.is_prayed > 0 ? 'text-red-600' : 'hover:text-red-600'} transition group relative" title="함께 기도합니다">
-                                        <i class="fas fa-praying-hands text-lg"></i>
-                                        <span class="text-sm">${post.prayer_clicks_count || 0}</span>
-                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">함께 기도합니다</span>
-                                    </button>
-                                ` : post.background_color === '#F5E398' ? `
-                                    <!-- 말씀: 아멘! -->
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-yellow-600' : 'hover:text-yellow-600'} transition group relative" title="아멘!">
-                                        <i class="fas fa-book-bible text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0}</span>
-                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">아멘!</span>
-                                    </button>
-                                ` : post.background_color === '#F5D4B3' ? `
-                                    <!-- 일상: 샬롬 -->
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-orange-600' : 'hover:text-orange-600'} transition group relative" title="샬롬">
-                                        <i class="fas fa-dove text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0}</span>
-                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">샬롬</span>
-                                    </button>
-                                ` : post.background_color === '#B3EDD8' ? `
-                                    <!-- 사역: 응원합니다 -->
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-green-600' : 'hover:text-green-600'} transition group relative" title="응원합니다">
-                                        <i class="fas fa-hands-helping text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0}</span>
-                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">응원합니다</span>
-                                    </button>
-                                ` : post.background_color === '#C4E5F8' ? `
-                                    <!-- 찬양: 할렐루야! -->
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-sky-600' : 'hover:text-sky-600'} transition group relative" title="할렐루야!">
-                                        <i class="fas fa-music text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0}</span>
-                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">할렐루야!</span>
-                                    </button>
-                                ` : post.background_color === '#E2DBFB' ? `
-                                    <!-- 교회: 우리는 하나 -->
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-violet-600' : 'hover:text-violet-600'} transition group relative" title="우리는 하나">
-                                        <i class="fas fa-church text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0}</span>
-                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">우리는 하나</span>
-                                    </button>
-                                ` : `
-                                    <!-- 자유: 좋아요 -->
-                                    <button onclick="toggleLike(${post.id})" class="flex items-center space-x-2 ${isLiked ? 'text-pink-600' : 'hover:text-pink-600'} transition group relative" title="좋아요">
-                                        <i class="fas fa-heart text-lg"></i>
-                                        <span class="text-sm">${post.likes_count || 0}</span>
-                                        <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">좋아요</span>
-                                    </button>
-                                `}
-                                <button onclick="loadComments(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition group relative" title="댓글">
-                                    <i class="fas fa-comment text-lg"></i>
-                                    <span class="text-sm">${post.comments_count || 0}</span>
-                                    <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">댓글</span>
-                                </button>
-                                <button onclick="sharePost(${post.id})" class="flex items-center space-x-2 hover:text-blue-600 transition group relative" title="공유하기">
-                                    <i class="fas fa-share text-lg"></i>
-                                    <span class="text-sm">공유</span>
-                                    <span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">공유하기</span>
-                                </button>
-                            </div>
+                        </div>
+                    </div>
+                    
+                    ${imageHtml}
+                    ${videoHtml}
+                    ${verseHtml}
+                    ${sharedPostHtml}
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 flex-shrink-0" aria-hidden="true"></div>
+                        <div class="flex-1 min-w-0">
+                            ${renderPostActionsToolbar(post, isLiked)}
                             <div id="comments-${post.id}" class="hidden"></div>
                         </div>
                     </div>
@@ -7682,8 +8356,116 @@ function escapeHtml(s) {
         .replace(/'/g, '&#39;');
 }
 
+/** 친구 목록 패널과 동일한 행 UI — 반응/댓글/공유 숫자 배지에서 연 사람 목록 */
+function renderSidebarEngagementUsers(users) {
+    if (!users || users.length === 0) {
+        return `
+            <div class="text-center py-8 text-gray-400">
+                <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
+                <p class="text-sm">아직 없습니다</p>
+            </div>
+        `;
+    }
+    return users.map((friend) => {
+        const nameJs = JSON.stringify(friend.name || '');
+        const avatarJs = JSON.stringify(friend.avatar_url || '');
+        return `
+        <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition">
+            <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition"
+                 onclick="showUserProfileModal(${friend.id})"
+                 title="${escapeHtml(friend.name || '')} 프로필 보기">
+                ${friend.avatar_url
+                    ? `<img src="${escapeHtml(toCanonicalSiteUrl(friend.avatar_url))}" alt="${escapeHtml(friend.name || '')}" class="w-full h-full object-cover" />`
+                    : `<i class="fas fa-user text-white"></i>`
+                }
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="font-bold text-gray-800 text-sm truncate cursor-pointer hover:text-blue-600 transition"
+                     onclick="filterByUser(${friend.id}, ${nameJs})"
+                     title="${escapeHtml(friend.name || '')} 님의 포스팅만 보기">
+                    ${escapeHtml(friend.name || '')}
+                </div>
+                <div class="text-xs text-gray-500 truncate">
+                    ${escapeHtml(friend.church || friend.denomination || '교회 정보 없음')}
+                </div>
+            </div>
+            <button
+                type="button"
+                onclick="openFriendMessenger(${friend.id}, ${nameJs}, ${avatarJs})"
+                class="w-9 h-9 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
+                title="${escapeHtml(friend.name || '')} 님에게 메시지 보내기">
+                <i class="fas fa-comment-dots text-sm"></i>
+            </button>
+        </div>
+    `;
+    }).join('');
+}
+
+async function openPostEngagementPanel(kind, postId) {
+    const titles = { react: '반응한 사람', comment: '댓글을 남긴 사람', share: '공유한 사람' };
+    const icons = { react: 'fa-users', comment: 'fa-comments', share: 'fa-share-alt' };
+    const rs = document.getElementById('rightSidebar');
+    const reactorsTab = document.getElementById('reactorsTabContent');
+    const listEl = document.getElementById('sidebarReactorsList');
+    const titleEl = document.getElementById('reactorsPanelTitle');
+    const iconEl = document.getElementById('reactorsPanelIcon');
+    if (!rs || !reactorsTab || !listEl) return;
+
+    if (titleEl) titleEl.textContent = titles[kind] || '가입자';
+    if (iconEl) iconEl.className = `fas ${icons[kind] || 'fa-users'} text-blue-600 text-xl mr-2`;
+
+    listEl.innerHTML = `
+        <div class="text-center py-6 text-gray-400">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+            <p class="text-sm">불러오는 중...</p>
+        </div>`;
+
+    reactorsTab.classList.remove('hidden');
+    isNotificationActive = false;
+    const notificationsContent = document.getElementById('notificationsTabContent');
+    if (notificationsContent) notificationsContent.classList.add('hidden');
+    if (typeof setSocialHeaderButtonActive === 'function') setSocialHeaderButtonActive('friends');
+
+    rs.classList.add('reactors-only');
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+        rs.classList.add('mobile-fullscreen-overlay');
+        rs.classList.remove('hidden');
+    }
+
+    try {
+        const res = await axios.get(`/api/posts/${postId}/engagement/${kind}`);
+        const users = res.data.users || [];
+        listEl.innerHTML = renderSidebarEngagementUsers(users);
+        listEl.scrollTop = 0;
+    } catch (e) {
+        console.error('openPostEngagementPanel', e);
+        showToast('목록을 불러오지 못했습니다.', 'error');
+        listEl.innerHTML = `
+            <div class="text-center py-8 text-gray-400">
+                <p class="text-sm">불러오는 데 실패했습니다</p>
+            </div>`;
+    }
+}
+
+function closePostReactors() {
+    const rs = document.getElementById('rightSidebar');
+    const reactorsTab = document.getElementById('reactorsTabContent');
+    if (reactorsTab) reactorsTab.classList.add('hidden');
+    if (rs) {
+        rs.classList.remove('reactors-only', 'mobile-fullscreen-overlay');
+        if (window.matchMedia('(max-width: 1023px)').matches) {
+            rs.classList.add('hidden');
+        }
+    }
+    const friendsContent = document.getElementById('friendsTabContent');
+    const notificationsContent = document.getElementById('notificationsTabContent');
+    if (friendsContent) friendsContent.classList.remove('hidden');
+    if (notificationsContent) notificationsContent.classList.add('hidden');
+    if (typeof setSocialHeaderButtonActive === 'function') setSocialHeaderButtonActive('friends');
+}
+
 function parsePostImageUrls(imageUrlValue) {
-    if (!imageUrlValue) return [];
+    if (imageUrlValue == null || imageUrlValue === '') return [];
     const raw = String(imageUrlValue).trim();
     if (!raw) return [];
     try {
@@ -7692,60 +8474,10 @@ function parsePostImageUrls(imageUrlValue) {
             return parsed.map((v) => String(v || '').trim()).filter(Boolean);
         }
     } catch (_) {}
+    if (raw.includes('||')) {
+        return raw.split('||').map((v) => v.trim()).filter(Boolean);
+    }
     return [raw];
-}
-
-function renderOrderedImageLayout(urls, maxHeightClass, marginTopClass = 'mt-3', wrapperExtraClass = '') {
-    if (!urls || !urls.length) return '';
-    const safeUrls = urls.map((u) => toCanonicalSiteUrl(u));
-    const isLarge = String(maxHeightClass || '').includes('96');
-    const singleCellH = isLarge ? 'h-[26rem]' : 'h-52';
-    const pairCellH = isLarge ? 'h-[14rem]' : 'h-32';
-    const topCellH3 = isLarge ? 'h-[18rem]' : 'h-40';
-    const bottomCellH3 = isLarge ? 'h-[12rem]' : 'h-28';
-    const frame = (u, hClass, extra = '') => `
-        <div class="w-full ${hClass} flex items-center justify-center overflow-hidden rounded-lg bg-white ${extra}">
-            <img src="${u}" alt="Post image" class="max-w-full max-h-full object-contain" onerror="this.style.display='none'" />
-        </div>
-    `;
-
-    if (safeUrls.length === 1) {
-        return `
-            <div class="${marginTopClass} ${wrapperExtraClass}">
-                ${frame(safeUrls[0], singleCellH)}
-            </div>
-        `;
-    }
-
-    if (safeUrls.length === 2) {
-        return `
-            <div class="${marginTopClass} flex items-center gap-2 ${wrapperExtraClass}">
-                <div class="w-1/2">${frame(safeUrls[0], pairCellH)}</div>
-                <div class="w-1/2">${frame(safeUrls[1], pairCellH)}</div>
-            </div>
-        `;
-    }
-
-    if (safeUrls.length === 3) {
-        // 첨부 순서 유지 + 누운 T 레이아웃(상단 1장, 하단 2장)
-        // 하단 셀 높이를 고정해 HVH의 우하단 H도 세로 중앙 정렬되도록 함.
-        return `
-            <div class="${marginTopClass} ${wrapperExtraClass}">
-                <div class="w-full mb-2">${frame(safeUrls[0], topCellH3)}</div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="w-full">${frame(safeUrls[1], bottomCellH3)}</div>
-                    <div class="w-full">${frame(safeUrls[2], bottomCellH3)}</div>
-                </div>
-            </div>
-        `;
-    }
-
-    // 4장 이상(실사용은 최대 4장): 첨부 순서대로 2x2
-    return `
-        <div class="${marginTopClass} grid grid-cols-2 gap-2 ${wrapperExtraClass}">
-            ${safeUrls.slice(0, 4).map((u) => frame(u, pairCellH)).join('')}
-        </div>
-    `;
 }
 
 function formatFriendMessengerTime(ts) {
@@ -8735,8 +9467,10 @@ window.resetBackgroundColor = resetBackgroundColor;
 window.previewPostImage = previewPostImage;
 window.previewPostVideo = previewPostVideo;
 window.removePostImage = removePostImage;
-window.removePostImageAt = removePostImageAt;
+window.removePostImageAt = removePostImageAtIndex;
 window.removePostVideo = removePostVideo;
+window.openPostMediaExpand = openPostMediaExpand;
+window.closePostMediaExpand = closePostMediaExpand;
 window.removeSharedPost = removeSharedPost;
 window.loadPosts = loadPosts;
 window.loadFriendsList = loadFriendsList;
@@ -8752,6 +9486,8 @@ window.removeFriendMessengerAttachment = removeFriendMessengerAttachment;
 window.createPostAutoGrow = createPostAutoGrow;
 window.toggleFriendsList = toggleFriendsList;
 window.toggleNotifications = toggleNotifications;
+window.openPostEngagementPanel = openPostEngagementPanel;
+window.closePostReactors = closePostReactors;
 window.toggleQtPanel = toggleQtPanel;
 window.showQtSection = showQtSection;
 window.toggleQtWorshipPlay = toggleQtWorshipPlay;

@@ -1404,6 +1404,7 @@ app.get('/api/posts', async (c) => {
       sp.content as shared_content,
       sp.image_url as shared_image_url,
       sp.video_url as shared_video_url,
+      sp.background_color as shared_background_color,
       sp.verse_reference as shared_verse_reference,
       sp.created_at as shared_created_at,
       sp.user_id as shared_user_id,
@@ -1424,6 +1425,62 @@ app.get('/api/posts', async (c) => {
   return c.json({ posts: results })
 })
 
+// 포스트별 반응/댓글/공유를 누른 가입자 목록 (숫자 배지 전용)
+app.get('/api/posts/:id/engagement/:kind', async (c) => {
+  const { DB } = c.env
+  const postId = Number(c.req.param('id'))
+  const kind = c.req.param('kind')
+  if (!Number.isFinite(postId)) return c.json({ error: 'Invalid id' }, 400)
+  if (!['react', 'comment', 'share'].includes(kind)) return c.json({ error: 'Invalid kind' }, 400)
+
+  const post = await DB.prepare('SELECT id, background_color FROM posts WHERE id = ?').bind(postId).first()
+  if (!post) return c.json({ error: 'Post not found' }, 404)
+
+  if (kind === 'react') {
+    const bg = String(post.background_color || '')
+    if (bg === '#F87171') {
+      const { results } = await DB.prepare(`
+        SELECT u.id, u.name, u.avatar_url, u.church, u.denomination, u.role as user_role
+        FROM prayer_clicks pc
+        JOIN users u ON u.id = pc.user_id
+        WHERE pc.post_id = ?
+        ORDER BY pc.created_at DESC
+      `).bind(postId).all()
+      return c.json({ users: results || [] })
+    }
+    const { results } = await DB.prepare(`
+      SELECT u.id, u.name, u.avatar_url, u.church, u.denomination, u.role as user_role
+      FROM likes l
+      JOIN users u ON u.id = l.user_id
+      WHERE l.post_id = ?
+      ORDER BY l.created_at DESC
+    `).bind(postId).all()
+    return c.json({ users: results || [] })
+  }
+
+  if (kind === 'comment') {
+    const { results } = await DB.prepare(`
+      SELECT u.id, u.name, u.avatar_url, u.church, u.denomination, u.role as user_role
+      FROM (
+        SELECT user_id, MAX(created_at) AS mx FROM comments WHERE post_id = ? GROUP BY user_id
+      ) x
+      JOIN users u ON u.id = x.user_id
+      ORDER BY x.mx DESC
+    `).bind(postId).all()
+    return c.json({ users: results || [] })
+  }
+
+  const { results } = await DB.prepare(`
+    SELECT u.id, u.name, u.avatar_url, u.church, u.denomination, u.role as user_role
+    FROM (
+      SELECT user_id, MAX(created_at) AS mx FROM posts WHERE shared_post_id = ? GROUP BY user_id
+    ) x
+    JOIN users u ON u.id = x.user_id
+    ORDER BY x.mx DESC
+  `).bind(postId).all()
+  return c.json({ users: results || [] })
+})
+
 // Get post by ID
 app.get('/api/posts/:id', async (c) => {
   const { DB } = c.env
@@ -1436,6 +1493,7 @@ app.get('/api/posts/:id', async (c) => {
       u.name as user_name,
       u.avatar_url as user_avatar,
       u.church as user_church,
+      u.role as user_role,
       (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count,
       (SELECT COUNT(*) FROM comments WHERE post_id = p.id) as comments_count,
       (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) as is_liked
@@ -9728,6 +9786,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+        <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
         <script src="/static/app.js?v=${Date.now()}"></script>
         <script>
             if ('serviceWorker' in navigator) {

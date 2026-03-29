@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS qt_invites (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  inviter_user_id INTEGER NOT NULL,
+  invited_email TEXT NOT NULL,
+  redeemed_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

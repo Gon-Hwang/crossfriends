@@ -5,6 +5,11 @@ import type { Bindings, Post, Comment, User, PrayerRequest, PrayerResponse } fro
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+/** XSS 방지용 텍스트 이스케이프 */
+function sanitizeText(s: string | null | undefined): string {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
 /** R2 키에 쓸 파일명만 허용 (경로 조각·.. 제거) */
 function sanitizeR2Filename(raw: string): string | null {
   const base = String(raw || '')
@@ -725,6 +730,382 @@ app.get('/users/:id', async (c) => {
     </body>
     </html>
   `)
+})
+
+// ── 비밀번호 유효성 검사 ─────────────────────────────────────────
+function validatePassword(pw: string): string[] {
+  const errs: string[] = []
+  if (pw.length < 8) errs.push('8자 이상 입력해주세요.')
+  if ((pw.match(/[a-z]/g) || []).length < 3) errs.push('영문 소문자를 3개 이상 포함해주세요.')
+  if ((pw.match(/[0-9]/g) || []).length < 3) errs.push('숫자를 3개 이상 포함해주세요.')
+  if (/[A-Z]/.test(pw) || /[^a-z0-9]/.test(pw)) errs.push('영문 소문자와 숫자만 사용할 수 있습니다.')
+  return errs
+}
+
+// ── 이메일 인증 회원가입 요청 ────────────────────────────────────
+app.post('/api/signup-request', async (c) => {
+  const { DB, RESEND_API_KEY } = c.env
+  if (!RESEND_API_KEY) return c.json({ error: '이메일 발송이 일시적으로 불가합니다. 잠시 후 다시 시도해주세요.' }, 503)
+
+  const body = await c.req.json()
+  const { email, name, password, church, pastor, denomination, location, position, gender, faith_answers, marital_status, address, phone, avatar_data_url } = body
+
+  if (!email || !name || !password) return c.json({ error: '이름, 이메일, 비밀번호는 필수입니다.' }, 400)
+  if (password.length < 4) return c.json({ error: '비밀번호는 4자 이상이어야 합니다.' }, 400)
+  const pwErrs = validatePassword(password)
+  if (pwErrs.length > 0) return c.json({ error: pwErrs[0] }, 400)
+
+  const normalizedEmail = email.trim().toLowerCase()
+  if (await DB.prepare('SELECT id FROM users WHERE LOWER(email) = ?').bind(normalizedEmail).first()) {
+    return c.json({ error: '이미 가입된 이메일입니다.' }, 409)
+  }
+
+  const avatarStr = typeof avatar_data_url === 'string' ? avatar_data_url.trim() : ''
+  if (avatarStr) {
+    if (!/^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=]+$/.test(avatarStr)) return c.json({ error: '프로필 이미지 형식이 올바르지 않습니다.' }, 400)
+    if (avatarStr.length > 2_000_000) return c.json({ error: '프로필 이미지가 너무 큽니다. 더 작게 잘라주세요.' }, 400)
+  }
+
+  const saltB64 = randomSaltB64()
+  const passwordHash = await derivePasswordHash(password, saltB64)
+  const signupData = {
+    email: normalizedEmail, name: sanitizeText(name), password_hash: passwordHash, password_salt: saltB64,
+    church: church ? sanitizeText(church) : null, pastor: pastor ? sanitizeText(pastor) : null,
+    denomination: denomination || null, location: location || null, position: position || null,
+    gender: gender || null, faith_answers: faith_answers || null,
+    marital_status: marital_status || null, address: address ? sanitizeText(address) : null,
+    phone: phone || null, avatar_data_url: avatarStr || null,
+  }
+
+  const tokenBytes = crypto.getRandomValues(new Uint8Array(32))
+  const token = Array.from(tokenBytes).map(b => b.toString(16).padStart(2, '0')).join('')
+  const expiresAt = new Date(Date.now() + 1440 * 60 * 1000).toISOString()
+
+  await DB.prepare('INSERT INTO email_verification_tokens (email, token, signup_data, expires_at) VALUES (?, ?, ?, ?)')
+    .bind(normalizedEmail, token, JSON.stringify(signupData), expiresAt).run()
+
+  const verifyUrl = `${new URL(c.req.url).origin}/verify-email?token=${token}`
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Crossfriends <noreply@crossfriends.org>',
+        to: [normalizedEmail],
+        reply_to: 'no-reply@null.invalid',
+        subject: '[CROSSfriends] 이메일 인증을 완료해주세요',
+        html: `
+          <p>안녕하세요, <strong>${sanitizeText(name)}</strong>님!</p>
+          <p>CROSSfriends 회원가입을 완료하려면 아래 링크를 클릭해주세요.</p>
+          <p><a href="${verifyUrl}" style="color:#3B82F6;text-decoration:underline;">이메일 인증하기</a></p>
+          <p>링크는 24시간 동안 유효합니다.</p>
+          <p>본인이 요청한 것이 아니라면 이 메일을 무시해주세요.</p>
+          <p>— CROSSfriends</p>
+        `,
+      }),
+    })
+  } catch (e) {
+    console.error('Resend error:', e)
+    return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+  }
+  return c.json({ success: true, message: '인증 메일을 발송했습니다. 이메일을 확인해주세요.' }, 200)
+})
+
+// ── 이메일 인증 완료 → 유저 생성 ─────────────────────────────────
+app.post('/api/verify-email', async (c) => {
+  const { DB, R2 } = c.env
+  const { token } = await c.req.json()
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return c.json({ error: '유효하지 않은 인증 링크입니다.' }, 400)
+
+  const row = await DB.prepare('SELECT id, email, signup_data, expires_at FROM email_verification_tokens WHERE token = ?').bind(token).first() as any
+  if (!row) return c.json({ error: '만료되었거나 유효하지 않은 인증 링크입니다.' }, 400)
+  if (new Date(row.expires_at) < new Date()) {
+    await DB.prepare('DELETE FROM email_verification_tokens WHERE id = ?').bind(row.id).run()
+    return c.json({ error: '인증 링크가 만료되었습니다. 회원가입을 다시 진행해주세요.' }, 400)
+  }
+
+  const data = JSON.parse(row.signup_data)
+  if (await DB.prepare('SELECT id FROM users WHERE LOWER(email) = ?').bind(data.email).first()) {
+    await DB.prepare('DELETE FROM email_verification_tokens WHERE id = ?').bind(row.id).run()
+    return c.json({ error: '이미 가입된 이메일입니다.' }, 409)
+  }
+
+  const countRow = await DB.prepare('SELECT COUNT(*) as count FROM users').first() as any
+  const role = ((countRow?.count) || 0) === 0 ? 'admin' : 'user'
+
+  const result = await DB.prepare(
+    'INSERT INTO users (email, name, password_salt, password_hash, password_updated_at, church, pastor, denomination, location, position, gender, faith_answers, role, marital_status, address, phone) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(data.email, data.name, data.password_salt || null, data.password_hash, data.church, data.pastor, data.denomination, data.location, data.position, data.gender, data.faith_answers, role, data.marital_status, data.address, data.phone).run()
+
+  const newUserId = Number(result.meta?.last_row_id || 0)
+
+  // 아바타 업로드
+  if (newUserId > 0 && data.avatar_data_url) {
+    try {
+      const m = String(data.avatar_data_url).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=]+)$/)
+      if (m) {
+        const mime = m[1].toLowerCase(), raw = atob(m[2])
+        const buf = new Uint8Array(raw.length)
+        for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i)
+        if (buf.byteLength <= 5 * 1024 * 1024) {
+          const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg'
+          const key = `avatars/${newUserId}_${Date.now()}.${ext}`
+          await R2.put(key, buf.buffer, { httpMetadata: { contentType: mime } })
+          await DB.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').bind(`/api/avatars/${key}`, newUserId).run()
+        }
+      }
+    } catch (e) { console.error('Signup avatar save error:', e) }
+  }
+
+  await DB.prepare('DELETE FROM email_verification_tokens WHERE id = ?').bind(row.id).run()
+
+  // QT 초대 처리
+  const invitedEmail = data.email.trim().toLowerCase()
+  const newUser = await DB.prepare('SELECT id, name FROM users WHERE LOWER(email) = ?').bind(invitedEmail).first() as any
+  const invite = await DB.prepare('SELECT inviter_user_id FROM qt_invites WHERE LOWER(invited_email) = ? AND redeemed_at IS NULL').bind(invitedEmail).first() as any
+  if (invite) {
+    await DB.prepare('UPDATE qt_invites SET redeemed_at = datetime(\'now\') WHERE LOWER(invited_email) = ? AND redeemed_at IS NULL').bind(invitedEmail).run()
+    const inviter = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(invite.inviter_user_id).first() as any
+    if (inviter) {
+      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind((inviter.activity_score || 0) + 40, invite.inviter_user_id).run()
+    }
+    if (newUser) {
+      await DB.prepare('INSERT INTO notifications (user_id, from_user_id, type, created_at) VALUES (?, ?, \'invite_redeemed\', ?)').bind(invite.inviter_user_id, newUser.id, new Date().toISOString()).run()
+    }
+  }
+
+  return c.json({ success: true, message: '회원가입이 완료되었습니다! 로그인해주세요.' }, 200)
+})
+
+// ── 이메일 인증 페이지 ───────────────────────────────────────────
+app.get('/verify-email', (c) => {
+  const token = c.req.query('token') || ''
+  const safeToken = /^[a-f0-9]{64}$/.test(token) ? token : ''
+  if (!safeToken) return c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>이메일 인증 - CROSSfriends</title><script src="https://cdn.tailwindcss.com"></script><link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"></head><body class="bg-gray-100 min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center"><i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i><h1 class="text-xl font-bold text-gray-800 mb-2">유효하지 않은 링크</h1><p class="text-gray-600 mb-6">인증 링크가 없거나 만료되었습니다. 회원가입을 다시 진행해주세요.</p><a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a></div></body></html>`)
+  return c.html(`<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>이메일 인증 - CROSSfriends</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+    <div id="loading" class="py-8">
+      <i class="fas fa-spinner fa-spin text-blue-600 text-4xl mb-4"></i>
+      <h1 class="text-xl font-bold text-gray-800 mb-2">이메일 인증 중...</h1>
+      <p class="text-gray-600 text-sm">잠시만 기다려주세요.</p>
+    </div>
+    <div id="success" class="hidden py-8">
+      <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
+      <h1 class="text-xl font-bold text-gray-800 mb-2">회원가입 완료!</h1>
+      <p class="text-gray-600 mb-6">이제 로그인해주세요.</p>
+      <a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">로그인하기</a>
+    </div>
+    <div id="error" class="hidden py-8">
+      <i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i>
+      <h1 class="text-xl font-bold text-gray-800 mb-2">인증 실패</h1>
+      <p id="errorMsg" class="text-gray-600 mb-6"></p>
+      <a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a>
+    </div>
+  </div>
+  <script>
+    (async function() {
+      try {
+        await axios.post('/api/verify-email', { token: ${JSON.stringify(safeToken)} });
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('success').classList.remove('hidden');
+        setTimeout(function() { location.href = '/'; }, 2000);
+      } catch (err) {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+        document.getElementById('errorMsg').textContent = err.response?.data?.error || '인증에 실패했습니다.';
+      }
+    })();
+  </script>
+</body>
+</html>`)
+})
+
+// ── 비밀번호 재설정 요청 ─────────────────────────────────────────
+app.post('/api/password-reset-request', async (c) => {
+  const { DB, RESEND_API_KEY } = c.env
+  const { email } = await c.req.json()
+  if (!email) return c.json({ error: '이메일을 입력해주세요.' }, 400)
+
+  const normalizedEmail = email.trim().toLowerCase()
+  const user = await DB.prepare('SELECT id, name FROM users WHERE LOWER(email) = ?').bind(normalizedEmail).first() as any
+  if (!user) return c.json({ error: '등록되지 않은 이메일입니다.' }, 404)
+
+  const tokenBytes = crypto.getRandomValues(new Uint8Array(32))
+  const token = Array.from(tokenBytes).map((b: number) => b.toString(16).padStart(2, '0')).join('')
+  const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString()
+
+  await DB.prepare('INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)').bind(user.id, token, expiresAt).run()
+
+  const resetUrl = `${new URL(c.req.url).origin}/reset-password?token=${token}`
+
+  if (RESEND_API_KEY) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'Crossfriends <noreply@crossfriends.org>',
+          to: [normalizedEmail],
+          subject: '[Crossfriends] 비밀번호 재설정',
+          html: `
+            <p>${user.name}님, 안녕하세요.</p>
+            <p>비밀번호 재설정을 요청하셨습니다. 아래 버튼을 클릭하여 새 비밀번호를 설정해주세요.</p>
+            <p><a href="${resetUrl}" style="display:inline-block;background:#3B82F6;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;margin:16px 0;">비밀번호 재설정하기</a></p>
+            <p>링크는 1시간 후 만료됩니다.</p>
+            <p>요청하지 않으셨다면 이 이메일을 무시해주세요.</p>
+          `,
+        }),
+      })
+      if (!res.ok) {
+        await DB.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run()
+        return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+      }
+    } catch (e) {
+      await DB.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run()
+      return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+    }
+    return c.json({ success: true, message: '등록된 이메일로 비밀번호 재설정 링크를 보냈습니다. 이메일을 확인해주세요.' })
+  }
+
+  // RESEND_API_KEY 없는 경우 관리자 알림
+  const admin = await DB.prepare('SELECT id FROM users WHERE role = \'admin\' LIMIT 1').first() as any
+  if (admin) {
+    await DB.prepare('INSERT INTO notifications (user_id, type, from_user_id, message, created_at) VALUES (?, \'system\', ?, ?, datetime(\'now\'))').bind(admin.id, user.id, `${user.name}(${email})님이 비밀번호 초기화를 요청했습니다. 관리자 패널에서 초기화해주세요.`).run()
+  }
+  return c.json({ success: true, message: '관리자에게 비밀번호 초기화 요청이 전달되었습니다. 관리자가 처리 후 안내드리겠습니다.' })
+})
+
+// ── 비밀번호 재설정 확인 ─────────────────────────────────────────
+app.post('/api/password-reset', async (c) => {
+  const { DB } = c.env
+  const { token, newPassword } = await c.req.json()
+  if (!token || !newPassword) return c.json({ error: '토큰과 새 비밀번호를 입력해주세요.' }, 400)
+
+  const errs = validatePassword(newPassword)
+  if (errs.length > 0) return c.json({ error: errs[0] }, 400)
+
+  const row = await DB.prepare('SELECT prt.user_id FROM password_reset_tokens prt WHERE prt.token = ? AND prt.expires_at > datetime(\'now\')').bind(token).first() as any
+  if (!row) return c.json({ error: '만료되었거나 유효하지 않은 링크입니다. 비밀번호 찾기를 다시 요청해주세요.' }, 400)
+
+  const user = await DB.prepare('SELECT password_hash, password_salt FROM users WHERE id = ?').bind(row.user_id).first() as any
+  if (user?.password_salt && user?.password_hash && await verifyUserPassword(user as any, newPassword)) {
+    return c.json({ error: '이전 비밀번호와 같을 수 없습니다. 다른 비밀번호를 입력해주세요.' }, 400)
+  }
+
+  const newSalt = randomSaltB64()
+  const newHash = await derivePasswordHash(newPassword, newSalt)
+  await DB.prepare('UPDATE users SET password_salt = ?, password_hash = ?, password_updated_at = CURRENT_TIMESTAMP WHERE id = ?').bind(newSalt, newHash, row.user_id).run()
+  await DB.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run()
+  return c.json({ success: true, message: '비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.' })
+})
+
+// ── 비밀번호 재설정 페이지 ───────────────────────────────────────
+app.get('/reset-password', (c) => {
+  const token = c.req.query('token') || ''
+  const safeToken = /^[a-f0-9]{64}$/.test(token) ? token : ''
+  if (!safeToken) return c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>비밀번호 재설정 - CROSSfriends</title><script src="https://cdn.tailwindcss.com"></script><link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"></head><body class="bg-gray-100 min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center"><i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i><h1 class="text-xl font-bold text-gray-800 mb-2">유효하지 않은 링크</h1><p class="text-gray-600 mb-6">비밀번호 재설정 링크가 없거나 만료되었습니다.</p><a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a></div></body></html>`)
+  return c.html(`<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>비밀번호 재설정 - CROSSfriends</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
+    <h1 class="text-xl font-bold text-gray-800 mb-2"><i class="fas fa-key mr-2"></i>새 비밀번호 설정</h1>
+    <p class="text-gray-600 text-sm mb-4">회원가입과 동일한 비밀번호 규칙을 적용합니다. 이전 비밀번호는 사용할 수 없습니다.</p>
+    <form id="resetForm" onsubmit="return submitReset(event)">
+      <input type="hidden" id="token" value="${safeToken}">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+        <input type="password" id="newPassword" required minlength="8" placeholder="영문 소문자 + 숫자 혼합 8자"
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" oninput="validateResetPw()">
+        <div id="resetPwRules" class="mt-1.5 space-y-0.5 text-xs hidden">
+          <div id="r-length" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>8자 이상</div>
+          <div id="r-lower" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>영문 소문자 3개 이상</div>
+          <div id="r-digit" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>숫자 3개 이상</div>
+          <div id="r-noUpper" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>대문자·특수문자 사용 불가</div>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호 확인</label>
+        <input type="password" id="newPasswordConfirm" required minlength="8" placeholder="비밀번호 재입력"
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" oninput="validateResetPw()">
+        <p id="matchMsg" class="text-sm mt-1 hidden"></p>
+      </div>
+      <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium">비밀번호 변경</button>
+    </form>
+    <p class="text-center mt-4"><a href="/" class="text-blue-600 hover:underline">로그인으로 돌아가기</a></p>
+  </div>
+  <div id="toast" class="fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg hidden"></div>
+  <script>
+    function getPwErrors(pw) {
+      const errs = [];
+      if (pw.length < 8) errs.push('length');
+      if ((pw.match(/[a-z]/g) || []).length < 3) errs.push('lower');
+      if ((pw.match(/[0-9]/g) || []).length < 3) errs.push('digit');
+      if (/[A-Z]/.test(pw) || /[^a-z0-9]/.test(pw)) errs.push('noUpper');
+      return errs;
+    }
+    function validateResetPw() {
+      const pw = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('newPasswordConfirm').value;
+      const rules = document.getElementById('resetPwRules');
+      const errs = getPwErrors(pw);
+      if (pw.length > 0) {
+        rules.classList.remove('hidden');
+        ['length','lower','digit','noUpper'].forEach(id => {
+          const el = document.getElementById('r-' + id);
+          el.className = 'flex items-center text-xs ' + (errs.includes(id) ? 'text-gray-400' : 'text-green-600');
+          el.querySelector('i').className = errs.includes(id) ? 'fas fa-circle text-[5px] mr-1.5' : 'fas fa-check-circle text-green-500 mr-1.5';
+        });
+      } else rules.classList.add('hidden');
+      const msg = document.getElementById('matchMsg');
+      if (confirm.length > 0) {
+        msg.classList.remove('hidden');
+        msg.textContent = pw === confirm ? '✓ 비밀번호가 일치합니다' : '✗ 비밀번호가 일치하지 않습니다';
+        msg.className = 'text-sm mt-1 ' + (pw === confirm ? 'text-green-600' : 'text-red-500');
+      } else msg.classList.add('hidden');
+    }
+    async function submitReset(e) {
+      e.preventDefault();
+      const token = document.getElementById('token').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('newPasswordConfirm').value;
+      if (getPwErrors(newPassword).length > 0) { showToast('비밀번호 규칙을 확인해주세요.', 'error'); return false; }
+      if (newPassword !== confirm) { showToast('비밀번호가 일치하지 않습니다.', 'error'); return false; }
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.textContent = '처리 중...';
+      try {
+        const res = await axios.post('/api/password-reset', { token, newPassword });
+        showToast(res.data.message, 'success');
+        setTimeout(() => location.href = '/', 1500);
+      } catch (err) {
+        showToast(err.response?.data?.error || '오류가 발생했습니다.', 'error');
+        btn.disabled = false; btn.textContent = '비밀번호 변경';
+      }
+      return false;
+    }
+    function showToast(msg, type) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ' + (type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white');
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+  </script>
+</body>
+</html>`)
 })
 
 // Create new user
@@ -2647,6 +3028,150 @@ app.post('/api/sermon/sync', requireAdmin, async (c) => {
   } catch (e) {
     console.error('[sermon/sync]', e)
     return c.json({ error: String(e) }, 500)
+  }
+})
+
+// QT invite - send today's QT sample + signup link to a friend
+const qtInviteVerseRef = '오늘의 QT 본문'
+const qtInviteVerseBody = '오늘의 QT 말씀은 앱에서 날짜에 맞게 제공됩니다.'
+
+app.post('/api/qt-invite', async (c) => {
+  const { DB, RESEND_API_KEY } = c.env
+  if (!RESEND_API_KEY) return c.json({ error: '이메일 발송이 일시적으로 불가합니다. 잠시 후 다시 시도해주세요.' }, 503)
+  const body = await c.req.json().catch(() => ({})) as any
+  const email = (body.email || '').trim().toLowerCase()
+  const inviterUserId = body.inviterUserId ? parseInt(String(body.inviterUserId), 10) : null
+  if (!email) return c.json({ error: '이메일을 입력해주세요.' }, 400)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ error: '올바른 이메일 주소를 입력해주세요.' }, 400)
+  if (!inviterUserId) return c.json({ error: '로그인 후 이용해주세요.' }, 401)
+
+  const now = new Date()
+  const kstNow = new Date(now.getTime() + 540 * 60 * 1000)
+  const weekDays = ['일', '월', '화', '수', '목', '금', '토']
+  const dateStr = `${kstNow.getUTCFullYear()}.${kstNow.getUTCMonth() + 1}.${kstNow.getUTCDate()} (${weekDays[kstNow.getUTCDay()]})`
+  const origin = `${new URL(c.req.url).origin}/`
+
+  const htmlBody = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;padding:20px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+    <div style="background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);padding:20px;text-align:center;">
+      <h1 style="margin:0;color:#fff;font-size:1.5rem;">📖 CROSSfriends QT</h1>
+      <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:0.9rem;">친구가 QT를 추천해드렸습니다</p>
+    </div>
+    <div style="padding:24px;">
+      <p style="color:#374151;margin:0 0 16px;line-height:1.6;">안녕하세요! CROSSfriends의 QT(Quiet Time)를 소개합니다. 오늘의 말씀으로 하루를 시작해보세요.</p>
+      <div style="border-left:4px solid #dc2626;padding:12px 16px;margin:20px 0;background:#fef2f2;border-radius:0 8px 8px 0;">
+        <p style="margin:0 0 4px;font-size:0.75rem;color:#6b7280;">${dateStr}</p>
+        <p style="margin:0 0 8px;font-weight:700;color:#dc2626;font-size:0.95rem;">${sanitizeText(qtInviteVerseRef)}</p>
+        <p style="margin:0;color:#374151;font-size:0.95rem;line-height:1.6;white-space:pre-line;">${sanitizeText(qtInviteVerseBody)}</p>
+      </div>
+      <p style="color:#6b7280;font-size:0.875rem;margin:16px 0;">이것은 오늘의 샘플 QT입니다. 매일 새로운 말씀과 함께 찬양, 묵상, 적용, 기도까지 완전한 QT를 경험하세요.</p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${origin}" style="display:inline-block;background:#dc2626;color:#fff;padding:14px 28px;text-decoration:none;border-radius:8px;font-weight:600;font-size:1rem;">무료 회원가입하고 QT 시작하기</a>
+      </div>
+      <p style="color:#9ca3af;font-size:0.8rem;margin:16px 0 0;text-align:center;">— CROSSfriends</p>
+    </div>
+  </div>
+</body>
+</html>`
+
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Crossfriends <noreply@crossfriends.org>',
+        to: [email],
+        reply_to: 'no-reply@null.invalid',
+        subject: '[CROSSfriends] 친구가 QT를 추천해드렸습니다 📖',
+        html: htmlBody
+      })
+    })
+    if (!resp.ok) {
+      const errText = await resp.text()
+      console.error('Resend qt-invite error:', resp.status, errText)
+      return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+    }
+    await DB.prepare('INSERT INTO qt_invites (inviter_user_id, invited_email) VALUES (?, ?)').bind(inviterUserId, email).run()
+    const inviter = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(inviterUserId).first() as any
+    if (inviter) {
+      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind((inviter.activity_score || 0) + 20, inviterUserId).run()
+    }
+    return c.json({ success: true, message: '초대 메일을 발송했습니다. +20μ 획득!' })
+  } catch (e) {
+    console.error('qt-invite error:', e)
+    return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+  }
+})
+
+// General CROSSfriends invite
+app.post('/api/invite', async (c) => {
+  const { DB, RESEND_API_KEY } = c.env
+  if (!RESEND_API_KEY) return c.json({ error: '이메일 발송이 일시적으로 불가합니다. 잠시 후 다시 시도해주세요.' }, 503)
+  const body = await c.req.json().catch(() => ({})) as any
+  const email = (body.email || '').trim().toLowerCase()
+  const inviterUserId = body.inviterUserId ? parseInt(String(body.inviterUserId), 10) : null
+  if (!email) return c.json({ error: '이메일을 입력해주세요.' }, 400)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return c.json({ error: '올바른 이메일 주소를 입력해주세요.' }, 400)
+  if (!inviterUserId) return c.json({ error: '로그인 후 이용해주세요.' }, 401)
+
+  const inviter = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(inviterUserId).first() as any
+  const inviterName = inviter?.name || '친구'
+  const origin = `${new URL(c.req.url).origin}/`
+  const safeName = sanitizeText(inviterName)
+
+  const htmlBody = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#fef3c7 0%,#fde68a 50%,#fcd34d 100%);min-height:100vh;padding:24px;box-sizing:border-box;">
+  <div style="max-width:400px;margin:0 auto;">
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.12);">
+      <div style="background:linear-gradient(135deg,#A55148 0%,#8b3d35 100%);padding:28px 24px;text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:8px;">✉️</div>
+        <h1 style="margin:0;color:#fff;font-size:1.4rem;font-weight:700;letter-spacing:-0.5px;">CROSSfriends</h1>
+        <p style="margin:8px 0 0;color:rgba(255,255,255,0.95);font-size:0.95rem;">${safeName}님이 초대했습니다</p>
+      </div>
+      <div style="padding:28px 24px;">
+        <p style="color:#374151;margin:0 0 20px;line-height:1.7;font-size:0.95rem;">안녕하세요,<br><br><strong>${safeName}</strong>님이 <strong>CROSSfriends</strong>에 초대해주셨습니다. 함께 말씀을 나누고, 기도하며, 교회 친구들과 소통해보세요.</p>
+        <div style="text-align:center;margin:28px 0;">
+          <a href="${origin}" style="display:inline-block;background:linear-gradient(135deg,#A55148,#8b3d35);color:#fff!important;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:600;font-size:1rem;box-shadow:0 4px 14px rgba(165,81,72,0.4);">CROSSfriends와 함께</a>
+        </div>
+        <p style="color:#9ca3af;font-size:0.75rem;margin:16px 0 0;text-align:center;line-height:1.5;">회원가입 후 언제든 탈퇴할 수 있습니다.</p>
+        <p style="color:#9ca3af;font-size:0.8rem;margin:20px 0 0;text-align:center;">— CROSSfriends</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+
+  try {
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'CROSSfriends <noreply@crossfriends.org>',
+        to: [email],
+        reply_to: 'no-reply@null.invalid',
+        subject: `[CROSSfriends] ${inviterName}님이 초대했습니다 ✉️`,
+        html: htmlBody
+      })
+    })
+    if (!resp.ok) {
+      const errText = await resp.text()
+      console.error('Resend invite error:', resp.status, errText)
+      return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+    }
+    await DB.prepare('INSERT INTO qt_invites (inviter_user_id, invited_email) VALUES (?, ?)').bind(inviterUserId, email).run()
+    const inviterScore = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(inviterUserId).first() as any
+    if (inviterScore) {
+      await DB.prepare('UPDATE users SET activity_score = ? WHERE id = ?').bind((inviterScore.activity_score || 0) + 20, inviterUserId).run()
+    }
+    return c.json({ success: true, message: '초대 메일을 발송했습니다. +20μ 획득!' })
+  } catch (e) {
+    console.error('invite error:', e)
+    return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
   }
 })
 
@@ -9095,6 +9620,46 @@ app.get('/', (c) => {
                     class="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
                     저장하기
                 </button>
+            </div>
+        </div>
+
+        <!-- QT 친구 추천 모달 -->
+        <div id="qtInviteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-envelope text-red-600 mr-2"></i>친구에게 QT 추천하기
+                    </h2>
+                    <button onclick="hideQtInviteModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">이메일을 입력하면 오늘의 샘플 QT 카드와 함께 회원가입 링크가 발송됩니다.</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="email" id="qtInviteEmail" placeholder="친구 이메일" class="w-full min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    <button id="qtInviteBtn" onclick="sendQtInvite()" class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium whitespace-nowrap">초대 보내기</button>
+                </div>
+                <p id="qtInviteMsg" class="text-xs mt-2 hidden"></p>
+            </div>
+        </div>
+
+        <!-- CROSSfriends 지인 초대 모달 (친구목록 패널) -->
+        <div id="friendInviteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-envelope text-amber-600 mr-2"></i>지인 초대하기
+                    </h2>
+                    <button onclick="hideFriendInviteModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">이메일을 입력하면 CROSSfriends 초대 메일이 발송됩니다. 가입 시 +20μ, 친구가 가입하면 +40μ를 받아요!</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="email" id="friendInviteEmail" placeholder="초대할 이메일 주소" class="w-full min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                    <button id="friendInviteBtn" onclick="sendFriendInvite()" class="w-full sm:w-auto px-3 py-2 border-2 border-gray-500 bg-white text-gray-500 rounded-lg hover:border-blue-600 hover:text-blue-600 text-sm font-medium whitespace-nowrap">초대 보내기</button>
+                </div>
+                <p id="friendInviteMsg" class="text-xs mt-2 hidden"></p>
             </div>
         </div>
 

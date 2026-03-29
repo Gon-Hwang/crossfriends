@@ -2896,9 +2896,23 @@ async function handleSignup() {
     // 교회 위치 조합: 도 + 시 (둘 다 있을 경우만)
     const location = (province && city) ? (province + ' ' + city) : '';
 
+    // 아바타를 base64로 변환 (서버에서 인증 후 저장)
+    let avatarDataUrl = null;
+    if (avatarFile) {
+        try {
+            avatarDataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(avatarFile);
+            });
+        } catch (e) {
+            console.warn('Avatar read error:', e);
+        }
+    }
+
     try {
-        // 1. Create user
-        const response = await axios.post('/api/users', {
+        await axios.post('/api/signup-request', {
             email,
             name,
             password,
@@ -2911,79 +2925,17 @@ async function handleSignup() {
             marital_status: maritalStatus,
             address,
             phone,
-            faith_answers: JSON.stringify(faithAnswers)
+            faith_answers: JSON.stringify(faithAnswers),
+            avatar_data_url: avatarDataUrl,
         });
 
-        const newUserId = Number(response.data.id);
-        if (!Number.isFinite(newUserId)) {
-            alert('가입 응답이 올바르지 않습니다. 로그인을 시도해 보시고, 문제가 계속되면 관리자에게 문의해 주세요.');
-            hideSignupModal();
-            showLoginModal();
-            return;
-        }
-
-        // 2. Upload avatar if selected
-        if (avatarFile) {
-            const formData = new FormData();
-            formData.append('avatar', avatarFile);
-            try {
-                await axios.post('/api/users/' + newUserId + '/avatar', formData);
-            } catch (uploadError) {
-                console.error('Avatar upload error:', uploadError);
-                const msg =
-                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
-                    '프로필 사진 업로드에 실패했습니다. 로그인 후 다시 시도해 주세요.';
-                showToast(msg, 'error');
-            }
-        }
-
-        // 3. Upload cover if selected
-        if (coverFile) {
-            const formData = new FormData();
-            formData.append('cover', coverFile);
-            try {
-                await axios.post('/api/users/' + newUserId + '/cover', formData);
-            } catch (uploadError) {
-                console.error('Cover upload error:', uploadError);
-                const msg =
-                    (uploadError.response && uploadError.response.data && uploadError.response.data.error) ||
-                    '커버 사진 업로드에 실패했습니다. 로그인 후 다시 시도해 주세요.';
-                showToast(msg, 'error');
-            }
-        }
-
-        alert('회원가입이 완료되었습니다! 환영합니다! 🎉');
-        hideSignupModal();
-        
-        // Save email to history
         saveEmailToHistory(email);
-        
-        // Auto login - Fetch complete user info
-        const userResponse = await axios.get('/api/users/' + newUserId);
-        currentUserId = newUserId;
-        currentUser = userResponse.data.user;
-        
-        // Load user scores from API
-        await loadUserScores();
-        
-        // Load friends list
-        await loadFriendsList();
-        
-        // Load notifications (don't mark as read yet)
-        await loadNotifications(false);
-        
-        // Start notification polling
-        startNotificationPolling();
-        
-        updateAuthUI();
-        loadPosts();
+        hideSignupModal();
+        alert('인증 이메일을 발송했습니다. 이메일을 확인하여 인증 링크를 클릭해주세요.\n\n(스팸함도 확인해주세요)');
     } catch (error) {
         console.error('Signup error:', error);
-        if (error.response && error.response.status === 500) {
-            alert('이미 가입된 이메일입니다.');
-        } else {
-            alert('회원가입에 실패했습니다. 다시 시도해주세요.');
-        }
+        const msg = (error.response && error.response.data && error.response.data.error) || '회원가입에 실패했습니다. 다시 시도해주세요.';
+        alert(msg);
     }
 }
 
@@ -4425,8 +4377,90 @@ function showQtAlarmModal() {
 }
 
 function showQtInviteModal() {
-    // Invite modal markup doesn't exist in current HTML snapshot.
-    showToast('QT 초대 기능은 준비 중입니다.', 'info');
+    const modal = document.getElementById('qtInviteModal');
+    if (!modal) { showToast('QT 초대 기능은 준비 중입니다.', 'info'); return; }
+    const input = document.getElementById('qtInviteEmail');
+    if (input) { input.value = ''; input.focus(); }
+    const msg = document.getElementById('qtInviteMsg');
+    if (msg) { msg.classList.add('hidden'); msg.textContent = ''; }
+    modal.classList.remove('hidden');
+}
+function hideQtInviteModal() {
+    const modal = document.getElementById('qtInviteModal');
+    if (modal) modal.classList.add('hidden');
+}
+async function sendQtInvite() {
+    const input = document.getElementById('qtInviteEmail');
+    const btn = document.getElementById('qtInviteBtn');
+    const msg = document.getElementById('qtInviteMsg');
+    const email = (input && input.value || '').trim();
+    if (!email) { showToast('이메일을 입력해주세요.', 'error'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('올바른 이메일 주소를 입력해주세요.', 'error'); return; }
+    if (!currentUserId) { showToast('로그인 후 이용해주세요.', 'error'); return; }
+    if (btn) { btn.disabled = true; btn.textContent = '발송 중...'; }
+    if (msg) { msg.classList.add('hidden'); msg.textContent = ''; }
+    try {
+        const res = await axios.post('/api/qt-invite', { email, inviterUserId: currentUserId });
+        if (res.data.success) {
+            showToast(res.data.message || '초대 메일을 발송했습니다.', 'success');
+            if (input) input.value = '';
+            if (msg) { msg.textContent = '초대 메일이 발송되었습니다.'; msg.classList.remove('hidden', 'text-red-600'); msg.classList.add('text-green-600'); }
+            hideQtInviteModal();
+        } else {
+            showToast(res.data.error || '발송에 실패했습니다.', 'error');
+            if (msg) { msg.textContent = res.data.error || ''; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+        }
+    } catch (e) {
+        const err = e.response?.data?.error || '이메일 발송에 실패했습니다.';
+        showToast(err, 'error');
+        if (msg) { msg.textContent = err; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '초대 보내기'; }
+    }
+}
+
+// CROSSfriends 지인 초대 (친구목록 패널)
+function showFriendInviteModal() {
+    const modal = document.getElementById('friendInviteModal');
+    if (!modal) { showToast('지인 초대 기능은 준비 중입니다.', 'info'); return; }
+    const input = document.getElementById('friendInviteEmail');
+    if (input) { input.value = ''; input.focus(); }
+    const msg = document.getElementById('friendInviteMsg');
+    if (msg) { msg.classList.add('hidden'); msg.textContent = ''; }
+    modal.classList.remove('hidden');
+}
+function hideFriendInviteModal() {
+    const modal = document.getElementById('friendInviteModal');
+    if (modal) modal.classList.add('hidden');
+}
+async function sendFriendInvite() {
+    const input = document.getElementById('friendInviteEmail');
+    const btn = document.getElementById('friendInviteBtn');
+    const msg = document.getElementById('friendInviteMsg');
+    const email = (input && input.value || '').trim();
+    if (!email) { showToast('이메일을 입력해주세요.', 'error'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('올바른 이메일 주소를 입력해주세요.', 'error'); return; }
+    if (!currentUserId) { showToast('로그인 후 이용해주세요.', 'error'); return; }
+    if (btn) { btn.disabled = true; btn.textContent = '발송 중...'; }
+    if (msg) { msg.classList.add('hidden'); msg.textContent = ''; }
+    try {
+        const res = await axios.post('/api/invite', { email, inviterUserId: currentUserId });
+        if (res.data.success) {
+            showToast(res.data.message || '초대 메일을 발송했습니다.', 'success');
+            if (input) input.value = '';
+            if (msg) { msg.textContent = '초대 메일이 발송되었습니다.'; msg.classList.remove('hidden', 'text-red-600'); msg.classList.add('text-green-600'); }
+            hideFriendInviteModal();
+        } else {
+            showToast(res.data.error || '발송에 실패했습니다.', 'error');
+            if (msg) { msg.textContent = res.data.error || ''; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+        }
+    } catch (e) {
+        const err = e.response?.data?.error || '이메일 발송에 실패했습니다.';
+        showToast(err, 'error');
+        if (msg) { msg.textContent = err; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '초대 보내기'; }
+    }
 }
 
 function saveQtApply() {
@@ -8556,13 +8590,17 @@ window.toggleFriendsList = toggleFriendsList;
 window.toggleNotifications = toggleNotifications;
 window.toggleQtPanel = toggleQtPanel;
 window.showQtSection = showQtSection;
-window.toggleQtWorship = toggleQtWorship;
 window.toggleQtWorshipPlay = toggleQtWorshipPlay;
 window.toggleQtWorshipMute = toggleQtWorshipMute;
 window.setQtWorshipVolume = setQtWorshipVolume;
 window.setQtWorshipVolumeFromPanel = setQtWorshipVolumeFromPanel;
 window.showQtAlarmModal = showQtAlarmModal;
 window.showQtInviteModal = showQtInviteModal;
+window.hideQtInviteModal = hideQtInviteModal;
+window.sendQtInvite = sendQtInvite;
+window.showFriendInviteModal = showFriendInviteModal;
+window.hideFriendInviteModal = hideFriendInviteModal;
+window.sendFriendInvite = sendFriendInvite;
 window.saveQtApply = saveQtApply;
 window.saveQtPrayer = saveQtPrayer;
 window.qtAutoGrow = qtAutoGrow;
@@ -8664,7 +8702,7 @@ loadPosts = async function() {
 window.scrollPosts = scrollPosts;
 window.updatePostIndicators = updatePostIndicators;
 
-// 리워드 카드 접기/펼치기 (localStorage 상태 유지)
+// 리워드 카드 접기/펼치기 (이벤트 위임 방식 — 가장 안정적)
 (function initRewardCardCollapse() {
     const STORAGE_KEY = 'rewardCardCollapsed';
 
@@ -8686,35 +8724,35 @@ window.updatePostIndicators = updatePostIndicators;
         }
     }
 
-    function initCards() {
+    // 저장된 상태 반영 (페이지 로드 시 1회)
+    function applyStoredStates() {
         const collapsed = getCollapsedSet();
         document.querySelectorAll('.reward-card-collapsible').forEach(card => {
             const key = card.dataset.rewardKey;
-            if (!key) return;
-            applyState(card, collapsed.has(key));
-
-            const header = card.querySelector('.reward-card-header-line');
-            if (!header || header.dataset.collapseInit) return;
-            header.dataset.collapseInit = '1';
-            header.addEventListener('click', () => {
-                const isCollapsed = card.classList.contains('reward-card-collapsed');
-                const newCollapsed = !isCollapsed;
-                applyState(card, newCollapsed);
-                const set = getCollapsedSet();
-                newCollapsed ? set.add(key) : set.delete(key);
-                saveCollapsedSet(set);
-            });
+            if (key) applyState(card, collapsed.has(key));
         });
     }
 
-    // Run after DOM is ready and again after login (cards may re-render)
+    // body 레벨 이벤트 위임 — 동적 카드도 자동 처리
+    document.addEventListener('click', function(e) {
+        const header = e.target.closest('.reward-card-header-line');
+        if (!header) return;
+        const card = header.closest('.reward-card-collapsible');
+        if (!card) return;
+        const key = card.dataset.rewardKey;
+        if (!key) return;
+        const newCollapsed = !card.classList.contains('reward-card-collapsed');
+        const set = getCollapsedSet();
+        newCollapsed ? set.add(key) : set.delete(key);
+        saveCollapsedSet(set);
+        applyState(card, newCollapsed);
+    });
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCards);
+        document.addEventListener('DOMContentLoaded', applyStoredStates);
     } else {
-        initCards();
+        applyStoredStates();
     }
-    // Re-init when new cards appear (e.g. after login)
-    const obs = new MutationObserver(() => initCards());
-    obs.observe(document.body, { childList: true, subtree: true });
+    window.reInitRewardCardCollapse = applyStoredStates;
 })();
 

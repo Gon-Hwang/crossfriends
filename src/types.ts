@@ -2,6 +2,7 @@ export type Bindings = {
   DB: D1Database;
   R2: R2Bucket;
   YOUTUBE_API_KEY?: string;
+  RESEND_API_KEY?: string;
 }
 
 export interface User {

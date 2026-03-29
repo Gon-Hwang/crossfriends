@@ -7910,8 +7910,8 @@ app.get('/', (c) => {
                                 </div>
                                 
                                 <div class="mt-3 flex w-full items-end justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <input 
+                                    <div class="flex items-center gap-2 -translate-x-[39px]">
+                                        <input
                                             id="postImageFile"
                                             type="file"
                                             accept="image/*"
@@ -7919,21 +7919,21 @@ app.get('/', (c) => {
                                             onchange="previewPostImage(event)"
                                             class="hidden"
                                         />
-                                        <label 
+                                        <label
                                             for="postImageFile"
                                             class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-touch lg:min-h-0 lg:min-w-0"
                                             title="여러 장은 원하는 순서대로 한 장씩 첨부해 주세요. (최대 4장)">
                                             <i class="fas fa-image"></i>
                                         </label>
-                                        
-                                        <input 
+
+                                        <input
                                             id="postVideoFile"
                                             type="file"
                                             accept="video/*"
                                             onchange="previewPostVideo(event)"
                                             class="hidden"
                                         />
-                                        <label 
+                                        <label
                                             for="postVideoFile"
                                             class="cursor-pointer inline-flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition min-touch lg:min-h-0 lg:min-w-0"
                                             title="동영상 첨부">

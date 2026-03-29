@@ -4,10 +4,10 @@
   "scripts": {
     "dev": "vite",
     "dev:sandbox": "wrangler pages dev dist --d1=crossfriends-production --local --ip 0.0.0.0 --port 3000",
-    "build": "vite build && cp -r public/* dist/",
+    "build": "vite build",
     "preview": "wrangler pages dev dist",
-    "deploy": "npm run build && wrangler pages deploy",
-    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name crossfriends",
+    "deploy": "npm run build && wrangler pages deploy dist --commit-dirty=true --commit-message=deploy",
+    "deploy:prod": "npm run build && wrangler pages deploy dist --project-name crossfriends --commit-dirty=true --commit-message=deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "clean-port": "fuser -k 3000/tcp 2>/dev/null || true",
     "test": "curl http://localhost:3000",

@@ -9,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const wranglerConfig = path.resolve(__dirname, 'wrangler.jsonc')
 
 export default defineConfig({
+  publicDir: 'public',
   plugins: [
     build(),
     devServer({

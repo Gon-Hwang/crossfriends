@@ -3749,6 +3749,22 @@ function onQtPanelsWrapClick(e) {
     }
 }
 
+function scrollQtPanelsIntoViewMobile() {
+    const el = document.getElementById('qtPanelsWrap');
+    if (!el || el.classList.contains('hidden')) return;
+    if (typeof window.matchMedia !== 'function' || !window.matchMedia('(max-width: 639px)').matches) return;
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+            try {
+                el.focus({ preventScroll: true });
+            } catch (e) {
+                //
+            }
+        });
+    });
+}
+
 async function toggleQtPanel() {
     const qtPanelsWrap = document.getElementById('qtPanelsWrap');
     if (!qtPanelsWrap) return;
@@ -3768,6 +3784,7 @@ async function toggleQtPanel() {
         if (mainFeedPart1) mainFeedPart1.classList.add('hidden');
         if (newPostCard) newPostCard.classList.add('hidden');
         if (postsFeedWrapper) postsFeedWrapper.classList.add('hidden');
+        scrollQtPanelsIntoViewMobile();
     } else {
         qtPanelsWrap.classList.add('hidden');
         hideAllQtSections();
@@ -4173,36 +4190,18 @@ async function sendQtApplyPostForPanel(panel) {
 
     const verseRef = getQtVerseReferenceForPanel(panel);
     const row = qtLogsByDate[qtDate] || {};
-    let applyPostId = row.apply_post_id ? Number(row.apply_post_id) : null;
 
     try {
-        if (applyPostId) {
-            await axios.put(`/api/posts/${applyPostId}`, {
-                content,
-                verse_reference: verseRef,
-                background_color: '#FFFFFF'
-            });
-        } else {
-            const pr = await axios.post('/api/posts', {
-                user_id: currentUserId,
-                content,
-                verse_reference: verseRef,
-                shared_post_id: null,
-                is_prayer_request: 0,
-                background_color: '#FFFFFF'
-            });
-            applyPostId = pr.data && pr.data.id ? Number(pr.data.id) : null;
-        }
-
+        // 일반 피드에는 올리지 않고 QT 로그만 저장 (과거 연동 포스트 ID는 해제)
         const payload = {
             user_id: currentUserId,
             qt_date: qtDate,
             apply_text: content,
             verse_reference_raw: verseRef || (row.verse_reference_raw ? String(row.verse_reference_raw) : ''),
-            apply_post_id: applyPostId
+            apply_post_id: null,
+            closing_post_id: null
         };
         if (row.closing_prayer_text) payload.closing_prayer_text = row.closing_prayer_text;
-        if (row.closing_post_id) payload.closing_post_id = row.closing_post_id;
 
         const up = await axios.post('/api/qt/logs/upsert', payload);
         if (up.data && up.data.log) mergeQtLogRowIntoCache(up.data.log);
@@ -4217,8 +4216,7 @@ async function sendQtApplyPostForPanel(panel) {
             panel.dataset.qtLogId = String(up.data.log.id);
         }
 
-        showToast('QT 적용이 저장·포스팅되었어요.', 'success');
-        loadPosts();
+        showToast('QT 적용이 저장되었어요.', 'success');
     } catch (e) {
         console.error(e);
         showToast('저장에 실패했습니다.', 'error');
@@ -4241,36 +4239,18 @@ async function sendQtPrayerPostForPanel(panel) {
 
     const verseRef = getQtVerseReferenceForPanel(panel);
     const row = qtLogsByDate[qtDate] || {};
-    let closingPostId = row.closing_post_id ? Number(row.closing_post_id) : null;
 
     try {
-        if (closingPostId) {
-            await axios.put(`/api/posts/${closingPostId}`, {
-                content,
-                verse_reference: verseRef,
-                background_color: '#FFFFFF'
-            });
-        } else {
-            const pr = await axios.post('/api/posts', {
-                user_id: currentUserId,
-                content,
-                verse_reference: verseRef,
-                shared_post_id: null,
-                is_prayer_request: 0,
-                background_color: '#FFFFFF'
-            });
-            closingPostId = pr.data && pr.data.id ? Number(pr.data.id) : null;
-        }
-
+        // 일반 피드에는 올리지 않고 QT 로그만 저장 (과거 연동 포스트 ID는 해제)
         const payload = {
             user_id: currentUserId,
             qt_date: qtDate,
             closing_prayer_text: content,
             verse_reference_raw: verseRef || row.verse_reference_raw || '',
-            closing_post_id: closingPostId
+            apply_post_id: null,
+            closing_post_id: null
         };
         if (row.apply_text) payload.apply_text = row.apply_text;
-        if (row.apply_post_id) payload.apply_post_id = row.apply_post_id;
 
         const up = await axios.post('/api/qt/logs/upsert', payload);
         if (up.data && up.data.log) mergeQtLogRowIntoCache(up.data.log);
@@ -4285,8 +4265,7 @@ async function sendQtPrayerPostForPanel(panel) {
             panel.dataset.qtLogId = String(up.data.log.id);
         }
 
-        showToast('QT 마침기도가 저장·포스팅되었어요.', 'success');
-        loadPosts();
+        showToast('QT 마침기도가 저장되었어요.', 'success');
     } catch (e) {
         console.error(e);
         showToast('저장에 실패했습니다.', 'error');
@@ -4712,13 +4691,44 @@ function hideForgotPasswordModal() {
 }
 
 async function requestPasswordReset() {
-    // 프로덕션과 UI는 맞추되, 로컬에서는 별도 메일 발송이 없을 수 있습니다.
-    const email = (document.getElementById('forgotPasswordEmail') || {}).value;
+    const input = document.getElementById('forgotPasswordEmail');
+    const email = input && input.value ? String(input.value).trim() : '';
     if (!email) {
-        alert('이메일을 입력해주세요.');
+        showToast('이메일을 입력해주세요.', 'error');
         return;
     }
-    alert('비밀번호 초기화 기능은 준비 중입니다. 관리자에게 문의해주세요.');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showToast('올바른 이메일 형식을 입력해주세요.', 'error');
+        return;
+    }
+    const btn = document.getElementById('forgotPasswordSubmitBtn');
+    const prevText = btn ? btn.textContent : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '처리 중...';
+    }
+    try {
+        const response = await axios.post('/api/password-reset-request', { email });
+        const msg =
+            (response.data && response.data.message) ||
+            '등록된 이메일로 비밀번호 재설정 안내를 보냈습니다. 메일함을 확인해주세요.';
+        showToast(msg, 'success');
+        hideForgotPasswordModal();
+        if (input) input.value = '';
+        showLoginModal();
+    } catch (error) {
+        console.error('Password reset request error:', error);
+        const errMsg =
+            (error.response && error.response.data && error.response.data.error) ||
+            '요청에 실패했습니다. 잠시 후 다시 시도해주세요.';
+        showToast(errMsg, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = prevText || '비밀번호 초기화 요청';
+        }
+    }
 }
 
 // Logout
@@ -5298,9 +5308,7 @@ function renderPostActionsToolbar(post, isLiked) {
 
     const reactionActive = bg === '#F87171' ? post.is_prayed > 0 : isLiked;
     const reactIconWrap = reactionActive ? 'bg-gray-200' : 'hover:bg-gray-100';
-    const reactCountWrap = reactionActive
-        ? 'bg-gray-100 border-gray-300 -translate-x-[10px]'
-        : '-translate-x-[10px]';
+    const reactCountWrap = reactionActive ? 'bg-gray-100 border-gray-300' : '';
 
     const urls = getPostImageUrls(post);
     const hasMedia = urls.length > 0 || !!post.video_url;
@@ -5310,20 +5318,27 @@ function renderPostActionsToolbar(post, isLiked) {
         : `<span class="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-300" title="첨부 미디어 없음"><i class="fas fa-expand text-lg"></i></span>`;
 
     return `
-        <div class="post-actions-toolbar mt-4 border-t border-gray-200/90 pt-3 flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-gray-700">
-            <button type="button" id="post-toolbar-react-${pid}" onclick="${reactionHandler}" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition ${reactIconWrap}" title="${title}">
-                <i class="${iconClass} text-lg ${activeIconCls}"></i>
-            </button>
-            <button type="button" id="post-toolbar-count-react-${pid}" onclick="openPostEngagementPanel('react', ${pid})" class="post-toolbar-n inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm ${reactCountWrap}">${reactionCount}</button>
-            <button type="button" id="post-toolbar-comment-${pid}" onclick="loadComments(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="댓글">
-                <i class="fas fa-comment text-lg text-gray-700"></i>
-            </button>
-            <button type="button" id="post-toolbar-count-comment-${pid}" onclick="openPostEngagementPanel('comment', ${pid})" class="post-toolbar-n -translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${comments}</button>
-            <button type="button" id="post-toolbar-share-${pid}" onclick="sharePost(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="공유하기">
-                <i class="fas fa-share text-lg text-gray-700"></i>
-            </button>
-            <button type="button" id="post-toolbar-count-share-${pid}" onclick="openPostEngagementPanel('share', ${pid})" class="post-toolbar-n -translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${shares}</button>
-            ${expandBtn}
+        <!-- 툴바 A–D 한 줄·고정(스크롤 없음), 간격 유지, 중앙 정렬 -->
+        <div class="post-actions-toolbar mt-4 flex w-full flex-nowrap items-center justify-center border-t border-gray-200/90 pt-3 text-gray-700 gap-x-[18px] sm:gap-x-2.5">
+            <span class="inline-flex shrink-0 items-center" data-toolbar-group="A">
+                <button type="button" id="post-toolbar-react-${pid}" onclick="${reactionHandler}" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition ${reactIconWrap}" title="${title}">
+                    <i class="${iconClass} text-lg ${activeIconCls}"></i>
+                </button>
+                <button type="button" id="post-toolbar-count-react-${pid}" onclick="openPostEngagementPanel('react', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm ${reactCountWrap}">${reactionCount}</button>
+            </span>
+            <span class="inline-flex shrink-0 items-center" data-toolbar-group="B">
+                <button type="button" id="post-toolbar-comment-${pid}" onclick="loadComments(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="댓글">
+                    <i class="fas fa-comment text-lg text-gray-700"></i>
+                </button>
+                <button type="button" id="post-toolbar-count-comment-${pid}" onclick="openPostEngagementPanel('comment', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${comments}</button>
+            </span>
+            <span class="inline-flex shrink-0 items-center" data-toolbar-group="C">
+                <button type="button" id="post-toolbar-share-${pid}" onclick="sharePost(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="공유하기">
+                    <i class="fas fa-share text-lg text-gray-700"></i>
+                </button>
+                <button type="button" id="post-toolbar-count-share-${pid}" onclick="openPostEngagementPanel('share', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${shares}</button>
+            </span>
+            <span class="inline-flex shrink-0 items-center justify-center" data-toolbar-group="D">${expandBtn}</span>
         </div>
     `;
 }
@@ -7057,11 +7072,11 @@ async function loadPosts() {
                     ${videoHtml}
                     ${verseHtml}
                     ${sharedPostHtml}
-                    <div class="flex items-start space-x-4">
-                        <div class="w-12 flex-shrink-0" aria-hidden="true"></div>
-                        <div class="flex-1 min-w-0">
+                    <div class="flex items-start space-x-4 max-sm:flex-col max-sm:space-x-0">
+                        <div class="w-12 flex-shrink-0 max-sm:hidden" aria-hidden="true"></div>
+                        <div class="flex min-w-0 flex-1 flex-col max-sm:w-full max-sm:items-center">
                             ${renderPostActionsToolbar(post, isLiked)}
-                            <div id="comments-${post.id}" class="hidden"></div>
+                            <div id="comments-${post.id}" class="hidden w-full"></div>
                         </div>
                     </div>
                 </div>

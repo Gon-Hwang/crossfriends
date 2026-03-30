@@ -16,7 +16,8 @@
     "db:seed": "wrangler d1 execute crossfriends-production --local --file=./seed.sql",
     "db:reset": "rm -rf .wrangler/state/v3/d1 && npm run db:migrate:local && npm run db:seed",
     "db:console:local": "wrangler d1 execute crossfriends-production --local",
-    "db:console:prod": "wrangler d1 execute crossfriends-production"
+    "db:console:prod": "wrangler d1 execute crossfriends-production",
+    "hash-password": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "hono": "^4.11.4"

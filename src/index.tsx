@@ -10,6 +10,26 @@ function sanitizeText(s: string | null | undefined): string {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
+/** Resend API JSON 오류 본문에서 message 추출 (도메인/API 등 원인 표시) */
+function resendErrorMessageFromBody(errBody: string): string {
+  try {
+    const j = JSON.parse(errBody) as { message?: string }
+    if (j.message && typeof j.message === 'string') {
+      return j.message.replace(/[\r\n]/g, ' ').slice(0, 300)
+    }
+  } catch {
+    //
+  }
+  return ''
+}
+
+function jsonResendSendFailed(errBody: string) {
+  const detail = resendErrorMessageFromBody(errBody)
+  return {
+    error: detail ? `이메일 발송에 실패했습니다. (${detail})` : '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.'
+  }
+}
+
 /** R2 키에 쓸 파일명만 허용 (경로 조각·.. 제거) */
 function sanitizeR2Filename(raw: string): string | null {
   const base = String(raw || '')
@@ -239,7 +259,11 @@ function base64ToBuf(b64: string) {
   return bytes.buffer
 }
 
-async function derivePasswordHash(password: string, saltB64: string) {
+/** Cloudflare Workers CPU 한도 내에서 동작하도록 반복 횟수 제한 (150k는 프로덕션에서 PBKDF2가 예외로 실패함) */
+const PBKDF2_ITERATIONS = 10_000
+const LEGACY_PBKDF2_ITERATIONS = 150_000
+
+async function derivePasswordHashWithIter(password: string, saltB64: string, iterations: number) {
   const enc = new TextEncoder()
   const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
     'deriveBits'
@@ -250,12 +274,29 @@ async function derivePasswordHash(password: string, saltB64: string) {
       name: 'PBKDF2',
       hash: 'SHA-256',
       salt,
-      iterations: 150_000
+      iterations
     },
     keyMaterial,
     256
   )
   return bufToBase64(bits)
+}
+
+async function derivePasswordHash(password: string, saltB64: string) {
+  return derivePasswordHashWithIter(password, saltB64, PBKDF2_ITERATIONS)
+}
+
+/** 저장된 해시가 신규(10k) 또는 구버전(150k) 중 어느 쪽인지 검증 */
+async function verifyStoredPassword(password: string, saltB64: string, storedHash: string): Promise<boolean> {
+  const dNew = await derivePasswordHashWithIter(password, saltB64, PBKDF2_ITERATIONS)
+  if (dNew === storedHash) return true
+  try {
+    const dLegacy = await derivePasswordHashWithIter(password, saltB64, LEGACY_PBKDF2_ITERATIONS)
+    return dLegacy === storedHash
+  } catch (e) {
+    console.warn('[auth] legacy PBKDF2 verify failed', e)
+    return false
+  }
 }
 
 function randomSaltB64(bytes = 16) {
@@ -271,8 +312,7 @@ async function verifyUserPassword(user: Record<string, unknown>, password: strin
     return false
   }
   if (!user.password_hash) return false
-  const derived = await derivePasswordHash(String(password), String(user.password_salt))
-  return derived === String(user.password_hash)
+  return verifyStoredPassword(String(password), String(user.password_salt), String(user.password_hash))
 }
 
 /** 회원가입 폼과 동일한 비밀번호 규칙 */
@@ -353,8 +393,8 @@ app.post('/api/login', async (c) => {
     return c.json({ error: '이 계정은 비밀번호가 설정되어 있지 않습니다. 비밀번호 초기화를 진행해주세요.' }, 400)
   }
 
-  const derived = await derivePasswordHash(String(password), String(user.password_salt))
-  if (derived !== String(user.password_hash)) {
+  const passwordOk = await verifyStoredPassword(String(password), String(user.password_salt), String(user.password_hash))
+  if (!passwordOk) {
     return c.json({ error: '비밀번호가 올바르지 않습니다.' }, 401)
   }
   
@@ -786,13 +826,12 @@ app.post('/api/signup-request', async (c) => {
 
   const verifyUrl = `${new URL(c.req.url).origin}/verify-email?token=${token}`
   try {
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: 'Crossfriends <noreply@crossfriends.org>',
         to: [normalizedEmail],
-        reply_to: 'no-reply@null.invalid',
         subject: '[CROSSfriends] 이메일 인증을 완료해주세요',
         html: `
           <p>안녕하세요, <strong>${sanitizeText(name)}</strong>님!</p>
@@ -804,8 +843,15 @@ app.post('/api/signup-request', async (c) => {
         `,
       }),
     })
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error('Resend signup-request error:', res.status, errText)
+      await DB.prepare('DELETE FROM email_verification_tokens WHERE token = ?').bind(token).run()
+      return c.json(jsonResendSendFailed(errText), 500)
+    }
   } catch (e) {
     console.error('Resend error:', e)
+    await DB.prepare('DELETE FROM email_verification_tokens WHERE token = ?').bind(token).run()
     return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
   }
   return c.json({ success: true, message: '인증 메일을 발송했습니다. 이메일을 확인해주세요.' }, 200)
@@ -931,8 +977,14 @@ app.get('/verify-email', (c) => {
 // ── 비밀번호 재설정 요청 ─────────────────────────────────────────
 app.post('/api/password-reset-request', async (c) => {
   const { DB, RESEND_API_KEY } = c.env
-  const { email } = await c.req.json()
-  if (!email) return c.json({ error: '이메일을 입력해주세요.' }, 400)
+  let body: Record<string, unknown> = {}
+  try {
+    body = await c.req.json()
+  } catch {
+    return c.json({ error: '요청 형식이 올바르지 않습니다.' }, 400)
+  }
+  const email = body.email
+  if (!email || typeof email !== 'string' || !email.trim()) return c.json({ error: '이메일을 입력해주세요.' }, 400)
 
   const normalizedEmail = email.trim().toLowerCase()
   const user = await DB.prepare('SELECT id, name FROM users WHERE LOWER(email) = ?').bind(normalizedEmail).first() as any
@@ -965,8 +1017,10 @@ app.post('/api/password-reset-request', async (c) => {
         }),
       })
       if (!res.ok) {
+        const errText = await res.text()
+        console.error('Resend password-reset error:', res.status, errText)
         await DB.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run()
-        return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+        return c.json(jsonResendSendFailed(errText), 500)
       }
     } catch (e) {
       await DB.prepare('DELETE FROM password_reset_tokens WHERE token = ?').bind(token).run()
@@ -3204,7 +3258,6 @@ app.post('/api/qt-invite', async (c) => {
       body: JSON.stringify({
         from: 'Crossfriends <noreply@crossfriends.org>',
         to: [email],
-        reply_to: 'no-reply@null.invalid',
         subject: '[CROSSfriends] 친구가 QT를 추천해드렸습니다 📖',
         html: htmlBody
       })
@@ -3212,7 +3265,7 @@ app.post('/api/qt-invite', async (c) => {
     if (!resp.ok) {
       const errText = await resp.text()
       console.error('Resend qt-invite error:', resp.status, errText)
-      return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+      return c.json(jsonResendSendFailed(errText), 500)
     }
     await DB.prepare('INSERT INTO qt_invites (inviter_user_id, invited_email) VALUES (?, ?)').bind(inviterUserId, email).run()
     const inviter = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(inviterUserId).first() as any
@@ -3273,7 +3326,6 @@ app.post('/api/invite', async (c) => {
       body: JSON.stringify({
         from: 'CROSSfriends <noreply@crossfriends.org>',
         to: [email],
-        reply_to: 'no-reply@null.invalid',
         subject: `[CROSSfriends] ${inviterName}님이 초대했습니다 ✉️`,
         html: htmlBody
       })
@@ -3281,7 +3333,7 @@ app.post('/api/invite', async (c) => {
     if (!resp.ok) {
       const errText = await resp.text()
       console.error('Resend invite error:', resp.status, errText)
-      return c.json({ error: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.' }, 500)
+      return c.json(jsonResendSendFailed(errText), 500)
     }
     await DB.prepare('INSERT INTO qt_invites (inviter_user_id, invited_email) VALUES (?, ?)').bind(inviterUserId, email).run()
     const inviterScore = await DB.prepare('SELECT activity_score FROM users WHERE id = ?').bind(inviterUserId).first() as any
@@ -8027,9 +8079,6 @@ app.get('/', (c) => {
                                 <h2 class="text-xl font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
                                 <div class="flex items-center gap-2 flex-wrap justify-end">
                                     <div class="text-sm text-gray-600" data-qt-field="dateLabel"></div>
-                                    <div class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-200" title="오늘 본문(시작 절)">
-                                        <span data-qt-field="passageShort">-</span>
-                                    </div>
                                     <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-red-50 text-red-600 border border-red-300 hover:bg-red-100" title="QT 찬양">
                                         <i class="fas fa-music text-[13px] leading-none" aria-hidden="true"></i>
                                     </button>
@@ -8122,7 +8171,7 @@ app.get('/', (c) => {
                     </template>
                     <!-- 찬양 YT 플레이어 전역 마운트 (화면 밖 고정, 이동 금지) -->
                     <div id="qtWorshipYtGlobal" class="fixed -left-[9999px] top-0 w-1 h-1 overflow-hidden" aria-hidden="true"></div>
-                    <div id="qtPanelsWrap" class="hidden flex flex-col gap-4 mb-4">
+                    <div id="qtPanelsWrap" tabindex="-1" class="hidden flex flex-col gap-4 mb-4 max-sm:scroll-mt-24 max-sm:focus:outline-none">
                         <div id="qtPanelsStack" class="flex flex-col gap-4"></div>
                     </div>
                     <!-- Posts Feed -->
@@ -9169,6 +9218,7 @@ app.get('/', (c) => {
                     </button>
                 </div>
 
+                <p class="text-xs text-gray-600 mb-2 leading-relaxed">가입 시 사용한 이메일을 입력하면, 비밀번호 재설정 링크가 메일로 발송됩니다. (스팸함도 확인해주세요)</p>
                 <div class="space-y-2.5">
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1.5">이메일</label>
@@ -9176,11 +9226,12 @@ app.get('/', (c) => {
                             id="forgotPasswordEmail"
                             type="email"
                             placeholder="이메일 주소"
+                            autocomplete="email"
                             class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                 </div>
-                <button onclick="requestPasswordReset()" class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold text-sm">
+                <button type="button" id="forgotPasswordSubmitBtn" onclick="requestPasswordReset()" class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed">
                     비밀번호 초기화 요청
                 </button>
                 <p class="mt-2 text-center text-xs text-gray-500">

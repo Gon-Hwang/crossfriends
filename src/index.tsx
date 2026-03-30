@@ -3193,6 +3193,34 @@ app.delete('/api/push/reset/:userId', async (c) => {
   return c.json({ ok: true, message: '구독 초기화됨. 알림 탭에서 푸시 켜기를 다시 눌러주세요.' })
 })
 
+// GET qt-alarm settings
+app.get('/api/users/:id/qt-alarm', async (c) => {
+  const DB = c.env.DB
+  const userId = Number(c.req.param('id'))
+  const currentUserId = Number(c.req.query('current_user_id') || 0)
+  if (!currentUserId || currentUserId !== userId) return c.json({ error: 'Unauthorized' }, 401)
+  const row = await DB.prepare('SELECT days, time, enabled FROM qt_alarm WHERE user_id = ?').bind(userId).first()
+  if (!row) return c.json({ days: [], time: '06:00', enabled: 1 })
+  return c.json({
+    days: JSON.parse(String(row.days || '[]')),
+    time: row.time || '06:00',
+    enabled: row.enabled !== 0
+  })
+})
+
+// POST qt-alarm settings
+app.post('/api/users/:id/qt-alarm', async (c) => {
+  const DB = c.env.DB
+  const userId = Number(c.req.param('id'))
+  const currentUserId = Number(c.req.query('current_user_id') || 0)
+  if (!currentUserId || currentUserId !== userId) return c.json({ error: 'Unauthorized' }, 401)
+  const { days, time, enabled } = await c.req.json()
+  await DB.prepare(
+    'INSERT INTO qt_alarm (user_id, days, time, enabled, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET days=excluded.days, time=excluded.time, enabled=excluded.enabled, updated_at=CURRENT_TIMESTAMP'
+  ).bind(userId, JSON.stringify(days || []), time || '06:00', enabled ? 1 : 0).run()
+  return c.json({ success: true })
+})
+
 // QT invite - send today's QT sample + signup link to a friend
 const qtInviteVerseRef = '오늘의 QT 본문'
 
@@ -7709,10 +7737,10 @@ app.get('/', (c) => {
                             </div>
 
                             <div id="qtWorshipUnlocked" class="hidden">
-                                <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                                <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
                                     <div class="flex items-center gap-2 mb-1">
-                                        <i class="fas fa-gift text-green-600"></i>
-                                        <p class="font-size-base font-bold text-green-700">1000μ 달성 축하합니다!</p>
+                                        <i class="fas fa-gift text-blue-600"></i>
+                                        <p class="font-size-base font-bold text-blue-700">1000μ 달성 축하합니다!</p>
                                     </div>
                                     <p class="font-size-desc text-gray-700">
                                         점수 획득 축하 카드와 함께 QT 패널 상단의 <span class="font-bold text-red-600">찬양 버튼</span>이 공개되었습니다.
@@ -7760,10 +7788,10 @@ app.get('/', (c) => {
                             </div>
 
                             <div id="qtAlarmUnlocked" class="hidden">
-                                <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                                <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
                                     <div class="flex items-center gap-2 mb-1">
-                                        <i class="fas fa-gift text-green-600"></i>
-                                        <p class="font-size-base font-bold text-green-700">1400μ 달성 축하합니다!</p>
+                                        <i class="fas fa-gift text-blue-600"></i>
+                                        <p class="font-size-base font-bold text-blue-700">1400μ 달성 축하합니다!</p>
                                     </div>
                                     <p class="font-size-desc text-gray-700">
                                         QT 패널 상단의 <span class="font-bold text-red-600">알람 버튼</span>이 공개되었습니다.
@@ -8261,6 +8289,43 @@ app.get('/', (c) => {
                 </div>
             </div>
         </div>
+
+        <!-- QT Alarm Modal -->
+        <div id="qtAlarmModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4" onclick="if(event.target===this)hideQtAlarmModal()">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-bell text-red-500 mr-2"></i>QT 알림 설정</h3>
+                    <button onclick="hideQtAlarmModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="mb-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="qtAlarmEnabled" class="w-5 h-5 accent-red-500 rounded" checked>
+                        <span class="text-sm font-semibold text-gray-700">알림 켜기</span>
+                    </label>
+                </div>
+                <div class="mb-4">
+                    <p class="text-xs font-semibold text-gray-500 mb-2">알림 요일</p>
+                    <div class="flex gap-1.5 flex-wrap">
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmSun" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">일</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmMon" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">월</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmTue" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">화</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmWed" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">수</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmThu" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">목</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmFri" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">금</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmSat" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">토</span></label>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <p class="text-xs font-semibold text-gray-500 mb-2">알림 시각</p>
+                    <input type="time" id="qtAlarmTime" value="06:00" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-300 focus:outline-none">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="hideQtAlarmModal()" class="flex-1 py-2 px-4 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50">취소</button>
+                    <button onclick="saveQtAlarmSettings()" class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600">저장</button>
+                </div>
+            </div>
+        </div>
+        <div id="qtAlarmBackdrop" class="hidden fixed inset-0 z-[69] bg-black/50"></div>
 
         <!-- Post Focus Overlay -->
         <div id="postFocusOverlay" class="hidden fixed inset-0 z-[60] bg-black bg-opacity-95 overflow-y-auto" style="top:0;padding-top:60px;" onclick="closePostFocus()">

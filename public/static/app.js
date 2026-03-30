@@ -4477,8 +4477,52 @@ function setQtWorshipVolumeFromPanel(el) {
 }
 
 function showQtAlarmModal() {
-    // Alarm modal markup doesn't exist in current HTML snapshot.
-    showToast('QT 예약(알람) 기능은 준비 중입니다.', 'info');
+    if (!currentUserId) { showToast('로그인 후 이용해주세요.', 'error'); return; }
+    const modal = document.getElementById('qtAlarmModal');
+    const backdrop = document.getElementById('qtAlarmBackdrop');
+    if (modal) modal.classList.remove('hidden');
+    if (backdrop) backdrop.classList.remove('hidden');
+    loadQtAlarmSettings();
+}
+function hideQtAlarmModal() {
+    const modal = document.getElementById('qtAlarmModal');
+    const backdrop = document.getElementById('qtAlarmBackdrop');
+    if (modal) modal.classList.add('hidden');
+    if (backdrop) backdrop.classList.add('hidden');
+}
+async function loadQtAlarmSettings() {
+    if (!currentUserId) return;
+    try {
+        const res = await axios.get('/api/users/' + currentUserId + '/qt-alarm?current_user_id=' + currentUserId);
+        const d = res.data;
+        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((name, i) => {
+            const cb = document.getElementById('qtAlarm' + name);
+            if (cb) cb.checked = (d.days || []).includes(i);
+        });
+        const timeSel = document.getElementById('qtAlarmTime');
+        if (timeSel) timeSel.value = (d.time || '06:00').slice(0, 5);
+        const enabled = document.getElementById('qtAlarmEnabled');
+        if (enabled) enabled.checked = d.enabled !== false && d.enabled !== 0;
+    } catch (e) { /* ignore */ }
+}
+async function saveQtAlarmSettings() {
+    if (!currentUserId) return;
+    const days = [];
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((name, i) => {
+        const cb = document.getElementById('qtAlarm' + name);
+        if (cb && cb.checked) days.push(i);
+    });
+    const timeSel = document.getElementById('qtAlarmTime');
+    const time = timeSel ? timeSel.value : '06:00';
+    const enabled = document.getElementById('qtAlarmEnabled');
+    const enabledVal = enabled ? enabled.checked : true;
+    try {
+        await axios.post('/api/users/' + currentUserId + '/qt-alarm?current_user_id=' + currentUserId, { days, time, enabled: enabledVal });
+        showToast('QT 알림 설정이 저장되었습니다.', 'success');
+        hideQtAlarmModal();
+    } catch (e) {
+        showToast('저장에 실패했습니다.', 'error');
+    }
 }
 
 function showQtInviteModal() {
@@ -9591,6 +9635,9 @@ window.toggleQtWorshipMute = toggleQtWorshipMute;
 window.setQtWorshipVolume = setQtWorshipVolume;
 window.setQtWorshipVolumeFromPanel = setQtWorshipVolumeFromPanel;
 window.showQtAlarmModal = showQtAlarmModal;
+window.hideQtAlarmModal = hideQtAlarmModal;
+window.loadQtAlarmSettings = loadQtAlarmSettings;
+window.saveQtAlarmSettings = saveQtAlarmSettings;
 window.showQtInviteModal = showQtInviteModal;
 window.hideQtInviteModal = hideQtInviteModal;
 window.sendQtInvite = sendQtInvite;

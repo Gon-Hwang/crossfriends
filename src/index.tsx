@@ -2660,6 +2660,35 @@ app.get('/api/qt/bible', async (c) => {
 // =====================
 // QT diary logs (적용 / 마침기도)
 // =====================
+
+/** QT 텍스트 품질 검증 (API 없이 규칙 기반) */
+function validateQtText(text: string, label: string): string | null {
+  const t = text.trim()
+  if (t.length < 15) return `${label}이 너무 짧습니다 (최소 15자).`
+
+  // 한글이 전혀 없으면 키보드 난타 또는 외국어로 간주
+  if (!/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(t)) return `${label}을 한국어로 작성해주세요.`
+
+  // 동일 문자가 전체의 40% 이상이면 반복 입력으로 간주
+  const freq: Record<string, number> = {}
+  for (const ch of t) freq[ch] = (freq[ch] || 0) + 1
+  const topCount = Math.max(...Object.values(freq))
+  if (topCount / t.length > 0.4) return `${label}에 의미 있는 내용을 입력해주세요.`
+
+  // 8자 이상 부분 문자열이 3회 이상 반복되면 복붙 또는 반복 입력으로 간주
+  if (t.length >= 16) {
+    const subLen = 8
+    for (let i = 0; i <= t.length - subLen; i++) {
+      const sub = t.slice(i, i + subLen)
+      if (sub.trim().length < 5) continue
+      let cnt = 0, pos = 0
+      while ((pos = t.indexOf(sub, pos)) !== -1) { cnt++; pos++ }
+      if (cnt >= 3) return `${label}에 반복된 내용이 감지되었습니다.`
+    }
+  }
+
+  return null
+}
 app.get('/api/qt/logs', async (c) => {
   const { DB } = c.env
   const userId = Number(c.req.query('user_id') || 0)
@@ -2723,6 +2752,23 @@ app.post('/api/qt/logs/upsert', async (c) => {
     return c.json({ error: 'apply_text or closing_prayer_text required' }, 400)
   }
 
+  // 내용 품질 검증
+  if (nextApply.trim()) {
+    const applyErr = validateQtText(nextApply, '적용')
+    if (applyErr) return c.json({ error: applyErr }, 400)
+  }
+  if (nextClose.trim()) {
+    const closeErr = validateQtText(nextClose, '마침기도')
+    if (closeErr) return c.json({ error: closeErr }, 400)
+  }
+  if (nextApply.trim() && nextClose.trim() && nextApply.trim() === nextClose.trim()) {
+    return c.json({ error: '적용과 마침기도 내용이 동일합니다. 다른 내용으로 작성해주세요.' }, 400)
+  }
+
+  // 점수 지급 조건: 이전에 둘 다 없었는데 → 이번에 둘 다 완성될 때 +60
+  const prevHadBoth = !!(existing?.apply_text && String(existing.apply_text).trim() && existing?.closing_prayer_text && String(existing.closing_prayer_text).trim())
+  const nowHasBoth = !!(nextApply.trim() && nextClose.trim())
+
   if (existing) {
     await DB.prepare(
       `UPDATE qt_logs SET apply_text = ?, closing_prayer_text = ?, verse_reference_raw = ?, apply_post_id = ?, closing_post_id = ?, updated_at = CURRENT_TIMESTAMP
@@ -2742,8 +2788,19 @@ app.post('/api/qt/logs/upsert', async (c) => {
     )
       .bind(existing.id)
       .first()
+
+    let qtScoreAwarded = false
+    let newScriptureScore: number | null = null
+    if (!prevHadBoth && nowHasBoth) {
+      const userRow = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(userId).first() as any
+      const updated = (parseInt(userRow?.scripture_score) || 0) + 60
+      await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(updated, userId).run()
+      qtScoreAwarded = true
+      newScriptureScore = updated
+    }
+
     c.header('Cache-Control', 'private, no-store')
-    return c.json({ log: row })
+    return c.json({ log: row, qt_score_awarded: qtScoreAwarded, new_scripture_score: newScriptureScore })
   }
 
   const ins = await DB.prepare(
@@ -2758,8 +2815,19 @@ app.post('/api/qt/logs/upsert', async (c) => {
   )
     .bind(ins.meta.last_row_id)
     .first()
+
+  let qtScoreAwarded = false
+  let newScriptureScore: number | null = null
+  if (!prevHadBoth && nowHasBoth) {
+    const userRow = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(userId).first() as any
+    const updated = (parseInt(userRow?.scripture_score) || 0) + 60
+    await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(updated, userId).run()
+    qtScoreAwarded = true
+    newScriptureScore = updated
+  }
+
   c.header('Cache-Control', 'private, no-store')
-  return c.json({ log: row })
+  return c.json({ log: row, qt_score_awarded: qtScoreAwarded, new_scripture_score: newScriptureScore })
 })
 
 /** JSON POST 삭제 — 일부 환경에서 DELETE/쿼리가 불안정할 때 사용 */
@@ -7436,11 +7504,11 @@ app.get('/', (c) => {
                     <div class="w-full flex justify-center">
                         <div class="inline-flex items-center justify-center mx-auto w-fit gap-2" id="authButtons">
                             <button onclick="showHowToUse()" class="text-gray-500 hover:text-gray-800 px-2 py-2 rounded-full hover:bg-gray-100 transition font-size-mini1 flex items-center gap-1" title="사용법">
-                                <i class="fas fa-question-circle text-[2.25rem] leading-none"></i>
+                                <i class="fas fa-question-circle font-size-title leading-none"></i>
                             </button>
                             <div class="flex items-center gap-0">
-                                <button onclick="showLoginModal()" class="text-gray-700 hover:text-blue-600 border border-gray-300 px-[0.95rem] py-[0.48rem] rounded-full transition text-[0.97rem] font-medium">로그인</button>
-                                <button onclick="showSignupModal()" class="ml-2 bg-blue-600 text-white px-[1.1rem] py-[0.48rem] rounded-full hover:bg-blue-700 transition text-[0.97rem] font-semibold">가입</button>
+                                <button onclick="showLoginModal()" class="text-gray-700 hover:text-blue-600 border border-gray-300 px-[0.95rem] py-[0.48rem] rounded-full transition font-size-base font-medium">로그인</button>
+                                <button onclick="showSignupModal()" class="ml-2 bg-blue-600 text-white px-[1.1rem] py-[0.48rem] rounded-full hover:bg-blue-700 transition font-size-base font-semibold">가입</button>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 sm:gap-1.5 hidden" id="userMenuMobile">
@@ -9053,7 +9121,7 @@ app.get('/', (c) => {
                         <h3 class="font-size-title font-bold text-gray-800 mb-3">
                             환영합니다!
                         </h3>
-                        <p class="text-gray-700 leading-relaxed mb-4">
+                        <p class="font-size-desc text-gray-700 leading-relaxed mb-4">
                             크로스프렌즈는 기독교인들을 위한 행복하고 재미있는 소셜 미디어입니다. 
                             말씀, 기도, 활동을 통해 신앙 생활을 풍성하게 하고, 형제 자매들과 소통하세요!
                         </p>
@@ -9063,8 +9131,8 @@ app.get('/', (c) => {
                             <div class="flex items-start">
                                 <i class="fas fa-book-open text-blue-600 mt-1 mr-3 font-size-title"></i>
                                 <div>
-                                    <p class="font-bold text-blue-800 mb-2">마태복음 5:12</p>
-                                    <p class="text-gray-700 leading-relaxed italic">
+                                    <p class="font-size-desc font-bold text-blue-800 mb-2">마태복음 5:12</p>
+                                    <p class="font-size-desc text-gray-700 leading-relaxed italic">
                                         "기뻐하고 즐거워하라 하늘에서 너희의 상이 큼이라"
                                     </p>
                                 </div>
@@ -9083,81 +9151,81 @@ app.get('/', (c) => {
                             <table class="w-full border-collapse">
                                 <thead>
                                     <tr class="bg-gray-50">
-                                        <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-800">행동</th>
-                                        <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-800">점수</th>
+                                        <th class="border border-gray-300 px-4 py-3 text-left font-size-desc font-bold text-gray-800">행동</th>
+                                        <th class="border border-gray-300 px-4 py-3 text-center font-size-desc font-bold text-gray-800">점수</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">7종 포스팅 반응하기 (기도 제외)</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">7종 포스팅 반응하기 (기도 제외)</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">1μ</span>
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-size-desc font-bold">1μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">7종 포스팅 반응받기</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">7종 포스팅 반응받기</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">2μ</span>
+                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-size-desc font-bold">2μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">댓글 작성</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">댓글 작성</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5μ</span>
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-size-desc font-bold">5μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">댓글 받기</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">댓글 받기</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold">5μ</span>
+                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-size-desc font-bold">5μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">다른 사람 포스팅 공유</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">다른 사람 포스팅 공유</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-bold">5μ</span>
+                                            <span class="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-size-desc font-bold">5μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700">포스팅 작성</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">포스팅 작성</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">10μ</span>
+                                            <span class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-size-desc font-bold">10μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">기도 포스팅 반응하기 (중보)</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">기도 포스팅 반응하기 (중보)</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold">20μ</span>
+                                            <span class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-size-desc font-bold">20μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">QT 친구 초대 이메일 발송</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">QT 친구 초대 이메일 발송</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold">20μ</span>
+                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-size-desc font-bold">20μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">오늘의 말씀 타이핑</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">오늘의 말씀 타이핑</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">40μ</span>
+                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-size-desc font-bold">40μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">오늘의 말씀 시청</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">오늘의 말씀 시청</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold">40μ</span>
+                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-size-desc font-bold">40μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">초대한 친구가 회원가입</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">초대한 친구가 회원가입</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold">40μ</span>
+                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-size-desc font-bold">40μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
-                                        <td class="border border-gray-300 px-4 py-3 text-gray-700 font-semibold">QT 하루 달성</td>
+                                        <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">QT 하루 달성</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold">60μ</span>
+                                            <span class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full font-size-desc font-bold">60μ</span>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -9165,7 +9233,7 @@ app.get('/', (c) => {
                         </div>
                         
                         <div class="mt-4 bg-yellow-50 rounded-lg p-4 border-2 border-yellow-300">
-                            <p class="text-center text-gray-800 font-semibold">
+                            <p class="font-size-desc text-center text-gray-800 font-semibold">
                                 <i class="fas fa-trophy text-yellow-500 mr-2"></i>
                                 총 점수 200μ 이상 달성 시 리워드1 공개
                             </p>
@@ -9181,7 +9249,7 @@ app.get('/', (c) => {
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-blue-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">포스팅 작성</h4>
+                                    <h4 class="font-size-base font-semibold text-gray-800">포스팅 작성</h4>
                                     <p class="font-size-desc text-gray-600">말씀(파란색), 기도(보라색), 활동(초록색) 카테고리로 포스팅을 작성하세요.</p>
                                 </div>
                             </div>
@@ -9195,35 +9263,35 @@ app.get('/', (c) => {
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">소통하기</h4>
+                                    <h4 class="font-size-base font-semibold text-gray-800">소통하기</h4>
                                     <p class="font-size-desc text-gray-600">댓글, 좋아요, 기도하기 기능으로 형제 자매들과 교제하세요.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-red-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">나의 홈페이지</h4>
+                                    <h4 class="font-size-base font-semibold text-gray-800">나의 홈페이지</h4>
                                     <p class="font-size-desc text-gray-600">헤더의 <strong>원형 프사</strong>를 클릭하면 커버, 프로필, 내 포스팅이 표시됩니다.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">메인으로 돌아가기</h4>
+                                    <h4 class="font-size-base font-semibold text-gray-800">메인으로 돌아가기</h4>
                                     <p class="font-size-desc text-gray-600"><strong>로고</strong>를 누르면 QT, 친구 목록, 알림, 프로필 등이 모두 닫히고 전체 메인 화면으로 돌아갑니다.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-indigo-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">헤더 버튼 (QT, 친구, 알림, 관리자, 프사)</h4>
+                                    <h4 class="font-size-base font-semibold text-gray-800">헤더 버튼 (QT, 친구, 알림, 관리자, 프사)</h4>
                                     <p class="font-size-desc text-gray-600">첫 번째 클릭 시 해당 기능이 열립니다. 닫으려면 <strong>로고</strong>를 클릭하세요.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-yellow-500 mt-1 mr-3"></i>
                                 <div>
-                                    <h4 class="font-semibold text-gray-800">놀라운 보상</h4>
+                                    <h4 class="font-size-base font-semibold text-gray-800">놀라운 보상</h4>
                                     <p class="font-size-desc text-gray-600">특정 점수 이상 획득 시 놀라운 리워드가 계속 주어집니다.</p>
                                 </div>
                             </div>
@@ -9268,7 +9336,7 @@ app.get('/', (c) => {
                 </div>
                 
                 <div class="mt-6 text-center">
-                    <button onclick="hideHowToUse(); showSignupModal();" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition font-semibold shadow-lg">
+                    <button onclick="hideHowToUse(); showSignupModal();" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition font-size-base font-semibold shadow-lg">
                         <i class="fas fa-user-plus mr-2"></i><span class="inline sm:inline">지금 가입하고<br class="sm:hidden">시작하기</span>
                     </button>
                 </div>

@@ -4183,6 +4183,26 @@ async function showQtSection(sectionKey) {
     if (panel) await showQtSectionForPanel(panel, sectionKey);
 }
 
+function validateQtContent(text, label) {
+    const t = text.trim();
+    if (t.length < 15) return `${label}이 너무 짧습니다 (최소 15자).`;
+    if (!/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(t)) return `${label}을 한국어로 작성해주세요.`;
+    const freq = {};
+    for (const c of t) freq[c] = (freq[c] || 0) + 1;
+    if (Math.max(...Object.values(freq)) / t.length > 0.4) return `${label}에 의미 있는 내용을 입력해주세요.`;
+    if (t.length >= 16) {
+        const subLen = 8;
+        for (let i = 0; i <= t.length - subLen; i++) {
+            const sub = t.slice(i, i + subLen);
+            if (sub.trim().length < 5) continue;
+            let cnt = 0, pos = 0;
+            while ((pos = t.indexOf(sub, pos)) !== -1) { cnt++; pos++; }
+            if (cnt >= 3) return `${label}에 반복된 내용이 감지되었습니다.`;
+        }
+    }
+    return null;
+}
+
 async function sendQtApplyPostForPanel(panel) {
     if (!currentUserId) {
         showToast('로그인이 필요합니다.', 'error');
@@ -4196,6 +4216,8 @@ async function sendQtApplyPostForPanel(panel) {
         showToast('적용 내용을 입력해주세요.', 'error');
         return;
     }
+    const applyErr = validateQtContent(content, '적용');
+    if (applyErr) { showToast(applyErr, 'error'); return; }
 
     const verseRef = getQtVerseReferenceForPanel(panel);
     const row = qtLogsByDate[qtDate] || {};
@@ -4225,10 +4247,15 @@ async function sendQtApplyPostForPanel(panel) {
             panel.dataset.qtLogId = String(up.data.log.id);
         }
 
-        showToast('QT 적용이 저장되었어요.', 'success');
+        if (up.data && up.data.qt_score_awarded) {
+            showToast(`QT 적용이 저장되었어요. 🎉 오늘 QT 완료! +60μ 획득!`, 'success');
+            if (typeof refreshScores === 'function') refreshScores();
+        } else {
+            showToast('QT 적용이 저장되었어요.', 'success');
+        }
     } catch (e) {
-        console.error(e);
-        showToast('저장에 실패했습니다.', 'error');
+        const msg = e?.response?.data?.error;
+        showToast(msg || '저장에 실패했습니다.', 'error');
     }
 }
 
@@ -4245,9 +4272,17 @@ async function sendQtPrayerPostForPanel(panel) {
         showToast('기도 제목을 입력해주세요.', 'error');
         return;
     }
+    const prayerErr = validateQtContent(content, '마침기도');
+    if (prayerErr) { showToast(prayerErr, 'error'); return; }
 
     const verseRef = getQtVerseReferenceForPanel(panel);
     const row = qtLogsByDate[qtDate] || {};
+
+    // 적용과 동일한 내용인지 클라이언트에서도 체크
+    if (row.apply_text && row.apply_text.trim() === content) {
+        showToast('적용과 마침기도 내용이 동일합니다. 다른 내용으로 작성해주세요.', 'error');
+        return;
+    }
 
     try {
         // 일반 피드에는 올리지 않고 QT 로그만 저장 (과거 연동 포스트 ID는 해제)
@@ -4274,10 +4309,15 @@ async function sendQtPrayerPostForPanel(panel) {
             panel.dataset.qtLogId = String(up.data.log.id);
         }
 
-        showToast('QT 마침기도가 저장되었어요.', 'success');
+        if (up.data && up.data.qt_score_awarded) {
+            showToast(`QT 마침기도가 저장되었어요. 🎉 오늘 QT 완료! +60μ 획득!`, 'success');
+            if (typeof refreshScores === 'function') refreshScores();
+        } else {
+            showToast('QT 마침기도가 저장되었어요.', 'success');
+        }
     } catch (e) {
-        console.error(e);
-        showToast('저장에 실패했습니다.', 'error');
+        const msg = e?.response?.data?.error;
+        showToast(msg || '저장에 실패했습니다.', 'error');
     }
 }
 

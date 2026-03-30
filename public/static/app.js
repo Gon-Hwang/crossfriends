@@ -8345,7 +8345,7 @@ function updateSidebarFriendsList() {
         container.innerHTML = `
             <div class="text-center py-8 text-gray-400">
                 <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
-                <p class="text-sm">친구가 없습니다</p>
+                <p class="font-size-desc">친구가 없습니다</p>
             </div>
         `;
         return;
@@ -8364,12 +8364,12 @@ function updateSidebarFriendsList() {
                 }
             </div>
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-gray-800 text-sm truncate cursor-pointer hover:text-blue-600 transition"
+                <div class="font-bold text-gray-800 font-size-desc truncate cursor-pointer hover:text-blue-600 transition"
                      onclick="filterByUser(${friend.id}, \`${friend.name}\`)"
                      title="${friend.name} 님의 포스팅만 보기">
                     ${friend.name}
                 </div>
-                <div class="text-xs text-gray-500 truncate">
+                <div class="font-size-mini1 text-gray-500 truncate">
                     ${friend.church || friend.denomination || '교회 정보 없음'}
                 </div>
             </div>
@@ -8378,7 +8378,7 @@ function updateSidebarFriendsList() {
                 onclick="openFriendMessenger(${friend.id}, \`${friend.name}\`, \`${friend.avatar_url || ''}\`)"
                 class="w-9 h-9 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
                 title="${friend.name} 님에게 메시지 보내기">
-                <i class="fas fa-comment-dots text-sm"></i>
+                <i class="fas fa-comment-dots font-size-desc"></i>
             </button>
         </div>
     `).join('');
@@ -8450,12 +8450,12 @@ function renderSidebarEngagementUsers(users) {
                 }
             </div>
             <div class="flex-1 min-w-0">
-                <div class="font-bold text-gray-800 text-sm truncate cursor-pointer hover:text-blue-600 transition"
+                <div class="font-bold text-gray-800 font-size-desc truncate cursor-pointer hover:text-blue-600 transition"
                      onclick="filterByUser(${friend.id}, ${nameJs})"
                      title="${escapeHtml(friend.name || '')} 님의 포스팅만 보기">
                     ${escapeHtml(friend.name || '')}
                 </div>
-                <div class="text-xs text-gray-500 truncate">
+                <div class="font-size-mini1 text-gray-500 truncate">
                     ${escapeHtml(friend.church || friend.denomination || '교회 정보 없음')}
                 </div>
             </div>
@@ -8464,7 +8464,7 @@ function renderSidebarEngagementUsers(users) {
                 onclick="openFriendMessenger(${friend.id}, ${nameJs}, ${avatarJs})"
                 class="w-9 h-9 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
                 title="${escapeHtml(friend.name || '')} 님에게 메시지 보내기">
-                <i class="fas fa-comment-dots text-sm"></i>
+                <i class="fas fa-comment-dots font-size-desc"></i>
             </button>
         </div>
     `;
@@ -8859,6 +8859,7 @@ async function sendFriendMessage() {
 
 let notificationsList = [];
 let isNotificationActive = false;
+let isFriendsPanelOpen = false;
 
 function setSocialHeaderButtonActive(kind) {
     const friendsBtns = [document.getElementById('friendsListBtn'), document.getElementById('friendsListBtnMobile')];
@@ -8872,24 +8873,28 @@ function setSocialHeaderButtonActive(kind) {
         if (!b) continue;
         b.classList.toggle('text-blue-600', friendsActive);
         b.classList.toggle('text-gray-500', !friendsActive);
+        b.style.color = friendsActive ? '' : 'rgb(107,114,128)';
     }
     for (let i = 0; i < notifBtns.length; i++) {
         const b = notifBtns[i];
         if (!b) continue;
         b.classList.toggle('text-blue-600', notifActive);
         b.classList.toggle('text-gray-500', !notifActive);
+        b.style.color = notifActive ? '' : 'rgb(107,114,128)';
     }
 }
 
 function showMobileSidebarBackdrop() {
     let backdrop = document.getElementById('mobileSidebarBackdrop');
+    const header = document.getElementById('mainHeader');
+    const headerBottom = header ? header.getBoundingClientRect().bottom : 0;
     if (!backdrop) {
         backdrop = document.createElement('div');
         backdrop.id = 'mobileSidebarBackdrop';
-        backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:49;';
         backdrop.addEventListener('click', closeMobileSidebarPanel);
         document.body.appendChild(backdrop);
     }
+    backdrop.style.cssText = `position:fixed;top:${headerBottom}px;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:49;`;
     backdrop.classList.remove('hidden');
 }
 
@@ -8909,6 +8914,8 @@ function applyMobileSidebarTopPosition(rs) {
 }
 
 function closeMobileSidebarPanel() {
+    isFriendsPanelOpen = false;
+    isNotificationActive = false;
     const rs = document.getElementById('rightSidebar');
     if (rs) {
         rs.classList.add('hidden');
@@ -8928,11 +8935,11 @@ function toggleFriendsList() {
 
     if (window.matchMedia('(max-width: 1023px)').matches) {
         const rs = document.getElementById('rightSidebar');
-        const isOpen = rs && !rs.classList.contains('hidden') && !friendsContent.classList.contains('hidden');
-        if (isOpen) { closeMobileSidebarPanel(); return; }
+        if (isFriendsPanelOpen) { closeMobileSidebarPanel(); return; }
+        isFriendsPanelOpen = true;
+        isNotificationActive = false;
         friendsContent.classList.remove('hidden');
         notificationsContent.classList.add('hidden');
-        isNotificationActive = false;
         if (rs) { rs.classList.remove('hidden', 'reactors-only'); rs.classList.add('mobile-fullscreen-overlay'); applyMobileSidebarTopPosition(rs); }
         showMobileSidebarBackdrop();
         setSocialHeaderButtonActive('friends');
@@ -8955,6 +8962,7 @@ function toggleNotifications() {
         const rs = document.getElementById('rightSidebar');
         const isOpen = rs && !rs.classList.contains('hidden') && !notificationsContent.classList.contains('hidden');
         if (isOpen) { closeMobileSidebarPanel(); return; }
+        isFriendsPanelOpen = false;
         isNotificationActive = true;
         friendsContent.classList.add('hidden');
         notificationsContent.classList.remove('hidden');

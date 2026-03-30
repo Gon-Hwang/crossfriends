@@ -7425,7 +7425,7 @@ app.get('/', (c) => {
                                 <img src="/static/logo-cross.png" alt="" class="logo-cross-img mx-0 sm:mx-0.5 scale-[0.6] sm:scale-90 w-[2.646rem] h-[2.646rem] object-contain rounded-full border border-red-300 p-0.5" />
                                 <span>friends</span>
                             </h1>
-                            <p class="text-[10px] sm:text-sm text-gray-600 -mt-1 sm:mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                            <p class="text-[10px] sm:text-[0.78rem] text-gray-600 -mt-1 sm:mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
                                 <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
                             </p>
                         </div>
@@ -7480,7 +7480,7 @@ app.get('/', (c) => {
                                 <img src="/static/logo-cross.png" alt="" class="logo-cross-img pc-logo-cross-spin mx-0.5 md:mx-1.5 scale-90 md:scale-100 w-[2.646rem] h-[2.646rem] object-contain" />
                                 <span>friends</span>
                             </h1>
-                            <p class="w-full text-[10px] text-gray-600 mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                            <p class="w-full text-[10px] sm:text-[0.78rem] text-gray-600 mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
                                 <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
                             </p>
                         </div>
@@ -7571,7 +7571,7 @@ app.get('/', (c) => {
                                 <!-- Typing Input Area (Initially Hidden) -->
                                 <div id="typingArea" class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-blue-100 hidden">
                                     <div class="mb-3">
-                                        <label class="text-sm sm:text-base font-bold text-gray-800 flex items-center gap-1.5">
+                                        <label class="font-size-desc font-bold text-gray-800 flex items-center gap-1.5">
                                             <i class="fas fa-keyboard text-blue-600 text-base"></i>말씀 타이핑
                                         </label>
                                     </div>
@@ -7633,7 +7633,7 @@ app.get('/', (c) => {
                                 </div>
                             </div>
                             <div id="sermonRewardContent" class="reward-card-content">
-                            <p id="sermonQueueNotice" class="hidden mt-1 mb-2 text-[11px] sm:text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                            <p id="sermonQueueNotice" class="hidden mt-1 mb-2 font-size-mini1 text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                                 준비된 하용조 목사 설교 목록이 모두 소진되었습니다. 새 링크를 보내주세요.
                             </p>
                             <!-- Locked State (< 200 points) — 로그아웃 시에도 동일 UI -->
@@ -7660,8 +7660,8 @@ app.get('/', (c) => {
                             
                             <!-- Unlocked State (≥ 200 points) -->
                             <div id="sermonUnlocked" class="hidden">
-                                <div class="border-l-4 border-red-600 pl-3 py-2 mb-3">
-                                    <p id="sermonTitleText" class="font-size-base font-bold text-red-600 mb-1">
+                                <div class="border-l-4 border-blue-600 pl-3 py-2 mb-3">
+                                    <p id="sermonTitleText" class="font-size-base font-bold text-blue-600 mb-1 break-keep">
                                         나의 사랑 안에 거하라
                                     </p>
                                     <p id="sermonReferenceText" class="font-size-base text-gray-700 mb-1">
@@ -7680,15 +7680,15 @@ app.get('/', (c) => {
                                 <!-- Video Progress Indicator -->
                                 <div id="videoProgressContainer" class="mt-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-3 hidden">
                                     <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm font-semibold text-blue-800">
+                                        <span class="font-size-desc font-semibold text-blue-800">
                                             <i class="fas fa-play-circle mr-1"></i>시청 진행도
                                         </span>
-                                        <span id="videoProgressPercent" class="text-sm font-bold text-blue-600">0%</span>
+                                        <span id="videoProgressPercent" class="font-size-desc font-bold text-blue-600">0%</span>
                                     </div>
                                     <div class="w-full bg-blue-200 rounded-full h-2.5">
                                         <div id="videoProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
                                     </div>
-                                    <p class="text-xs text-blue-700 mt-2">
+                                    <p class="font-size-mini1 text-blue-700 mt-2">
                                         <i class="fas fa-info-circle mr-1"></i>영상을 90% 이상 시청하면 40μ을 받습니다!
                                     </p>
                                 </div>
@@ -7707,7 +7707,7 @@ app.get('/', (c) => {
                                 </h3>
                                 <div class="reward-card-header-right">
                                     <span class="reward-two-badge font-size-mini1 font-bold text-blue-800">🎁 리워드2</span>
-                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
+                                    <i class="fas fa-chevron-up font-size-mini1 reward-card-chevron"></i>
                                 </div>
                             </div>
                             <div id="qtWorshipRewardContent" class="reward-card-content">
@@ -7758,7 +7758,7 @@ app.get('/', (c) => {
                                 </h3>
                                 <div class="reward-card-header-right">
                                     <span class="reward-three-badge font-size-mini1 font-bold text-blue-800">🎁 리워드3</span>
-                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
+                                    <i class="fas fa-chevron-up font-size-mini1 reward-card-chevron"></i>
                                 </div>
                             </div>
                             <div id="qtAlarmRewardContent" class="reward-card-content">
@@ -8227,7 +8227,7 @@ app.get('/', (c) => {
                             <div id="friendsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
                                 <div class="flex items-center">
                                     <i class="fas fa-user-friends text-blue-600 text-xl mr-2"></i>
-                                    <h3 class="text-base font-bold text-gray-800">친구 목록</h3>
+                                    <h3 class="font-size-base font-bold text-gray-800">친구 목록</h3>
                                 </div>
                                 <button onclick="showFriendInviteModal()" class="text-sm px-2.5 py-1.5 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700 transition" title="지인 초대하기">
                                     <i class="fas fa-envelope"></i>

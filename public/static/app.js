@@ -5242,10 +5242,10 @@ function renderEmbeddedOriginalPostCard(post, fieldMode, options = {}) {
                     <div class="flex justify-between items-start">
                         <div>
                             <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${p.user_id}, ${nameJs})" title="클릭하여 ${String(p.user_name || '').replace(/"/g, '&quot;')} 님의 포스팅만 보기">${p.user_name || ''}</h4>
-                            <p class="text-sm text-gray-500">${p.user_church || ''}</p>
+                            <p class="font-size-desc text-gray-500">${p.user_church || ''}</p>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <p class="text-xs text-gray-500">${formatDate(p.created_at)}</p>
+                            <p class="font-size-mini1 text-gray-500">${formatDate(p.created_at)}</p>
                         </div>
                     </div>
                     <div class="mt-3">
@@ -5368,29 +5368,29 @@ function renderPostActionsToolbar(post, isLiked) {
     const hasMedia = urls.length > 0 || !!post.video_url;
 
     const expandBtn = hasMedia
-        ? `<button type="button" onclick="openPostMediaExpand(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="미디어 크게 보기"><i class="fas fa-expand text-lg"></i></button>`
-        : `<span class="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-300" title="첨부 미디어 없음"><i class="fas fa-expand text-lg"></i></span>`;
+        ? `<button type="button" onclick="openPostMediaExpand(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="미디어 크게 보기"><i class="fas fa-expand font-size-base"></i></button>`
+        : `<span class="inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-300" title="첨부 미디어 없음"><i class="fas fa-expand font-size-base"></i></span>`;
 
     return `
         <!-- 툴바 A–D 한 줄·고정(스크롤 없음), 간격 유지, 중앙 정렬 -->
         <div class="post-actions-toolbar mt-4 flex w-full flex-nowrap items-center justify-center border-t border-gray-200/90 pt-3 text-gray-700 gap-x-[18px] sm:gap-x-2.5">
             <span class="inline-flex shrink-0 items-center" data-toolbar-group="A">
                 <button type="button" id="post-toolbar-react-${pid}" onclick="${reactionHandler}" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition ${reactIconWrap}" title="${title}">
-                    <i class="${iconClass} text-lg ${activeIconCls}"></i>
+                    <i class="${iconClass} font-size-base ${activeIconCls}"></i>
                 </button>
-                <button type="button" id="post-toolbar-count-react-${pid}" onclick="openPostEngagementPanel('react', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm ${reactCountWrap}">${reactionCount}</button>
+                <button type="button" id="post-toolbar-count-react-${pid}" onclick="openPostEngagementPanel('react', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm ${reactCountWrap}">${reactionCount}</button>
             </span>
             <span class="inline-flex shrink-0 items-center" data-toolbar-group="B">
                 <button type="button" id="post-toolbar-comment-${pid}" onclick="loadComments(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="댓글">
-                    <i class="fas fa-comment text-lg text-gray-700"></i>
+                    <i class="fas fa-comment font-size-base text-gray-700"></i>
                 </button>
-                <button type="button" id="post-toolbar-count-comment-${pid}" onclick="openPostEngagementPanel('comment', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${comments}</button>
+                <button type="button" id="post-toolbar-count-comment-${pid}" onclick="openPostEngagementPanel('comment', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm">${comments}</button>
             </span>
             <span class="inline-flex shrink-0 items-center" data-toolbar-group="C">
                 <button type="button" id="post-toolbar-share-${pid}" onclick="sharePost(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="공유하기">
-                    <i class="fas fa-share text-lg text-gray-700"></i>
+                    <i class="fas fa-share font-size-base text-gray-700"></i>
                 </button>
-                <button type="button" id="post-toolbar-count-share-${pid}" onclick="openPostEngagementPanel('share', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 text-xs font-semibold text-gray-800 shadow-sm">${shares}</button>
+                <button type="button" id="post-toolbar-count-share-${pid}" onclick="openPostEngagementPanel('share', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm">${shares}</button>
             </span>
             <span class="inline-flex shrink-0 items-center justify-center" data-toolbar-group="D">${expandBtn}</span>
         </div>
@@ -6714,7 +6714,7 @@ async function loadComments(postId) {
                                             <button 
                                                 onclick="toggleCommentMenu(${comment.id})"
                                                 class="text-gray-400 hover:text-gray-600 transition">
-                                                <i class="fas fa-ellipsis-v text-sm"></i>
+                                                <i class="fas fa-ellipsis-v font-size-desc"></i>
                                             </button>
                                             <div id="comment-menu-${comment.id}" class="hidden absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1">
                                                 <button 
@@ -7035,7 +7035,7 @@ async function loadPosts() {
             // Background color style
             const backgroundStyle = post.background_color ? `style="background-color: ${post.background_color};"` : '';
             const visibilityBadgeHtml = post.visibility_scope === 'friends'
-                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
+                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-green-100 text-green-700"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
                 : '';
             
             const postCardImageUrlsJson = encodeURIComponent(JSON.stringify(getPostImageUrls(post)));
@@ -7052,38 +7052,38 @@ async function loadPosts() {
                             <div class="flex justify-between items-start">
                                 <div>
                                     <h4 class="font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${post.user_id}, \`${post.user_name}\`)" title="클릭하여 ${post.user_name} 님의 포스팅만 보기">${post.user_name}${visibilityBadgeHtml}</h4>
-                                    <p class="text-sm text-gray-500">${post.user_church || ''}</p>
+                                    <p class="font-size-desc text-gray-500">${post.user_church || ''}</p>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    <p class="text-xs text-gray-500">${formatDate(post.created_at)}</p>
+                                    <p class="font-size-mini1 text-gray-500">${formatDate(post.created_at)}</p>
                                     ${currentUser ? `
                                         <div class="relative">
                                             <button 
                                                 onclick="togglePostMenu(${post.id})"
                                                 class="text-gray-500 hover:text-gray-700 transition p-1" 
                                                 title="더보기">
-                                                <i class="fas fa-ellipsis-v text-sm"></i>
+                                                <i class="fas fa-ellipsis-v font-size-desc"></i>
                                             </button>
                                             <div id="post-menu-${post.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1">
                                                 ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
                                                     <button 
                                                         onclick="editPost(${post.id})"
-                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center text-sm">
+                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center font-size-desc">
                                                         <i class="fas fa-edit text-blue-600 w-5"></i>
                                                         <span class="ml-2">게시물 수정</span>
                                                     </button>
                                                 ` : ''}
-                                                <button 
+                                                <button
                                                     onclick="copyPostLink(${post.id})"
-                                                    class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center text-sm">
+                                                    class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center font-size-desc">
                                                     <i class="fas fa-link text-green-600 w-5"></i>
                                                     <span class="ml-2">링크 복사</span>
                                                 </button>
                                                 ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
                                                     <hr class="my-1">
-                                                    <button 
+                                                    <button
                                                         onclick="deletePost(${post.id})"
-                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center text-sm text-red-600">
+                                                        class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center font-size-desc text-red-600">
                                                         <i class="fas fa-trash-alt w-5"></i>
                                                         <span class="ml-2">게시물 삭제</span>
                                                     </button>
@@ -7206,29 +7206,8 @@ function showToastWithColor(message, backgroundColor) {
     
     // Create toast element
     const toast = document.createElement('div');
-    toast.className = 'toast-notification fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-[10000] transform transition-all duration-300 translate-x-0 border-2';
-    
-    // Set background color to match the post color
-    toast.style.backgroundColor = backgroundColor;
-    
-    // Set text color based on background brightness for better readability
-    // Dark text for light backgrounds, light text for dark backgrounds
-    const isDarkBackground = ['#FCA5A5', '#A7F3D0', '#BAE6FD', '#DDD6FE'].includes(backgroundColor);
-    const textColor = (backgroundColor === '#FFFFFF' || !isDarkBackground) ? '#1F2937' : '#1F2937';
-    toast.style.color = textColor;
-    
-    // Set border color slightly darker than background
-    const borderColors = {
-        '#F87171': '#DC2626',  // 중보 기도 - 빨간색
-        '#F5E398': '#CA8A04',  // 말씀 - 노란색
-        '#F5D4B3': '#EA580C',  // 일상 - 주황색
-        '#B3EDD8': '#059669',  // 사역 - 초록색
-        '#C4E5F8': '#0284C7',  // 찬양 - 하늘색
-        '#E2DBFB': '#7C3AED',  // 교회 - 보라색
-        '#FFFFFF': '#D1D5DB'   // 자유 - 회색
-    };
-    toast.style.borderColor = borderColors[backgroundColor] || '#D1D5DB';
-    
+    toast.className = 'toast-notification fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-[10000] transform transition-all duration-300 translate-x-0 bg-blue-600';
+
     // Add appropriate icon and message
     toast.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
     
@@ -8353,7 +8332,7 @@ function updateSidebarFriendsList() {
         if (friendsContent) friendsContent.classList.add('friends-empty');
         container.innerHTML = `
             <div class="text-center py-8 text-gray-400">
-                <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
+                <i class="fas fa-user-friends font-size-title mb-3 opacity-40"></i>
                 <p class="font-size-desc">친구가 없습니다</p>
             </div>
         `;
@@ -8440,7 +8419,7 @@ function renderSidebarEngagementUsers(users) {
     if (!users || users.length === 0) {
         return `
             <div class="text-center py-8 text-gray-400">
-                <i class="fas fa-user-friends text-4xl mb-3 opacity-40"></i>
+                <i class="fas fa-user-friends font-size-title mb-3 opacity-40"></i>
                 <p class="text-sm">아직 없습니다</p>
             </div>
         `;
@@ -9187,8 +9166,8 @@ function updateSidebarNotificationsList() {
         if (notificationsContent) notificationsContent.classList.add('notifications-empty');
         container.innerHTML = `
             <div class="text-center py-8 text-gray-400">
-                <i class="fas fa-bell text-4xl mb-3 opacity-40"></i>
-                <p class="text-sm">알림이 없습니다</p>
+                <i class="fas fa-bell font-size-title mb-3 opacity-40"></i>
+                <p class="font-size-desc">알림이 없습니다</p>
             </div>
         `;
         // Hide red dot when no notifications
@@ -9211,21 +9190,21 @@ function updateSidebarNotificationsList() {
                         </div>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-800 font-medium mb-1">
+                        <p class="font-size-desc text-gray-800 font-medium mb-1">
                             <span class="font-bold">${notification.from_user_name}</span>님이 친구 제안을 보냈습니다
                         </p>
-                        <p class="text-xs text-gray-500 mb-2">
+                        <p class="font-size-mini1 text-gray-500 mb-2">
                             ${formatNotificationTime(notification.created_at)}
                         </p>
                         <div class="flex space-x-2">
-                            <button 
+                            <button
                                 onclick="acceptFriendRequest(${notification.id})"
-                                class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-semibold">
+                                class="px-3 py-1.5 bg-blue-600 text-white font-size-desc rounded-lg hover:bg-blue-700 transition font-semibold">
                                 수락
                             </button>
-                            <button 
+                            <button
                                 onclick="rejectFriendRequest(${notification.id})"
-                                class="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition font-semibold">
+                                class="px-3 py-1.5 bg-gray-200 text-gray-700 font-size-desc rounded-lg hover:bg-gray-300 transition font-semibold">
                                 삭제
                             </button>
                         </div>
@@ -9249,13 +9228,13 @@ function updateSidebarNotificationsList() {
                         </div>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-800 mb-1">
+                        <p class="font-size-desc text-gray-800 mb-1">
                             <span class="font-bold">${notification.from_user_name}</span>님이 회원님의 게시물에 댓글을 남겼습니다
                         </p>
-                        <p class="text-xs text-gray-500 mb-2">
+                        <p class="font-size-mini1 text-gray-500 mb-2">
                             "${postPreview}"
                         </p>
-                        <p class="text-xs text-gray-400">
+                        <p class="font-size-mini1 text-gray-400">
                             ${formatNotificationTime(notification.created_at)}
                         </p>
                     </div>
@@ -9278,13 +9257,13 @@ function updateSidebarNotificationsList() {
                         </div>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-800 mb-1">
+                        <p class="font-size-desc text-gray-800 mb-1">
                             <span class="font-bold">${notification.from_user_name}</span>님이 회원님의 게시물을 좋아합니다
                         </p>
-                        <p class="text-xs text-gray-500 mb-2">
+                        <p class="font-size-mini1 text-gray-500 mb-2">
                             "${postPreview}"
                         </p>
-                        <p class="text-xs text-gray-400">
+                        <p class="font-size-mini1 text-gray-400">
                             ${formatNotificationTime(notification.created_at)}
                         </p>
                     </div>
@@ -9323,31 +9302,31 @@ function updateSidebarNotificationsList() {
                         </div>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-900 font-semibold mb-0.5">
+                        <p class="font-size-desc text-gray-900 font-semibold mb-0.5">
                             피드백 · <span class="font-bold">${escapeHtml(notification.from_user_name || '회원')}</span>
                         </p>
                         ${previewBlock}
-                        <p class="text-xs text-amber-800 font-medium mt-1.5">
+                        <p class="font-size-mini1 text-amber-800 font-medium mt-1.5">
                             <i class="fas fa-comments mr-0.5"></i>탭하여 메신저에서 전체 보기
                         </p>
-                        <p class="text-xs text-gray-400 mt-1">
+                        <p class="font-size-mini1 text-gray-400 mt-1">
                             ${formatNotificationTime(notification.created_at)}
                         </p>
                     </div>
                 </div>
             `;
         }
-        
+
         return `
             <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition ${notification.is_read ? 'opacity-60' : 'bg-blue-50'}">
                 <div class="flex-shrink-0">
-                    <i class="fas fa-${getNotificationIcon(notification.type)} text-blue-600 text-lg"></i>
+                    <i class="fas fa-${getNotificationIcon(notification.type)} text-blue-600 font-size-base"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm text-gray-800 font-medium">
+                    <p class="font-size-desc text-gray-800 font-medium">
                         ${notification.message || '새 알림이 있습니다'}
                     </p>
-                    <p class="text-xs text-gray-500 mt-1">
+                    <p class="font-size-mini1 text-gray-500 mt-1">
                         ${formatNotificationTime(notification.created_at)}
                     </p>
                 </div>

@@ -7546,7 +7546,7 @@ app.get('/', (c) => {
                                     <i class="fas fa-book-open font-size-title text-blue-600 mr-2"></i>오늘의 성경 구절
                                 </h3>
                                 <div class="reward-card-header-right">
-                                    <span class="basic-reward-badge font-size-mini1 font-bold text-blue-800">🎁 기본 리워드</span>
+                                    <span class="basic-reward-badge font-size-mini1 font-bold text-blue-800"><img src="/static/logo-cross.png" alt="" class="inline-block w-3.5 h-3.5 object-contain rounded-full mr-0.5 align-middle" /> 기본 리워드</span>
                                     <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
                                 </div>
                             </div>
@@ -7628,7 +7628,7 @@ app.get('/', (c) => {
                                     <i class="fas fa-video font-size-title text-blue-600 mr-2"></i>오늘의 설교 말씀
                                 </h3>
                                 <div class="reward-card-header-right">
-                                    <span class="reward-one-badge font-size-mini1 font-bold text-blue-700">🎁 리워드1</span>
+                                    <span class="reward-one-badge font-size-mini1 font-bold text-blue-700"><img src="/static/logo-cross.png" alt="" class="inline-block w-3.5 h-3.5 object-contain rounded-full mr-0.5 align-middle" /> 리워드1</span>
                                     <i class="fas fa-chevron-up text-xs text-blue-600 reward-card-chevron"></i>
                                 </div>
                             </div>
@@ -7706,7 +7706,7 @@ app.get('/', (c) => {
                                     <i class="fas fa-music font-size-title text-blue-600 mr-2"></i>QT 찬양
                                 </h3>
                                 <div class="reward-card-header-right">
-                                    <span class="reward-two-badge font-size-mini1 font-bold text-blue-800">🎁 리워드2</span>
+                                    <span class="reward-two-badge font-size-mini1 font-bold text-blue-800"><img src="/static/logo-cross.png" alt="" class="inline-block w-3.5 h-3.5 object-contain rounded-full mr-0.5 align-middle" /> 리워드2</span>
                                     <i class="fas fa-chevron-up font-size-mini1 reward-card-chevron"></i>
                                 </div>
                             </div>
@@ -7757,7 +7757,7 @@ app.get('/', (c) => {
                                     <i class="fas fa-bell font-size-title text-blue-600 mr-2"></i>QT 예약
                                 </h3>
                                 <div class="reward-card-header-right">
-                                    <span class="reward-three-badge font-size-mini1 font-bold text-blue-800">🎁 리워드3</span>
+                                    <span class="reward-three-badge font-size-mini1 font-bold text-blue-800"><img src="/static/logo-cross.png" alt="" class="inline-block w-3.5 h-3.5 object-contain rounded-full mr-0.5 align-middle" /> 리워드3</span>
                                     <i class="fas fa-chevron-up font-size-mini1 reward-card-chevron"></i>
                                 </div>
                             </div>
@@ -7913,7 +7913,7 @@ app.get('/', (c) => {
                     <div id="newPostCard" class="bg-white rounded-xl sm:rounded-xl shadow-md border-2 border-gray-300 p-4 sm:p-6 transition-all duration-300 hover:shadow-lg hover:border-gray-500">
                         <div class="flex items-start space-x-2 sm:space-x-4">
                             <div class="admin-badge-container">
-                                <div id="newPostAvatar" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs sm:text-base flex-shrink-0 cursor-pointer hover:ring-2 sm:hover:ring-4 hover:ring-blue-300 transition" onclick="showMyProfile()">
+                                <div id="newPostAvatar" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white font-size-mini1 sm:font-size-base flex-shrink-0 cursor-pointer hover:ring-2 sm:hover:ring-4 hover:ring-blue-300 transition" onclick="showMyProfile()">
                                     <i class="fas fa-user"></i>
                                 </div>
                                 <!-- Badge will be added here dynamically -->
@@ -7937,7 +7937,7 @@ app.get('/', (c) => {
                                                 style="background-color: #F87171;"
                                                 title="중보">
                                             </button>
-                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">중보</span>
+                                            <span class="font-size-mini1 font-medium text-gray-600">중보</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button
@@ -7946,7 +7946,7 @@ app.get('/', (c) => {
                                                 style="background-color: #FED7B0;"
                                                 title="일상">
                                             </button>
-                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">일상</span>
+                                            <span class="font-size-mini1 font-medium text-gray-600">일상</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button
@@ -7955,7 +7955,7 @@ app.get('/', (c) => {
                                                 style="background-color: #FEF08A;"
                                                 title="말씀">
                                             </button>
-                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">말씀</span>
+                                            <span class="font-size-mini1 font-medium text-gray-600">말씀</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button
@@ -7964,7 +7964,7 @@ app.get('/', (c) => {
                                                 style="background-color: #BBF7D0;"
                                                 title="사역">
                                             </button>
-                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">사역</span>
+                                            <span class="font-size-mini1 font-medium text-gray-600">사역</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button
@@ -7973,7 +7973,7 @@ app.get('/', (c) => {
                                                 style="background-color: #BAE6FD;"
                                                 title="찬양">
                                             </button>
-                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">찬양</span>
+                                            <span class="font-size-mini1 font-medium text-gray-600">찬양</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button
@@ -7982,7 +7982,7 @@ app.get('/', (c) => {
                                                 style="background-color: #DDD6FE;"
                                                 title="교회">
                                             </button>
-                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">교회</span>
+                                            <span class="font-size-mini1 font-medium text-gray-600">교회</span>
                                         </div>
                                         <div class="new-post-color-item flex flex-col items-center space-y-0.5 sm:space-y-1">
                                             <button
@@ -7990,7 +7990,7 @@ app.get('/', (c) => {
                                                 class="color-selector-btn w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-white border-2 border-gray-300 hover:border-gray-500 transition-all"
                                                 title="자유">
                                             </button>
-                                            <span class="text-[10px] sm:text-xs font-medium text-gray-600">자유</span>
+                                            <span class="font-size-mini1 font-medium text-gray-600">자유</span>
                                         </div>
                                     </div>
                                 </div>
@@ -8004,11 +8004,11 @@ app.get('/', (c) => {
                                                     <i class="fas fa-images text-sm"></i>
                                                 </span>
                                                 <div class="min-w-0 leading-tight">
-                                                    <div class="text-xs font-bold text-gray-800">첨부 사진</div>
-                                                    <div id="postImagePreviewCount" class="text-[10px] font-semibold text-blue-600">0/4</div>
+                                                    <div class="font-size-mini1 font-bold text-gray-800">첨부 사진</div>
+                                                    <div id="postImagePreviewCount" class="font-size-mini1 font-semibold text-blue-600">0/4</div>
                                                 </div>
                                             </div>
-                                            <button type="button" onclick="removePostImage()" class="flex-shrink-0 rounded-lg px-2 py-1 text-[10px] font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-600" title="모든 사진 제거">
+                                            <button type="button" onclick="removePostImage()" class="flex-shrink-0 rounded-lg px-2 py-1 font-size-mini1 font-medium text-gray-500 transition hover:bg-red-50 hover:text-red-600" title="모든 사진 제거">
                                                 전체 삭제
                                             </button>
                                         </div>
@@ -8037,15 +8037,15 @@ app.get('/', (c) => {
                                 <div id="uploadProgressContainer" class="hidden mt-3">
                                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="text-sm font-medium text-blue-900">
+                                            <span class="font-size-desc font-medium text-blue-900">
                                                 <i class="fas fa-cloud-upload-alt mr-2"></i><span id="uploadStatus">업로드 중...</span>
                                             </span>
-                                            <span id="uploadPercent" class="text-sm font-bold text-blue-600">0%</span>
+                                            <span id="uploadPercent" class="font-size-desc font-bold text-blue-600">0%</span>
                                         </div>
                                         <div class="w-full bg-blue-200 rounded-full h-2.5">
                                             <div id="uploadProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
                                         </div>
-                                        <p class="text-xs text-blue-700 mt-2">
+                                        <p class="font-size-mini1 text-blue-700 mt-2">
                                             <i class="fas fa-info-circle mr-1"></i>동영상을 업로드하는 중입니다. 잠시만 기다려주세요.
                                         </p>
                                     </div>
@@ -8084,14 +8084,14 @@ app.get('/', (c) => {
                                     </div>
                                     <div class="flex items-center space-x-3">
                                         <div class="flex flex-col items-end w-[108px] sm:w-[126px]">
-                                            <select id="newPostVisibility" class="w-full h-7 px-2 border border-gray-300 rounded-md text-[10px] sm:text-xs font-medium text-gray-600 leading-none bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            <select id="newPostVisibility" class="w-full h-7 px-2 border border-gray-300 rounded-md font-size-mini1 font-medium text-gray-600 leading-none bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                                 <option value="public">전체 공개</option>
                                                 <option value="friends">친구에게만</option>
                                             </select>
                                             <button 
                                                 id="createPostBtn"
                                                 onclick="createPost()"
-                                                class="mt-2 w-full h-7 sm:h-8 bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-xs sm:text-sm whitespace-nowrap leading-none">
+                                                class="mt-2 w-full h-7 sm:h-8 bg-blue-600 text-white px-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center font-size-desc whitespace-nowrap leading-none">
                                                 <i class="fas fa-paper-plane mr-2"></i>게시하기
                                             </button>
                                         </div>
@@ -8226,10 +8226,10 @@ app.get('/', (c) => {
                             <!-- Header -->
                             <div id="friendsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
                                 <div class="flex items-center">
-                                    <i class="fas fa-user-friends text-blue-600 text-xl mr-2"></i>
+                                    <i class="fas fa-user-friends text-blue-600 font-size-title mr-2"></i>
                                     <h3 class="font-size-base font-bold text-gray-800">친구 목록</h3>
                                 </div>
-                                <button onclick="showFriendInviteModal()" class="text-sm px-2.5 py-1.5 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700 transition" title="지인 초대하기">
+                                <button onclick="showFriendInviteModal()" class="font-size-desc px-2.5 py-1.5 flex items-center justify-center rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700 transition" title="지인 초대하기">
                                     <i class="fas fa-envelope"></i>
                                 </button>
                             </div>
@@ -8238,8 +8238,8 @@ app.get('/', (c) => {
                             <div id="sidebarFriendsList" class="space-y-3">
                                 <!-- Friends will be loaded here dynamically -->
                                 <div class="text-center py-4 text-gray-400">
-                                    <i class="fas fa-user-friends text-3xl mb-2 opacity-40"></i>
-                                    <p class="text-sm">친구가 없습니다</p>
+                                    <i class="fas fa-user-friends font-size-title mb-2 opacity-40"></i>
+                                    <p class="font-size-desc">친구가 없습니다</p>
                                 </div>
                             </div>
                         </div>
@@ -8251,14 +8251,14 @@ app.get('/', (c) => {
                             </button>
                             <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200 shrink-0 pr-12">
                                 <div class="flex items-center">
-                                    <i id="reactorsPanelIcon" class="fas fa-users text-blue-600 text-xl mr-2"></i>
-                                    <h3 id="reactorsPanelTitle" class="text-base font-bold text-gray-800">반응한 사람</h3>
+                                    <i id="reactorsPanelIcon" class="fas fa-users text-blue-600 font-size-title mr-2"></i>
+                                    <h3 id="reactorsPanelTitle" class="font-size-base font-bold text-gray-800">반응한 사람</h3>
                                 </div>
                             </div>
                             <div id="sidebarReactorsList" class="space-y-3 flex-1 min-h-0 overflow-y-auto">
                                 <div class="text-center py-4 text-gray-400">
-                                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-                                    <p class="text-sm">불러오는 중...</p>
+                                    <i class="fas fa-spinner fa-spin font-size-title mb-2"></i>
+                                    <p class="font-size-desc">불러오는 중...</p>
                                 </div>
                             </div>
                         </div>
@@ -8268,10 +8268,10 @@ app.get('/', (c) => {
                             <!-- Header -->
                             <div id="notificationsPanelHeader" class="flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200">
                                 <div class="flex items-center">
-                                    <i class="fas fa-bell text-blue-600 text-xl mr-2"></i>
-                                    <h3 class="text-base font-bold text-gray-800">알림</h3>
+                                    <i class="fas fa-bell text-blue-600 font-size-title mr-2"></i>
+                                    <h3 class="font-size-base font-bold text-gray-800">알림</h3>
                                 </div>
-                                <button type="button" id="pushNotifyBtn" class="text-sm px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700 transition cursor-pointer" title="푸시 꺼짐 (클릭하여 켜기)">
+                                <button type="button" id="pushNotifyBtn" class="font-size-desc px-2.5 py-1.5 rounded-lg border border-gray-300 text-gray-600 bg-white hover:bg-gray-50 hover:border-blue-300 hover:text-blue-700 transition cursor-pointer" title="푸시 꺼짐 (클릭하여 켜기)">
                                     <i class="fas fa-bell-slash"></i>
                                 </button>
                             </div>
@@ -8280,8 +8280,8 @@ app.get('/', (c) => {
                             <div id="sidebarNotificationsList" class="space-y-3">
                                 <!-- Notifications will be loaded here dynamically -->
                                 <div class="text-center py-4 text-gray-400">
-                                    <i class="fas fa-bell text-3xl mb-2 opacity-40"></i>
-                                    <p class="text-sm">알림이 없습니다</p>
+                                    <i class="fas fa-bell font-size-title mb-2 opacity-40"></i>
+                                    <p class="font-size-desc">알림이 없습니다</p>
                                 </div>
                             </div>
                         </div>

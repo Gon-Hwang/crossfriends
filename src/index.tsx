@@ -602,7 +602,7 @@ app.get('/users/:id', async (c) => {
   const careerHTML = (showCareerInfo && careers.length > 0) ? careers.map((career: any) => `
     <div class="bg-gray-50 p-3 rounded">
       <div class="font-semibold">${career.company}</div>
-      <div class="text-sm text-gray-600">${career.position} • ${career.period}</div>
+      <div class="font-size-desc text-gray-600">${career.position} • ${career.period}</div>
     </div>
   `).join('') : ''
   
@@ -610,7 +610,7 @@ app.get('/users/:id', async (c) => {
   const phdHTML = (showEducationInfo && user.phd) ? `<div><span class="font-semibold">박사:</span> ${user.phd} ${user.phd_major ? '(' + user.phd_major + ')' : ''}</div>` : ''
   const careerSectionHTML = (showCareerInfo && careers.length > 0) ? `
     <div class="border-b pb-4">
-      <h2 class="text-xl font-semibold mb-3 text-gray-700">
+      <h2 class="font-size-title font-semibold mb-3 text-gray-700">
         <i class="fas fa-briefcase mr-2"></i>직업 정보
       </h2>
       <div class="space-y-2">${careerHTML}</div>
@@ -637,7 +637,7 @@ app.get('/users/:id', async (c) => {
             <div class="bg-white rounded-lg shadow-lg p-8">
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-6">
-                    <h1 class="text-3xl font-bold text-gray-800">${ user.name}</h1>
+                    <h1 class="font-size-title font-bold text-gray-800">${ user.name}</h1>
                     <button onclick="window.close()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg">
                         <i class="fas fa-times mr-2"></i>닫기
                     </button>
@@ -647,14 +647,14 @@ app.get('/users/:id', async (c) => {
                 <div class="space-y-4">
                 ${showBasicInfo ? `
                     <div class="border-b pb-4">
-                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                        <h2 class="font-size-title font-semibold mb-3 text-gray-700">
                             <i class="fas fa-user mr-2"></i>기본 정보
                         </h2>
                         <div class="grid grid-cols-2 gap-4">
                             <div><span class="font-semibold">이메일:</span> ${ user.email}</div>
                             <div><span class="font-semibold">성별:</span> ${ user.gender || '-'}</div>
                             <div><span class="font-semibold">결혼 여부:</span> ${ user.marital_status === 'single' ? '미혼' : user.marital_status === 'married' ? '기혼' : '-'}</div>
-                            <div><span class="font-semibold">역할:</span> <span class="px-2 py-1 rounded-full text-xs ${ user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">${ user.role}</span></div>
+                            <div><span class="font-semibold">역할:</span> <span class="px-2 py-1 rounded-full font-size-mini1 ${ user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">${ user.role}</span></div>
                         </div>
                     </div>
                 ` : `
@@ -668,7 +668,7 @@ app.get('/users/:id', async (c) => {
                     <!-- Church Info -->
                     ${showChurchInfo ? `
                     <div class="border-b pb-4">
-                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                        <h2 class="font-size-title font-semibold mb-3 text-gray-700">
                             <i class="fas fa-church mr-2"></i>교회 정보
                         </h2>
                         <div class="grid grid-cols-2 gap-4">
@@ -690,7 +690,7 @@ app.get('/users/:id', async (c) => {
                     <!-- Education Info -->
                     ${showEducationInfo ? `
                     <div class="border-b pb-4">
-                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                        <h2 class="font-size-title font-semibold mb-3 text-gray-700">
                             <i class="fas fa-graduation-cap mr-2"></i>학교 정보
                         </h2>
                         <div class="space-y-2">
@@ -722,29 +722,29 @@ app.get('/users/:id', async (c) => {
                     <!-- Scores -->
                     ${showScores ? `
                     <div class="border-b pb-4">
-                        <h2 class="text-xl font-semibold mb-3 text-gray-700">
+                        <h2 class="font-size-title font-semibold mb-3 text-gray-700">
                             <i class="fas fa-chart-line mr-2"></i>점수
                         </h2>
                         
                         <!-- All Scores in Compact Single Line -->
-                        <div class="flex items-center justify-center space-x-4 text-xs">
+                        <div class="flex items-center justify-center space-x-4 font-size-mini1">
                             <div class="flex items-center space-x-1">
-                                <i class="fas fa-book-bible text-yellow-600 text-xs"></i>
+                                <i class="fas fa-book-bible text-yellow-600 font-size-mini1"></i>
                                 <span class="font-semibold text-yellow-600">${ user.scripture_score || 0}</span>
                             </div>
                             <span class="text-gray-300">|</span>
                             <div class="flex items-center space-x-1">
-                                <i class="fas fa-praying-hands text-blue-600 text-xs"></i>
+                                <i class="fas fa-praying-hands text-blue-600 font-size-mini1"></i>
                                 <span class="font-semibold text-blue-600">${ user.prayer_score || 0}</span>
                             </div>
                             <span class="text-gray-300">|</span>
                             <div class="flex items-center space-x-1">
-                                <i class="fas fa-heart text-green-600 text-xs"></i>
+                                <i class="fas fa-heart text-green-600 font-size-mini1"></i>
                                 <span class="font-semibold text-green-600">${ user.activity_score || 0}</span>
                             </div>
                             <span class="text-gray-300">|</span>
                             <div class="flex items-center space-x-1">
-                                <i class="fas fa-trophy text-purple-600 text-xs"></i>
+                                <i class="fas fa-trophy text-purple-600 font-size-mini1"></i>
                                 <span class="font-semibold text-purple-600">${ ((user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0))}</span>
                             </div>
                         </div>
@@ -760,7 +760,7 @@ app.get('/users/:id', async (c) => {
                     
                     <!-- Dates -->
                     <div>
-                        <div class="text-sm text-gray-500">
+                        <div class="font-size-desc text-gray-500">
                             <div>가입일: ${ new Date(user.created_at).toLocaleDateString('ko-KR')}</div>
                         </div>
                     </div>
@@ -927,7 +927,7 @@ app.post('/api/verify-email', async (c) => {
 app.get('/verify-email', (c) => {
   const token = c.req.query('token') || ''
   const safeToken = /^[a-f0-9]{64}$/.test(token) ? token : ''
-  if (!safeToken) return c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>이메일 인증 - CROSSfriends</title><script src="https://cdn.tailwindcss.com"></script><link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"></head><body class="bg-gray-100 min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center"><i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i><h1 class="text-xl font-bold text-gray-800 mb-2">유효하지 않은 링크</h1><p class="text-gray-600 mb-6">인증 링크가 없거나 만료되었습니다. 회원가입을 다시 진행해주세요.</p><a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a></div></body></html>`)
+  if (!safeToken) return c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>이메일 인증 - CROSSfriends</title><script src="https://cdn.tailwindcss.com"></script><link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"></head><body class="bg-gray-100 min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center"><i class="fas fa-exclamation-circle text-red-500 font-size-title mb-4"></i><h1 class="font-size-title font-bold text-gray-800 mb-2">유효하지 않은 링크</h1><p class="text-gray-600 mb-6">인증 링크가 없거나 만료되었습니다. 회원가입을 다시 진행해주세요.</p><a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a></div></body></html>`)
   return c.html(`<!DOCTYPE html>
 <html lang="ko">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -939,19 +939,19 @@ app.get('/verify-email', (c) => {
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
     <div id="loading" class="py-8">
-      <i class="fas fa-spinner fa-spin text-blue-600 text-4xl mb-4"></i>
-      <h1 class="text-xl font-bold text-gray-800 mb-2">이메일 인증 중...</h1>
-      <p class="text-gray-600 text-sm">잠시만 기다려주세요.</p>
+      <i class="fas fa-spinner fa-spin text-blue-600 font-size-title mb-4"></i>
+      <h1 class="font-size-title font-bold text-gray-800 mb-2">이메일 인증 중...</h1>
+      <p class="text-gray-600 font-size-desc">잠시만 기다려주세요.</p>
     </div>
     <div id="success" class="hidden py-8">
-      <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
-      <h1 class="text-xl font-bold text-gray-800 mb-2">회원가입 완료!</h1>
+      <i class="fas fa-check-circle text-green-500 font-size-title mb-4"></i>
+      <h1 class="font-size-title font-bold text-gray-800 mb-2">회원가입 완료!</h1>
       <p class="text-gray-600 mb-6">이제 로그인해주세요.</p>
       <a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">로그인하기</a>
     </div>
     <div id="error" class="hidden py-8">
-      <i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i>
-      <h1 class="text-xl font-bold text-gray-800 mb-2">인증 실패</h1>
+      <i class="fas fa-exclamation-circle text-red-500 font-size-title mb-4"></i>
+      <h1 class="font-size-title font-bold text-gray-800 mb-2">인증 실패</h1>
       <p id="errorMsg" class="text-gray-600 mb-6"></p>
       <a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a>
     </div>
@@ -1065,7 +1065,7 @@ app.post('/api/password-reset', async (c) => {
 app.get('/reset-password', (c) => {
   const token = c.req.query('token') || ''
   const safeToken = /^[a-f0-9]{64}$/.test(token) ? token : ''
-  if (!safeToken) return c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>비밀번호 재설정 - CROSSfriends</title><script src="https://cdn.tailwindcss.com"></script><link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"></head><body class="bg-gray-100 min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center"><i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i><h1 class="text-xl font-bold text-gray-800 mb-2">유효하지 않은 링크</h1><p class="text-gray-600 mb-6">비밀번호 재설정 링크가 없거나 만료되었습니다.</p><a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a></div></body></html>`)
+  if (!safeToken) return c.html(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>비밀번호 재설정 - CROSSfriends</title><script src="https://cdn.tailwindcss.com"></script><link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"></head><body class="bg-gray-100 min-h-screen flex items-center justify-center p-4"><div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center"><i class="fas fa-exclamation-circle text-red-500 font-size-title mb-4"></i><h1 class="font-size-title font-bold text-gray-800 mb-2">유효하지 않은 링크</h1><p class="text-gray-600 mb-6">비밀번호 재설정 링크가 없거나 만료되었습니다.</p><a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">홈으로</a></div></body></html>`)
   return c.html(`<!DOCTYPE html>
 <html lang="ko">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -1076,15 +1076,15 @@ app.get('/reset-password', (c) => {
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
-    <h1 class="text-xl font-bold text-gray-800 mb-2"><i class="fas fa-key mr-2"></i>새 비밀번호 설정</h1>
-    <p class="text-gray-600 text-sm mb-4">회원가입과 동일한 비밀번호 규칙을 적용합니다. 이전 비밀번호는 사용할 수 없습니다.</p>
+    <h1 class="font-size-title font-bold text-gray-800 mb-2"><i class="fas fa-key mr-2"></i>새 비밀번호 설정</h1>
+    <p class="text-gray-600 font-size-desc mb-4">회원가입과 동일한 비밀번호 규칙을 적용합니다. 이전 비밀번호는 사용할 수 없습니다.</p>
     <form id="resetForm" onsubmit="return submitReset(event)">
       <input type="hidden" id="token" value="${safeToken}">
       <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
+        <label class="block font-size-desc font-medium text-gray-700 mb-1">새 비밀번호</label>
         <input type="password" id="newPassword" required minlength="8" placeholder="영문 소문자 + 숫자 혼합 8자"
           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" oninput="validateResetPw()">
-        <div id="resetPwRules" class="mt-1.5 space-y-0.5 text-xs hidden">
+        <div id="resetPwRules" class="mt-1.5 space-y-0.5 font-size-mini1 hidden">
           <div id="r-length" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>8자 이상</div>
           <div id="r-lower" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>영문 소문자 3개 이상</div>
           <div id="r-digit" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>숫자 3개 이상</div>
@@ -1092,10 +1092,10 @@ app.get('/reset-password', (c) => {
         </div>
       </div>
       <div class="mb-6">
-        <label class="block text-sm font-medium text-gray-700 mb-1">비밀번호 확인</label>
+        <label class="block font-size-desc font-medium text-gray-700 mb-1">비밀번호 확인</label>
         <input type="password" id="newPasswordConfirm" required minlength="8" placeholder="비밀번호 재입력"
           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" oninput="validateResetPw()">
-        <p id="matchMsg" class="text-sm mt-1 hidden"></p>
+        <p id="matchMsg" class="font-size-desc mt-1 hidden"></p>
       </div>
       <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium">비밀번호 변경</button>
     </form>
@@ -1120,7 +1120,7 @@ app.get('/reset-password', (c) => {
         rules.classList.remove('hidden');
         ['length','lower','digit','noUpper'].forEach(id => {
           const el = document.getElementById('r-' + id);
-          el.className = 'flex items-center text-xs ' + (errs.includes(id) ? 'text-gray-400' : 'text-green-600');
+          el.className = 'flex items-center font-size-mini1 ' + (errs.includes(id) ? 'text-gray-400' : 'text-green-600');
           el.querySelector('i').className = errs.includes(id) ? 'fas fa-circle text-[5px] mr-1.5' : 'fas fa-check-circle text-green-500 mr-1.5';
         });
       } else rules.classList.add('hidden');
@@ -1128,7 +1128,7 @@ app.get('/reset-password', (c) => {
       if (confirm.length > 0) {
         msg.classList.remove('hidden');
         msg.textContent = pw === confirm ? '✓ 비밀번호가 일치합니다' : '✗ 비밀번호가 일치하지 않습니다';
-        msg.className = 'text-sm mt-1 ' + (pw === confirm ? 'text-green-600' : 'text-red-500');
+        msg.className = 'font-size-desc mt-1 ' + (pw === confirm ? 'text-green-600' : 'text-red-500');
       } else msg.classList.add('hidden');
     }
     async function submitReset(e) {
@@ -5083,7 +5083,7 @@ app.get('/admin', (c) => {
         <nav class="bg-red-600 text-white shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-4">
                 <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-bold">
+                    <h1 class="font-size-title font-bold">
                         <i class="fas fa-shield-alt mr-2"></i>관리자 패널
                     </h1>
                     <a href="/" onclick="sessionStorage.setItem('suppressLoginCelebration','1')" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
@@ -5099,95 +5099,95 @@ app.get('/admin', (c) => {
                 <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-blue-100 text-sm">총 회원</p>
-                            <p class="text-3xl font-bold" id="totalUsers">0</p>
+                            <p class="text-blue-100 font-size-desc">총 회원</p>
+                            <p class="font-size-title font-bold" id="totalUsers">0</p>
                         </div>
-                        <i class="fas fa-users text-4xl opacity-50"></i>
+                        <i class="fas fa-users font-size-title opacity-50"></i>
                     </div>
                 </div>
                 
                 <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-blue-100 text-sm">총 게시물</p>
-                            <p class="text-3xl font-bold" id="totalPosts">0</p>
+                            <p class="text-blue-100 font-size-desc">총 게시물</p>
+                            <p class="font-size-title font-bold" id="totalPosts">0</p>
                         </div>
-                        <i class="fas fa-file-alt text-4xl opacity-50"></i>
+                        <i class="fas fa-file-alt font-size-title opacity-50"></i>
                     </div>
                 </div>
                 
                 <div class="bg-purple-500 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-purple-100 text-sm">총 댓글</p>
-                            <p class="text-3xl font-bold" id="totalComments">0</p>
+                            <p class="text-purple-100 font-size-desc">총 댓글</p>
+                            <p class="font-size-title font-bold" id="totalComments">0</p>
                         </div>
-                        <i class="fas fa-comments text-4xl opacity-50"></i>
+                        <i class="fas fa-comments font-size-title opacity-50"></i>
                     </div>
                 </div>
                 <div class="bg-pink-500 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-pink-100 text-sm">총 친구 관계</p>
-                            <p class="text-3xl font-bold" id="totalFriendships">0</p>
+                            <p class="text-pink-100 font-size-desc">총 친구 관계</p>
+                            <p class="font-size-title font-bold" id="totalFriendships">0</p>
                         </div>
-                        <i class="fas fa-user-friends text-4xl opacity-50"></i>
+                        <i class="fas fa-user-friends font-size-title opacity-50"></i>
                     </div>
                 </div>
             </div>
 
             <!-- Post Type Statistics -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <h2 class="font-size-title font-bold text-gray-800 mb-6">
                     <i class="fas fa-chart-pie text-blue-600 mr-2"></i>포스팅 유형별 통계
                 </h2>
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
                     <!-- 중보 기도 -->
                     <div class="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-red-600 text-2xl font-bold mb-1" id="prayerPostCount">0</div>
-                        <div class="text-red-700 text-sm font-medium">중보 기도</div>
+                        <div class="text-red-600 font-size-title font-bold mb-1" id="prayerPostCount">0</div>
+                        <div class="text-red-700 font-size-desc font-medium">중보 기도</div>
                         <div class="w-8 h-8 bg-red-200 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 말씀 -->
                     <div class="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-yellow-600 text-2xl font-bold mb-1" id="versePostCount">0</div>
-                        <div class="text-yellow-700 text-sm font-medium">말씀</div>
+                        <div class="text-yellow-600 font-size-title font-bold mb-1" id="versePostCount">0</div>
+                        <div class="text-yellow-700 font-size-desc font-medium">말씀</div>
                         <div class="w-8 h-8 bg-yellow-200 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 일상 -->
                     <div class="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-orange-600 text-2xl font-bold mb-1" id="dailyPostCount">0</div>
-                        <div class="text-orange-700 text-sm font-medium">일상</div>
+                        <div class="text-orange-600 font-size-title font-bold mb-1" id="dailyPostCount">0</div>
+                        <div class="text-orange-700 font-size-desc font-medium">일상</div>
                         <div class="w-8 h-8 bg-orange-200 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 사역 -->
                     <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-green-600 text-2xl font-bold mb-1" id="ministryPostCount">0</div>
-                        <div class="text-green-700 text-sm font-medium">사역</div>
+                        <div class="text-green-600 font-size-title font-bold mb-1" id="ministryPostCount">0</div>
+                        <div class="text-green-700 font-size-desc font-medium">사역</div>
                         <div class="w-8 h-8 bg-green-200 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 찬양 -->
                     <div class="bg-sky-50 border-2 border-sky-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-sky-600 text-2xl font-bold mb-1" id="praisePostCount">0</div>
-                        <div class="text-sky-700 text-sm font-medium">찬양</div>
+                        <div class="text-sky-600 font-size-title font-bold mb-1" id="praisePostCount">0</div>
+                        <div class="text-sky-700 font-size-desc font-medium">찬양</div>
                         <div class="w-8 h-8 bg-sky-200 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 교회 -->
                     <div class="bg-violet-50 border-2 border-violet-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-violet-600 text-2xl font-bold mb-1" id="churchPostCount">0</div>
-                        <div class="text-violet-700 text-sm font-medium">교회</div>
+                        <div class="text-violet-600 font-size-title font-bold mb-1" id="churchPostCount">0</div>
+                        <div class="text-violet-700 font-size-desc font-medium">교회</div>
                         <div class="w-8 h-8 bg-violet-200 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 자유 -->
                     <div class="bg-white border-2 border-gray-300 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-gray-700 text-2xl font-bold mb-1" id="freePostCount">0</div>
-                        <div class="text-gray-600 text-sm font-medium">자유</div>
+                        <div class="text-gray-700 font-size-title font-bold mb-1" id="freePostCount">0</div>
+                        <div class="text-gray-600 font-size-desc font-medium">자유</div>
                         <div class="w-8 h-8 bg-white border-2 border-gray-300 rounded-full mx-auto mt-2"></div>
                     </div>
                 </div>
@@ -5196,7 +5196,7 @@ app.get('/admin', (c) => {
             <!-- Users Table -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-users text-red-600 mr-2"></i>회원 관리
                     </h2>
                     <div class="flex space-x-2">
@@ -5215,34 +5215,34 @@ app.get('/admin', (c) => {
                     <table class="w-full">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="id" onclick="sortUsers('id')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="id" onclick="sortUsers('id')">
                                     ID
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">이메일</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="name" onclick="sortUsers('name')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">이메일</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="name" onclick="sortUsers('name')">
                                     이름 (가나다순)
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">교회</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">역할</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="post_count" onclick="sortUsers('post_count')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">교회</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">역할</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="post_count" onclick="sortUsers('post_count')">
                                     게시물
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="scripture_score" onclick="sortUsers('scripture_score')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="scripture_score" onclick="sortUsers('scripture_score')">
                                     성경점수
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="prayer_score" onclick="sortUsers('prayer_score')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="prayer_score" onclick="sortUsers('prayer_score')">
                                     기도점수
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="activity_score" onclick="sortUsers('activity_score')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="activity_score" onclick="sortUsers('activity_score')">
                                     활동점수
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="ministry_score" onclick="sortUsers('ministry_score')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="ministry_score" onclick="sortUsers('ministry_score')">
                                     종합점수
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="created_at" onclick="sortUsers('created_at')">
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600 cursor-pointer hover:bg-gray-200 transition" data-sort="created_at" onclick="sortUsers('created_at')">
                                     가입일
                                 </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">작업</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody" class="divide-y divide-gray-200">
@@ -5255,7 +5255,7 @@ app.get('/admin', (c) => {
             <!-- Friendships Management -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-user-friends text-purple-600 mr-2"></i>친구 관계 관리
                     </h2>
                     <div class="flex space-x-2">
@@ -5274,12 +5274,12 @@ app.get('/admin', (c) => {
                     <table class="w-full">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">ID</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">친구 신청</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">친구 승인</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">상태</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">생성일</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">ID</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">친구 신청</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">친구 승인</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">상태</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">생성일</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">작업</th>
                             </tr>
                         </thead>
                         <tbody id="friendshipsTableBody" class="divide-y divide-gray-200">
@@ -5294,15 +5294,15 @@ app.get('/admin', (c) => {
                 <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
                     <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex justify-between items-center">
                         <div>
-                            <h2 class="text-2xl font-bold" id="graphTitle">친구 네트워크</h2>
-                            <p class="text-blue-100 text-sm mt-1" id="graphSubtitle"></p>
+                            <h2 class="font-size-title font-bold" id="graphTitle">친구 네트워크</h2>
+                            <p class="text-blue-100 font-size-desc mt-1" id="graphSubtitle"></p>
                         </div>
                         <button onclick="closeGraphModal()" class="text-white hover:text-gray-200 transition">
-                            <i class="fas fa-times text-2xl"></i>
+                            <i class="fas fa-times font-size-title"></i>
                         </button>
                     </div>
                     <div class="p-6 overflow-auto" style="max-height: calc(90vh - 120px);">
-                        <div class="mb-4 flex gap-4 text-sm">
+                        <div class="mb-4 flex gap-4 font-size-desc">
                             <div class="flex items-center gap-2">
                                 <div class="w-4 h-4 rounded-full bg-blue-500"></div>
                                 <span>선택된 사용자</span>
@@ -5330,26 +5330,26 @@ app.get('/admin', (c) => {
             <!-- Posts Management -->
             <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-newspaper text-blue-600 mr-2"></i>게시물 관리
                     </h2>
                     <div class="flex flex-wrap gap-2">
-                        <button onclick="createFakePosts()" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition text-sm">
+                        <button onclick="createFakePosts()" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition font-size-desc">
                             <i class="fas fa-plus mr-1"></i>게시물 생성
                         </button>
-                        <button onclick="createFakeComments()" class="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition text-sm">
+                        <button onclick="createFakeComments()" class="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition font-size-desc">
                             <i class="fas fa-comment mr-1"></i>댓글 생성
                         </button>
-                        <button onclick="createFakeLikes()" class="bg-pink-500 text-white px-3 py-2 rounded-lg hover:bg-pink-600 transition text-sm">
+                        <button onclick="createFakeLikes()" class="bg-pink-500 text-white px-3 py-2 rounded-lg hover:bg-pink-600 transition font-size-desc">
                             <i class="fas fa-heart mr-1"></i>반응 생성
                         </button>
-                        <button onclick="simulateTimePass()" class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition text-sm font-semibold shadow-lg">
+                        <button onclick="simulateTimePass()" class="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition font-size-desc font-semibold shadow-lg">
                             <i class="fas fa-magic mr-2"></i>🌱 활동 시뮬레이션
                         </button>
-                        <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition text-sm">
+                        <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
                             <i class="fas fa-sync-alt mr-1"></i>새로고침
                         </button>
-                        <button onclick="deleteAllPosts()" class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition text-sm">
+                        <button onclick="deleteAllPosts()" class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition font-size-desc">
                             <i class="fas fa-trash-alt mr-1"></i>모두 삭제
                         </button>
                     </div>
@@ -5358,14 +5358,14 @@ app.get('/admin', (c) => {
                     <table class="w-full">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">ID</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작성자</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">내용</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">유형</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">좋아요</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">댓글</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작성일</th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-600">작업</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">ID</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">작성자</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">내용</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">유형</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">좋아요</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">댓글</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">작성일</th>
+                                <th class="px-4 py-3 text-left font-size-desc font-semibold text-gray-600">작업</th>
                             </tr>
                         </thead>
                         <tbody id="postsTableBody" class="divide-y divide-gray-200">
@@ -5523,55 +5523,55 @@ app.get('/admin', (c) => {
                     
                 tbody.innerHTML = usersData.map(user => \`
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm">\${user.id}</td>
-                            <td class="px-4 py-3 text-sm">\${user.email}</td>
-                            <td class="px-4 py-3 text-sm font-semibold">
+                            <td class="px-4 py-3 font-size-desc">\${user.id}</td>
+                            <td class="px-4 py-3 font-size-desc">\${user.email}</td>
+                            <td class="px-4 py-3 font-size-desc font-semibold">
                                 <a href="#" onclick="viewUserProfile(\${user.id}); return false;" class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors">
                                     \${user.name}
                                 </a>
                             </td>
-                            <td class="px-4 py-3 text-sm">\${user.church || '-'}</td>
-                            <td class="px-4 py-3 text-sm">
-                                <span class="px-2 py-1 rounded-full text-xs \${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">
+                            <td class="px-4 py-3 font-size-desc">\${user.church || '-'}</td>
+                            <td class="px-4 py-3 font-size-desc">
+                                <span class="px-2 py-1 rounded-full font-size-mini1 \${user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}">
                                     \${user.role}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm">\${user.post_count}</td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-4 py-3 font-size-desc">\${user.post_count}</td>
+                            <td class="px-4 py-3 font-size-desc">
                                 <button 
                                     onclick="editUserScore(\${user.id}, 'scripture_score', \${user.scripture_score || 0}, '성경점수')"
                                     class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer transition">
-                                    <i class="fas fa-bible text-xs mr-1"></i>
+                                    <i class="fas fa-bible font-size-mini1 mr-1"></i>
                                     \${user.scripture_score || 0}
-                                    <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
+                                    <i class="fas fa-edit font-size-mini1 ml-1 opacity-50"></i>
                                 </button>
                             </td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-4 py-3 font-size-desc">
                                 <button 
                                     onclick="editUserScore(\${user.id}, 'prayer_score', \${user.prayer_score || 0}, '기도점수')"
                                     class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer transition">
-                                    <i class="fas fa-praying-hands text-xs mr-1"></i>
+                                    <i class="fas fa-praying-hands font-size-mini1 mr-1"></i>
                                     \${user.prayer_score || 0}
-                                    <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
+                                    <i class="fas fa-edit font-size-mini1 ml-1 opacity-50"></i>
                                 </button>
                             </td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-4 py-3 font-size-desc">
                                 <button 
                                     onclick="editUserScore(\${user.id}, 'activity_score', \${user.activity_score || 0}, '활동점수')"
                                     class="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer transition">
-                                    <i class="fas fa-chart-line text-xs mr-1"></i>
+                                    <i class="fas fa-chart-line font-size-mini1 mr-1"></i>
                                     \${user.activity_score || 0}
-                                    <i class="fas fa-edit text-xs ml-1 opacity-50"></i>
+                                    <i class="fas fa-edit font-size-mini1 ml-1 opacity-50"></i>
                                 </button>
                             </td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-4 py-3 font-size-desc">
                                 <span class="inline-flex items-center px-2 py-1 rounded bg-purple-100 text-purple-800 font-semibold">
-                                    <i class="fas fa-trophy text-xs mr-1"></i>
+                                    <i class="fas fa-trophy font-size-mini1 mr-1"></i>
                                     \${(user.scripture_score || 0) + (user.prayer_score || 0) + (user.activity_score || 0)}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-4 py-3 font-size-desc">\${new Date(user.created_at).toLocaleDateString('ko-KR')}</td>
+                            <td class="px-4 py-3 font-size-desc">
                                 \${user.role === 'admin' 
                                     ? '<span class="text-gray-400" title="관리자는 삭제할 수 없습니다"><i class="fas fa-lock"></i></span>' 
                                     : \`<button onclick="deleteUser(\${user.id}, '\${user.role}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>\`
@@ -5814,28 +5814,28 @@ app.get('/admin', (c) => {
                         
                         return \`
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3 text-sm">\${post.id}</td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-4 py-3 font-size-desc">\${post.id}</td>
+                                <td class="px-4 py-3 font-size-desc">
                                     <div class="font-semibold">\${post.user_name}</div>
-                                    <div class="text-xs text-gray-500">\${post.user_email}</div>
+                                    <div class="font-size-mini1 text-gray-500">\${post.user_email}</div>
                                 </td>
-                                <td class="px-4 py-3 text-sm max-w-xs">
+                                <td class="px-4 py-3 font-size-desc max-w-xs">
                                     <div class="truncate" title="\${post.content}">\${truncatedContent}</div>
-                                    \${post.verse_reference ? \`<div class="text-xs text-blue-600 mt-1"><i class="fas fa-bible mr-1"></i>\${post.verse_reference}</div>\` : ''}
+                                    \${post.verse_reference ? \`<div class="font-size-mini1 text-blue-600 mt-1"><i class="fas fa-bible mr-1"></i>\${post.verse_reference}</div>\` : ''}
                                 </td>
-                                <td class="px-4 py-3 text-sm">
-                                    <span class="px-2 py-1 rounded-full text-xs \${typeColor}">
+                                <td class="px-4 py-3 font-size-desc">
+                                    <span class="px-2 py-1 rounded-full font-size-mini1 \${typeColor}">
                                         \${postType}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-4 py-3 font-size-desc">
                                     <span class="text-red-600"><i class="fas fa-heart mr-1"></i>\${post.likes_count}</span>
                                 </td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-4 py-3 font-size-desc">
                                     <span class="text-blue-600"><i class="fas fa-comment mr-1"></i>\${post.comments_count}</span>
                                 </td>
-                                <td class="px-4 py-3 text-sm text-gray-500">\${formattedDate}</td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-4 py-3 font-size-desc text-gray-500">\${formattedDate}</td>
+                                <td class="px-4 py-3 font-size-desc">
                                     <button 
                                         onclick="deleteAdminPost(\${post.id})"
                                         class="text-red-600 hover:text-red-800 transition">
@@ -5987,10 +5987,10 @@ app.get('/admin', (c) => {
                 loadingDiv.innerHTML = \`
                     <div class="bg-white rounded-lg p-8 max-w-md">
                         <div class="text-center">
-                            <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-                            <h3 class="text-xl font-bold mb-2">시뮬레이션 진행 중...</h3>
-                            <p class="text-gray-600 text-sm">잠시만 기다려주세요.</p>
-                            <p class="text-gray-500 text-xs mt-4">⏱️ \${daysNum}일치 데이터를 생성하고 있습니다</p>
+                            <i class="fas fa-spinner fa-spin font-size-title text-blue-600 mb-4"></i>
+                            <h3 class="font-size-title font-bold mb-2">시뮬레이션 진행 중...</h3>
+                            <p class="text-gray-600 font-size-desc">잠시만 기다려주세요.</p>
+                            <p class="text-gray-500 font-size-mini1 mt-4">⏱️ \${daysNum}일치 데이터를 생성하고 있습니다</p>
                         </div>
                     </div>
                 \`;
@@ -6117,10 +6117,10 @@ app.get('/admin', (c) => {
                     const tbody = document.getElementById('friendshipsTableBody');
                     tbody.innerHTML = response.data.friendships.map(friendship => {
                         const statusBadge = friendship.status === 'accepted' 
-                            ? '<span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">수락됨</span>'
+                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-green-100 text-green-800">수락됨</span>'
                             : friendship.status === 'pending'
-                            ? '<span class="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">대기중</span>'
-                            : '<span class="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">거절됨</span>';
+                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-yellow-100 text-yellow-800">대기중</span>'
+                            : '<span class="px-2 py-1 rounded-full font-size-mini1 bg-red-100 text-red-800">거절됨</span>';
                         
                         const date = new Date(friendship.created_at);
                         const formattedDate = date.toLocaleDateString('ko-KR', {
@@ -6133,20 +6133,20 @@ app.get('/admin', (c) => {
                         
                         return \`
                             <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-3 text-sm">\${friendship.id}</td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-4 py-3 font-size-desc">\${friendship.id}</td>
+                                <td class="px-4 py-3 font-size-desc">
                                     <div class="font-semibold text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showFriendshipGraph(\${friendship.user_id}, '\${friendship.user_name}')">\${friendship.user_name}</div>
-                                    <div class="text-xs text-gray-500">\${friendship.user_email}</div>
-                                    <div class="text-xs text-gray-400">\${friendship.user_church || '-'}</div>
+                                    <div class="font-size-mini1 text-gray-500">\${friendship.user_email}</div>
+                                    <div class="font-size-mini1 text-gray-400">\${friendship.user_church || '-'}</div>
                                 </td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-4 py-3 font-size-desc">
                                     <div class="font-semibold text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showFriendshipGraph(\${friendship.friend_id}, '\${friendship.friend_name}')">\${friendship.friend_name}</div>
-                                    <div class="text-xs text-gray-500">\${friendship.friend_email}</div>
-                                    <div class="text-xs text-gray-400">\${friendship.friend_church || '-'}</div>
+                                    <div class="font-size-mini1 text-gray-500">\${friendship.friend_email}</div>
+                                    <div class="font-size-mini1 text-gray-400">\${friendship.friend_church || '-'}</div>
                                 </td>
-                                <td class="px-4 py-3 text-sm">\${statusBadge}</td>
-                                <td class="px-4 py-3 text-sm text-gray-500">\${formattedDate}</td>
-                                <td class="px-4 py-3 text-sm">
+                                <td class="px-4 py-3 font-size-desc">\${statusBadge}</td>
+                                <td class="px-4 py-3 font-size-desc text-gray-500">\${formattedDate}</td>
+                                <td class="px-4 py-3 font-size-desc">
                                     <button 
                                         onclick="deleteFriendship(\${friendship.id})"
                                         class="text-red-600 hover:text-red-800 transition">
@@ -6568,10 +6568,10 @@ app.get('/', (c) => {
                 filter: saturate(1.35) contrast(1.05) brightness(0.95);
             }
             /* Unified typography scale (mobile + desktop) */
-            .font-size-title { font-size: 1.15rem; }
-            .font-size-base { font-size: 1.03rem; }
-            .font-size-desc { font-size: 0.88rem; }
-            .font-size-mini1 { font-size: 0.78rem; }
+            .font-size-title { font-size: 1.25rem; }
+            .font-size-base { font-size: 1rem; }
+            .font-size-desc { font-size: 0.875rem; }
+            .font-size-mini1 { font-size: 0.75rem; }
             .basic-reward-badge,
             .reward-one-badge,
             .reward-two-badge,
@@ -7420,22 +7420,22 @@ app.get('/', (c) => {
                 <div class="flex flex-col gap-2 lg:hidden">
                     <div id="mobileLogoRow" class="relative flex items-center justify-center overflow-visible">
                         <div id="mobileLogoBlock" class="flex flex-col cursor-pointer hover:opacity-80 transition flex-shrink-0" onclick="goToHome()" style="font-size: 150%; transform: scale(1.26); transform-origin: center;">
-                            <h1 class="mt-2 text-base sm:text-2xl font-bold text-gray-800 flex items-center justify-center" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px; transform: scale(1.2); transform-origin: center;">
+                            <h1 class="mt-2 font-size-base font-size-title font-bold text-gray-800 flex items-center justify-center" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px; transform: scale(1.2); transform-origin: center;">
                                 <span>CROSS</span>
                                 <img src="/static/logo-cross.png" alt="" class="logo-cross-img mx-0 sm:mx-0.5 scale-[0.6] sm:scale-90 w-[2.646rem] h-[2.646rem] object-contain rounded-full border border-red-300 p-0.5" />
                                 <span>friends</span>
                             </h1>
-                            <p class="text-[10px] sm:text-[0.78rem] text-gray-600 -mt-1 sm:mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                            <p class="font-size-mini1 sm:text-[0.78rem] text-gray-600 -mt-1 sm:mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
                                 <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
                             </p>
                         </div>
                         <button id="installAppBtnMobile" type="button" onclick="triggerAppInstall()" class="hidden absolute top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600 w-10 h-10 rounded-full hover:bg-blue-50 transition flex items-center justify-center" title="앱처럼 설치">
-                            <i class="fas fa-download text-lg"></i>
+                            <i class="fas fa-download font-size-title"></i>
                         </button>
                     </div>
                     <div class="w-full flex justify-center">
                         <div class="inline-flex items-center justify-center mx-auto w-fit gap-2" id="authButtons">
-                            <button onclick="showHowToUse()" class="text-gray-500 hover:text-gray-800 px-2 py-2 rounded-full hover:bg-gray-100 transition text-xs flex items-center gap-1" title="사용법">
+                            <button onclick="showHowToUse()" class="text-gray-500 hover:text-gray-800 px-2 py-2 rounded-full hover:bg-gray-100 transition font-size-mini1 flex items-center gap-1" title="사용법">
                                 <i class="fas fa-question-circle text-[2.25rem] leading-none"></i>
                             </button>
                             <div class="flex items-center gap-0">
@@ -7444,29 +7444,29 @@ app.get('/', (c) => {
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 sm:gap-1.5 hidden" id="userMenuMobile">
-                            <button id="qtBtnMobile" onclick="toggleQtPanel()" class="text-gray-500 w-9 h-9 flex items-center justify-center rounded-full border-2 border-gray-500 bg-transparent font-bold text-sm transition hover:border-red-600 hover:text-red-600" title="QT">
+                            <button id="qtBtnMobile" onclick="toggleQtPanel()" class="text-gray-500 w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-500 bg-transparent font-bold font-size-desc transition hover:border-red-600 hover:text-red-600" title="QT">
                                 QT
                             </button>
                             <button id="friendsListBtnMobile" onclick="toggleFriendsList()" class="text-gray-500 hover:text-blue-600 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200" title="친구 목록">
-                                <i class="fas fa-user-friends text-lg"></i>
+                                <i class="fas fa-user-friends font-size-title"></i>
                             </button>
                             <button id="notificationBtnMobile" onclick="toggleNotifications()" class="relative text-gray-500 hover:text-blue-600 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200" title="알림">
-                                <i class="fas fa-bell text-lg"></i>
+                                <i class="fas fa-bell font-size-title"></i>
                                 <span id="notificationDotMobile" class="hidden absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
                             </button>
                             <button type="button" id="qtDaySimBtnMobile" onclick="advanceQtDaySimulation(event)" class="hidden relative text-violet-600 hover:text-violet-800 w-10 h-10 rounded-full hover:bg-violet-50 flex items-center justify-center transition" title="">
-                                <i class="fas fa-calendar-day text-lg"></i>
-                                <span data-qt-sim-badge class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-4 px-0.5 rounded-full bg-violet-600 text-white text-[9px] leading-4 font-bold text-center"></span>
+                                <i class="fas fa-calendar-day font-size-title"></i>
+                                <span data-qt-sim-badge class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-4 px-0.5 rounded-full bg-violet-600 text-white font-size-mini1 leading-4 font-bold text-center"></span>
                             </button>
                             <button onclick="goToAdmin()" id="adminPanelBtnMobile" class="hidden text-red-600 hover:text-red-800 w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center" title="관리자 패널">
-                                <i class="fas fa-shield-alt text-lg"></i>
+                                <i class="fas fa-shield-alt font-size-title"></i>
                             </button>
-                            <div id="userAvatarContainerMobile" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs cursor-pointer hover:ring-2 hover:ring-blue-300" onclick="showMyProfile()">
+                            <div id="userAvatarContainerMobile" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white font-size-mini1 cursor-pointer hover:ring-2 hover:ring-blue-300" onclick="showMyProfile()">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span id="userNameMobile" class="text-gray-800 text-base font-semibold cursor-default truncate max-w-[80px]"></span>
+                            <span id="userNameMobile" class="text-gray-800 font-size-base font-semibold cursor-default truncate max-w-[80px]"></span>
                             <button id="feedbackBtnMobile" onclick="showFeedbackModal()" class="text-gray-500 hover:text-amber-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-amber-50 transition" title="피드백 요청">
-                                <i class="fas fa-lightbulb text-base"></i>
+                                <i class="fas fa-lightbulb font-size-base"></i>
                             </button>
                         </div>
                     </div>
@@ -7475,12 +7475,12 @@ app.get('/', (c) => {
                 <div class="hidden lg:grid lg:grid-cols-[1fr_1.1115fr_1.1115fr_1fr] lg:items-center lg:gap-x-[2%]">
                     <div class="lg:col-start-1 flex justify-start">
                         <div class="pc-logo-hover flex flex-col items-center cursor-pointer hover:opacity-80 transition" onclick="goToHome()">
-                            <h1 class="text-xl md:text-2xl font-bold text-gray-800 flex items-center" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
+                            <h1 class="font-size-title font-bold text-gray-800 flex items-center" title="전체 포스팅 보기" style="font-family: 'Poppins', sans-serif; letter-spacing: -0.5px;">
                                 <span>CROSS</span>
                                 <img src="/static/logo-cross.png" alt="" class="logo-cross-img pc-logo-cross-spin mx-0.5 md:mx-1.5 scale-90 md:scale-100 w-[2.646rem] h-[2.646rem] object-contain" />
                                 <span>friends</span>
                             </h1>
-                            <p class="w-full text-[10px] sm:text-[0.78rem] text-gray-600 mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
+                            <p class="w-full font-size-mini1 sm:text-[0.78rem] text-gray-600 mt-1 text-center" style="font-family: 'Poppins', sans-serif; letter-spacing: 0.3px;">
                                 <span class="whitespace-nowrap">기독교인들을</span> <span class="whitespace-nowrap">위한</span> <span class="whitespace-nowrap">행복한</span> <span class="whitespace-nowrap">소셜미디어</span>
                             </p>
                         </div>
@@ -7488,20 +7488,20 @@ app.get('/', (c) => {
                     <div class="lg:col-start-2 lg:col-span-2 flex items-center justify-center gap-2">
                         <div class="flex flex-nowrap items-center gap-2 md:gap-3" id="authButtonsPC">
                             <button onclick="showHowToUse()" class="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-full hover:bg-gray-100 transition flex items-center justify-center" title="사용법">
-                                <i class="fas fa-question-circle text-[2rem] leading-none"></i>
+                                <i class="fas fa-question-circle font-size-title leading-none"></i>
                             </button>
-                            <button onclick="showLoginModal()" class="text-gray-700 hover:text-blue-600 border border-gray-300 hover:border-blue-400 px-5 py-2 rounded-full transition text-base font-medium">로그인</button>
-                            <button onclick="showSignupModal()" class="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition text-base font-semibold shadow-sm">가입</button>
+                            <button onclick="showLoginModal()" class="text-gray-700 hover:text-blue-600 border border-gray-300 hover:border-blue-400 px-5 py-2 rounded-full transition font-size-base font-medium">로그인</button>
+                            <button onclick="showSignupModal()" class="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition font-size-base font-semibold shadow-sm">가입</button>
                         </div>
                         <div class="flex items-center gap-2 hidden" id="userMenuCenterPC">
-                            <button id="qtBtn" onclick="toggleQtPanel()" class="text-gray-500 w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-500 bg-transparent transition font-bold text-sm hover:border-red-600 hover:text-red-600" title="QT">
+                            <button id="qtBtn" onclick="toggleQtPanel()" class="text-gray-500 w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-500 bg-transparent transition font-bold font-size-desc hover:border-red-600 hover:text-red-600" title="QT">
                                 QT
                             </button>
-                            <button id="friendsListBtn" onclick="toggleFriendsList()" class="text-gray-500 hover:text-blue-600 w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-200 transition" title="친구 목록">
-                                <i class="fas fa-user-friends text-xl"></i>
+                            <button id="friendsListBtn" onclick="toggleFriendsList()" class="text-gray-500 hover:text-blue-600 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition" title="친구 목록">
+                                <i class="fas fa-user-friends font-size-title"></i>
                             </button>
-                            <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-500 hover:text-blue-600 w-11 h-11 flex items-center justify-center rounded-full hover:bg-gray-200 transition" title="알림">
-                                <i class="fas fa-bell text-xl"></i>
+                            <button id="notificationBtn" onclick="toggleNotifications()" class="relative text-gray-500 hover:text-blue-600 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200 transition" title="알림">
+                                <i class="fas fa-bell font-size-title"></i>
                                 <span id="notificationDot" class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border border-white"></span>
                             </button>
                         </div>
@@ -7509,23 +7509,23 @@ app.get('/', (c) => {
                     <div class="lg:col-start-4 flex items-center justify-end gap-2">
                         <div class="flex items-center gap-2 hidden" id="userMenuRightPC">
                             <button type="button" id="qtDaySimBtn" onclick="advanceQtDaySimulation(event)" class="hidden relative text-violet-600 hover:text-violet-800 w-11 h-11 rounded-full hover:bg-violet-50 transition flex items-center justify-center" title="">
-                                <i class="fas fa-calendar-day text-xl"></i>
-                                <span data-qt-sim-badge class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-4 px-0.5 rounded-full bg-violet-600 text-white text-[9px] leading-4 font-bold text-center"></span>
+                                <i class="fas fa-calendar-day font-size-title"></i>
+                                <span data-qt-sim-badge class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-4 px-0.5 rounded-full bg-violet-600 text-white font-size-mini1 leading-4 font-bold text-center"></span>
                             </button>
                             <button onclick="goToAdmin()" id="adminPanelBtn" class="hidden text-red-600 hover:text-red-800 w-11 h-11 rounded-full hover:bg-red-50 transition flex items-center justify-center" title="관리자 패널">
-                                <i class="fas fa-shield-alt text-xl"></i>
+                                <i class="fas fa-shield-alt font-size-title"></i>
                             </button>
                             <div class="admin-badge-container flex-shrink-0">
-                                <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-xs cursor-pointer hover:ring-2 hover:ring-blue-300 transition" onclick="showMyProfile()">
+                                <div id="userAvatarContainer" class="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white font-size-mini1 cursor-pointer hover:ring-2 hover:ring-blue-300 transition" onclick="showMyProfile()">
                                     <i class="fas fa-user"></i>
                                 </div>
                             </div>
-                            <span id="userName" class="text-gray-800 text-base font-semibold whitespace-nowrap cursor-default"></span>
+                            <span id="userName" class="text-gray-800 font-size-base font-semibold whitespace-nowrap cursor-default"></span>
                             <button id="feedbackBtn" onclick="showFeedbackModal()" class="text-gray-500 hover:text-amber-600 w-9 h-9 flex items-center justify-center rounded-full hover:bg-amber-50 transition" title="피드백 요청">
-                                <i class="fas fa-lightbulb text-lg"></i>
+                                <i class="fas fa-lightbulb font-size-title"></i>
                             </button>
                             <button id="installAppBtn" type="button" onclick="triggerAppInstall()" class="hidden text-gray-500 hover:text-blue-600 w-10 h-10 rounded-full hover:bg-blue-50 transition flex items-center justify-center" title="앱처럼 설치">
-                                <i class="fas fa-download text-lg"></i>
+                                <i class="fas fa-download font-size-title"></i>
                             </button>
                         </div>
                     </div>
@@ -7547,7 +7547,7 @@ app.get('/', (c) => {
                                 </h3>
                                 <div class="reward-card-header-right">
                                     <span class="basic-reward-badge font-size-mini1 font-bold text-blue-800"><img src="/static/logo-cross.png" alt="" class="inline-block w-3.5 h-3.5 object-contain rounded-full mr-0.5 align-middle" /> 기본 리워드</span>
-                                    <i class="fas fa-chevron-up text-xs reward-card-chevron"></i>
+                                    <i class="fas fa-chevron-up font-size-mini1 reward-card-chevron"></i>
                                 </div>
                             </div>
                             <div id="verseRewardContent" class="reward-card-content">
@@ -7563,8 +7563,8 @@ app.get('/', (c) => {
                                 <button 
                                     id="typingToggleBtn"
                                     onclick="toggleTypingArea()"
-                                    class="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-blue-800 font-bold text-base">
-                                    <i class="fas fa-keyboard text-lg"></i>
+                                    class="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 rounded-lg transition-all flex items-center justify-center space-x-2 text-blue-800 font-bold font-size-base">
+                                    <i class="fas fa-keyboard font-size-title"></i>
                                     <span class="font-size-desc">말씀 타이핑</span>
                                 </button>
                                 
@@ -7572,7 +7572,7 @@ app.get('/', (c) => {
                                 <div id="typingArea" class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t-2 border-blue-100 hidden">
                                     <div class="mb-3">
                                         <label class="font-size-desc font-bold text-gray-800 flex items-center gap-1.5">
-                                            <i class="fas fa-keyboard text-blue-600 text-base"></i>말씀 타이핑
+                                            <i class="fas fa-keyboard text-blue-600 font-size-base"></i>말씀 타이핑
                                         </label>
                                     </div>
                                     <div class="flex gap-2 items-stretch">
@@ -7587,7 +7587,7 @@ app.get('/', (c) => {
                                             onclick="checkTyping()"
                                             title="제출"
                                             class="flex-shrink-0 w-12 sm:w-14 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm touch-manipulation">
-                                            <i class="fas fa-paper-plane text-lg sm:text-xl"></i>
+                                            <i class="fas fa-paper-plane font-size-title"></i>
                                         </button>
                                     </div>
                                     <div id="typingResult" class="mt-2 font-size-base hidden"></div>
@@ -7598,7 +7598,7 @@ app.get('/', (c) => {
                                     <button 
                                         disabled
                                         class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
-                                        <i class="fas fa-lock text-lg"></i>
+                                        <i class="fas fa-lock font-size-title"></i>
                                         <span>로그인 후 이용 가능</span>
                                     </button>
                                 </div>
@@ -7629,7 +7629,7 @@ app.get('/', (c) => {
                                 </h3>
                                 <div class="reward-card-header-right">
                                     <span class="reward-one-badge font-size-mini1 font-bold text-blue-700"><img src="/static/logo-cross.png" alt="" class="inline-block w-3.5 h-3.5 object-contain rounded-full mr-0.5 align-middle" /> 리워드1</span>
-                                    <i class="fas fa-chevron-up text-xs text-blue-600 reward-card-chevron"></i>
+                                    <i class="fas fa-chevron-up font-size-mini1 text-blue-600 reward-card-chevron"></i>
                                 </div>
                             </div>
                             <div id="sermonRewardContent" class="reward-card-content">
@@ -7653,7 +7653,7 @@ app.get('/', (c) => {
                                     type="button"
                                     disabled
                                     class="w-full py-3 px-4 bg-gray-300 text-gray-600 rounded-xl font-bold font-size-desc cursor-not-allowed flex items-center justify-center gap-2 transition-all">
-                                    <i class="fas fa-lock text-base text-gray-500"></i>
+                                    <i class="fas fa-lock font-size-base text-gray-500"></i>
                                     <span>200μ 달성 후 공개 가능</span>
                                 </button>
                             </div>
@@ -7731,7 +7731,7 @@ app.get('/', (c) => {
                                     id="unlockQtWorshipBtn"
                                     disabled
                                     class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
-                                    <i class="fas fa-lock text-lg"></i>
+                                    <i class="fas fa-lock font-size-title"></i>
                                     <span>1000μ 달성 후 공개 가능</span>
                                 </button>
                             </div>
@@ -7782,7 +7782,7 @@ app.get('/', (c) => {
                                     id="unlockQtAlarmBtn"
                                     disabled
                                     class="w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all">
-                                    <i class="fas fa-lock text-lg"></i>
+                                    <i class="fas fa-lock font-size-title"></i>
                                     <span>1400μ 달성 후 공개 가능</span>
                                 </button>
                             </div>
@@ -7819,7 +7819,7 @@ app.get('/', (c) => {
                             <div class="-mt-16 mb-4">
                                 <div class="relative inline-block">
                                     <div id="profileCoverAvatar" class="w-32 h-32 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white border-4 border-white shadow-lg">
-                                        <i class="fas fa-user text-5xl"></i>
+                                        <i class="fas fa-user font-size-title"></i>
                                     </div>
                                     <!-- Admin/Moderator Badge -->
                                     <div id="profileCoverBadge" class="absolute bottom-2 right-2"></div>
@@ -7829,7 +7829,7 @@ app.get('/', (c) => {
                             <!-- User Info -->
                             <div class="space-y-3">
                                 <div>
-                                    <h2 id="profileCoverName" class="text-2xl font-bold text-gray-800">사용자 이름</h2>
+                                    <h2 id="profileCoverName" class="font-size-title font-bold text-gray-800">사용자 이름</h2>
                                 </div>
                                 
                                 <p id="profileCoverBio" class="text-gray-700 leading-relaxed">
@@ -7842,19 +7842,19 @@ app.get('/', (c) => {
                                 <div class="flex items-center flex-wrap gap-4 pt-3 border-t border-gray-200">
                                     <div class="flex items-center space-x-2">
                                         <i class="fas fa-clipboard-list text-blue-600"></i>
-                                        <span class="text-sm text-gray-700">
+                                        <span class="font-size-desc text-gray-700">
                                             <span id="profileCoverPostCount" class="font-bold text-gray-800">0</span> 포스팅
                                         </span>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <i class="fas fa-user-friends text-pink-600"></i>
-                                        <span class="text-sm text-gray-700">
+                                        <span class="font-size-desc text-gray-700">
                                             <span id="profileCoverFriendCount" class="font-bold text-pink-600">0</span> 친구
                                         </span>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <i class="fas fa-church text-purple-600"></i>
-                                        <span id="profileCoverChurch" class="text-sm text-gray-700">교회 정보</span>
+                                        <span id="profileCoverChurch" class="font-size-desc text-gray-700">교회 정보</span>
                                     </div>
                                     <div id="profileCoverPosition" class="hidden">
                                         <!-- 직분 정보가 동적으로 삽입됩니다 -->
@@ -7865,7 +7865,7 @@ app.get('/', (c) => {
                                 </div>
                                 
                                 <!-- Scores (if not private) - Compact inline display -->
-                                <div id="profileCoverScores" class="flex items-center gap-3 sm:gap-4 pt-2 text-xs text-gray-600">
+                                <div id="profileCoverScores" class="flex items-center gap-3 sm:gap-4 pt-2 font-size-mini1 text-gray-600">
                                     <div class="flex items-center gap-1">
                                         <i class="fas fa-book-open text-blue-500"></i>
                                         <span class="text-gray-500">성경</span>
@@ -7892,12 +7892,12 @@ app.get('/', (c) => {
                     <div id="profileView" class="hidden">
                         <div class="bg-white border-2 border-gray-300 rounded-xl shadow-sm p-5 sm:p-6 mt-4">
                             <div class="flex items-center justify-between mb-6">
-                                <h2 class="text-2xl font-bold text-gray-800">
+                                <h2 class="font-size-title font-bold text-gray-800">
                                     <i class="fas fa-user-circle text-blue-600 mr-2"></i>프로필
                                 </h2>
                                 <div class="flex items-center gap-1.5">
                                     <div id="profileEditBtnContainer"></div>
-                                    <button id="profileViewLogoutBtn" type="button" onclick="logout()" class="text-gray-500 hover:text-red-500 transition px-3 py-1.5 rounded-lg hover:bg-red-50 flex items-center gap-1.5 text-sm" title="로그아웃">
+                                    <button id="profileViewLogoutBtn" type="button" onclick="logout()" class="text-gray-500 hover:text-red-500 transition px-3 py-1.5 rounded-lg hover:bg-red-50 flex items-center gap-1.5 font-size-desc" title="로그아웃">
                                         <i class="fas fa-sign-out-alt"></i>
                                         <span class="hidden sm:inline">로그아웃</span>
                                     </button>
@@ -8001,7 +8001,7 @@ app.get('/', (c) => {
                                         <div class="mb-2 flex items-center justify-between gap-2">
                                             <div class="flex min-w-0 items-center gap-2">
                                                 <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md">
-                                                    <i class="fas fa-images text-sm"></i>
+                                                    <i class="fas fa-images font-size-desc"></i>
                                                 </span>
                                                 <div class="min-w-0 leading-tight">
                                                     <div class="font-size-mini1 font-bold text-gray-800">첨부 사진</div>
@@ -8023,7 +8023,7 @@ app.get('/', (c) => {
                                         <button 
                                             onclick="removePostVideo()"
                                             class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
-                                            <i class="fas fa-times text-xs"></i>
+                                            <i class="fas fa-times font-size-mini1"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -8108,60 +8108,60 @@ app.get('/', (c) => {
                     <template id="qtPanelTemplate">
                         <div class="qt-panel-instance bg-white rounded-xl shadow-lg border-2 border-red-400 p-4 sm:p-6" data-qt-date="" data-qt-log-id="">
                             <div class="flex items-start justify-between gap-2 mb-4 flex-wrap">
-                                <h2 class="text-xl font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
+                                <h2 class="font-size-title font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
                                 <div class="flex items-center gap-2 flex-wrap justify-end">
-                                    <div class="text-sm text-gray-600" data-qt-field="dateLabel"></div>
-                                    <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-red-50 text-red-600 border border-red-300 hover:bg-red-100" title="QT 찬양">
-                                        <i class="fas fa-music text-[13px] leading-none" aria-hidden="true"></i>
+                                    <div class="font-size-desc text-gray-600" data-qt-field="dateLabel"></div>
+                                    <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-red-50 text-red-600 border border-red-300 hover:bg-red-100" title="QT 찬양">
+                                        <i class="fas fa-music font-size-desc leading-none" aria-hidden="true"></i>
                                     </button>
-                                    <button type="button" data-qt-field="qtAlarmBtn" data-qt-act="alarm" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">
-                                        <i class="fas fa-bell text-[13px] leading-none" aria-hidden="true"></i>
+                                    <button type="button" data-qt-field="qtAlarmBtn" data-qt-act="alarm" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">
+                                        <i class="fas fa-bell font-size-desc leading-none" aria-hidden="true"></i>
                                     </button>
-                                    <button type="button" data-qt-act="invite" class="inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="친구에게 QT 추천">
-                                        <i class="fas fa-envelope text-[13px] leading-none" aria-hidden="true"></i>
+                                    <button type="button" data-qt-act="invite" class="inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="친구에게 QT 추천">
+                                        <i class="fas fa-envelope font-size-desc leading-none" aria-hidden="true"></i>
                                     </button>
-                                    <button type="button" data-qt-act="delete-log" data-qt-field="deleteLogBtn" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg text-xs font-medium leading-none transition bg-white text-red-600 border border-red-300 hover:bg-red-50" title="저장된 QT 로그 삭제" aria-label="QT 로그 삭제">
-                                        <i class="fas fa-trash text-[12px] leading-none" aria-hidden="true"></i>
+                                    <button type="button" data-qt-act="delete-log" data-qt-field="deleteLogBtn" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-white text-red-600 border border-red-300 hover:bg-red-50" title="저장된 QT 로그 삭제" aria-label="QT 로그 삭제">
+                                        <i class="fas fa-trash font-size-mini1 leading-none" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </div>
                             <div class="border-l-4 border-red-600 pl-3 py-1 mb-4">
                                 <span data-qt-field="verseRefRaw" class="hidden" aria-hidden="true"></span>
-                                <p class="font-bold text-red-600 text-sm whitespace-pre-line leading-relaxed" data-qt-field="verseRef"></p>
+                                <p class="font-bold text-red-600 font-size-desc whitespace-pre-line leading-relaxed" data-qt-field="verseRef"></p>
                             </div>
                             <div class="flex flex-nowrap gap-1 sm:gap-2 mb-4 overflow-x-auto">
-                                <button type="button" data-qt-act="toggle-section" data-section="prayer" data-qt-sec-btn="prayer" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="prayer" data-qt-sec-btn="prayer" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
                                     시작기도
                                 </button>
-                                <button type="button" data-qt-act="toggle-section" data-section="read" data-qt-sec-btn="read" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="read" data-qt-sec-btn="read" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
                                     <span class="sm:hidden">읽기·묵상</span>
                                     <span class="hidden sm:inline">읽기와 묵상</span>
                                 </button>
-                                <button type="button" data-qt-act="toggle-section" data-section="apply" data-qt-sec-btn="apply" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="apply" data-qt-sec-btn="apply" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
                                     적용
                                 </button>
-                                <button type="button" data-qt-act="toggle-section" data-section="prayer2" data-qt-sec-btn="prayer2" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="prayer2" data-qt-sec-btn="prayer2" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-200 hover:border-red-300 hover:text-red-800 whitespace-nowrap">
                                     마침기도
                                 </button>
                             </div>
                             <div class="qt-section hidden p-4 bg-red-50 rounded-lg border border-red-200 mb-4" data-qt-section="prayer">
-                                <p class="text-gray-800 text-sm leading-relaxed">오늘 당신을 위한 생명의 양식입니다. 먼저 기도하며 오늘의 말씀을 잘 깨닿고 하나님의 인도함과 보호하심을 구하는 기도를 먼저 하십시오.</p>
+                                <p class="text-gray-800 font-size-desc leading-relaxed">오늘 당신을 위한 생명의 양식입니다. 먼저 기도하며 오늘의 말씀을 잘 깨닿고 하나님의 인도함과 보호하심을 구하는 기도를 먼저 하십시오.</p>
                             </div>
                             <div class="qt-section hidden p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4" data-qt-section="read">
-                                <div class="text-gray-800 text-sm leading-relaxed whitespace-pre-line" data-qt-field="scriptureText"></div>
+                                <div class="text-gray-800 font-size-desc leading-relaxed whitespace-pre-line" data-qt-field="scriptureText"></div>
                             </div>
                             <div class="qt-section hidden" data-qt-section="apply">
                                 <div class="flex items-end gap-3" data-qt-field="applyComposer">
                                     <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
-                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="applyInput" oninput="qtAutoGrow(this)"></textarea>
+                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-0 font-size-desc border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="applyInput" oninput="qtAutoGrow(this)"></textarea>
                                     </div>
                                     <button type="button" data-qt-act="send-apply" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
                                         <i class="fas fa-paper-plane"></i>
                                     </button>
                                 </div>
                                 <div class="hidden relative bg-white rounded-xl border-2 border-red-200 p-3 mb-2" data-qt-field="applySavedView">
-                                    <p class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="applySavedText"></p>
-                                    <button type="button" data-qt-act="edit-apply" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-300 text-red-700 bg-white hover:bg-red-50 text-xs font-semibold transition shadow-md">
+                                    <p class="font-size-desc text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="applySavedText"></p>
+                                    <button type="button" data-qt-act="edit-apply" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-300 text-red-700 bg-white hover:bg-red-50 font-size-mini1 font-semibold transition shadow-md">
                                         <i class="fas fa-pen mr-1"></i>수정
                                     </button>
                                 </div>
@@ -8169,15 +8169,15 @@ app.get('/', (c) => {
                             <div class="qt-section hidden mt-5" data-qt-section="prayer2">
                                 <div class="flex items-end gap-3" data-qt-field="prayerComposer">
                                     <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-200 px-3 py-2">
-                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-0 text-sm border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="prayerInput" oninput="qtAutoGrow(this)"></textarea>
+                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-0 font-size-desc border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="prayerInput" oninput="qtAutoGrow(this)"></textarea>
                                     </div>
                                     <button type="button" data-qt-act="send-prayer" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-700 text-white flex items-center justify-center transition shadow-sm" title="전송">
                                         <i class="fas fa-paper-plane"></i>
                                     </button>
                                 </div>
                                 <div class="hidden relative bg-white rounded-xl border-2 border-red-200 p-3" data-qt-field="prayerSavedView">
-                                    <p class="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="prayerSavedText"></p>
-                                    <button type="button" data-qt-act="edit-prayer" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-300 text-red-700 bg-white hover:bg-red-50 text-xs font-semibold transition shadow-md">
+                                    <p class="font-size-desc text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="prayerSavedText"></p>
+                                    <button type="button" data-qt-act="edit-prayer" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-300 text-red-700 bg-white hover:bg-red-50 font-size-mini1 font-semibold transition shadow-md">
                                         <i class="fas fa-pen mr-1"></i>수정
                                     </button>
                                 </div>
@@ -8188,13 +8188,13 @@ app.get('/', (c) => {
                                         <i class="fas fa-play" data-qt-field="worshipPlayIcon"></i>
                                     </button>
                                     <div class="flex-1 min-w-0">
-                                        <div class="text-sm font-medium text-gray-800 truncate">찬양</div>
+                                        <div class="font-size-desc font-medium text-gray-800 truncate">찬양</div>
                                         <div class="flex items-center gap-2 mt-1">
                                             <button type="button" data-qt-act="worship-mute" class="text-gray-600 hover:text-gray-800 p-0.5 flex-shrink-0" title="음소거">
-                                                <i class="fas fa-volume-up text-sm" data-qt-field="worshipMuteIcon"></i>
+                                                <i class="fas fa-volume-up font-size-desc" data-qt-field="worshipMuteIcon"></i>
                                             </button>
                                             <input type="range" min="0" max="100" value="80" data-qt-field="worshipVolumeBar" oninput="setQtWorshipVolumeFromPanel(this)" class="flex-1 h-2 accent-red-500 cursor-pointer" />
-                                            <span class="text-xs text-gray-500 w-8" data-qt-field="worshipVolumeLabel">80%</span>
+                                            <span class="font-size-mini1 text-gray-500 w-8" data-qt-field="worshipVolumeLabel">80%</span>
                                         </div>
                                     </div>
                                 </div>
@@ -8247,7 +8247,7 @@ app.get('/', (c) => {
                         <!-- Reactors Panel (반응한 사람/댓글 단 사람/공유한 사람) -->
                         <div id="reactorsTabContent" class="hidden bg-white rounded-xl shadow-md border-2 border-gray-300 p-5 flex flex-col relative">
                             <button type="button" onclick="closePostReactors()" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 border border-gray-300 transition shrink-0" title="닫기">
-                                <i class="fas fa-times text-lg"></i>
+                                <i class="fas fa-times font-size-title"></i>
                             </button>
                             <div class="flex items-center mb-4 pb-3 border-b-2 border-gray-200 shrink-0 pr-12">
                                 <div class="flex items-center">
@@ -8294,34 +8294,34 @@ app.get('/', (c) => {
         <div id="qtAlarmModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4" onclick="if(event.target===this)hideQtAlarmModal()">
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onclick="event.stopPropagation()">
                 <div class="flex items-center justify-between mb-5">
-                    <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-bell text-red-500 mr-2"></i>QT 알림 설정</h3>
+                    <h3 class="font-size-title font-bold text-gray-800"><i class="fas fa-bell text-red-500 mr-2"></i>QT 알림 설정</h3>
                     <button onclick="hideQtAlarmModal()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="mb-4">
                     <label class="flex items-center gap-3 cursor-pointer">
                         <input type="checkbox" id="qtAlarmEnabled" class="w-5 h-5 accent-red-500 rounded" checked>
-                        <span class="text-sm font-semibold text-gray-700">알림 켜기</span>
+                        <span class="font-size-desc font-semibold text-gray-700">알림 켜기</span>
                     </label>
                 </div>
                 <div class="mb-4">
-                    <p class="text-xs font-semibold text-gray-500 mb-2">알림 요일</p>
+                    <p class="font-size-mini1 font-semibold text-gray-500 mb-2">알림 요일</p>
                     <div class="flex gap-1.5 flex-wrap">
-                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmSun" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">일</span></label>
-                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmMon" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">월</span></label>
-                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmTue" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">화</span></label>
-                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmWed" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">수</span></label>
-                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmThu" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">목</span></label>
-                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmFri" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">금</span></label>
-                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmSat" class="w-4 h-4 accent-red-500"><span class="text-xs text-gray-600">토</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmSun" class="w-4 h-4 accent-red-500"><span class="font-size-mini1 text-gray-600">일</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmMon" class="w-4 h-4 accent-red-500"><span class="font-size-mini1 text-gray-600">월</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmTue" class="w-4 h-4 accent-red-500"><span class="font-size-mini1 text-gray-600">화</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmWed" class="w-4 h-4 accent-red-500"><span class="font-size-mini1 text-gray-600">수</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmThu" class="w-4 h-4 accent-red-500"><span class="font-size-mini1 text-gray-600">목</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmFri" class="w-4 h-4 accent-red-500"><span class="font-size-mini1 text-gray-600">금</span></label>
+                        <label class="flex flex-col items-center gap-1 cursor-pointer"><input type="checkbox" id="qtAlarmSat" class="w-4 h-4 accent-red-500"><span class="font-size-mini1 text-gray-600">토</span></label>
                     </div>
                 </div>
                 <div class="mb-6">
-                    <p class="text-xs font-semibold text-gray-500 mb-2">알림 시각</p>
-                    <input type="time" id="qtAlarmTime" value="06:00" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-300 focus:outline-none">
+                    <p class="font-size-mini1 font-semibold text-gray-500 mb-2">알림 시각</p>
+                    <input type="time" id="qtAlarmTime" value="06:00" class="w-full border border-gray-300 rounded-lg px-3 py-2 font-size-desc focus:ring-2 focus:ring-red-300 focus:outline-none">
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="hideQtAlarmModal()" class="flex-1 py-2 px-4 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50">취소</button>
-                    <button onclick="saveQtAlarmSettings()" class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600">저장</button>
+                    <button onclick="hideQtAlarmModal()" class="flex-1 py-2 px-4 border border-gray-300 rounded-xl font-size-desc text-gray-600 hover:bg-gray-50">취소</button>
+                    <button onclick="saveQtAlarmSettings()" class="flex-1 py-2 px-4 bg-red-500 text-white rounded-xl font-size-desc font-semibold hover:bg-red-600">저장</button>
                 </div>
             </div>
         </div>
@@ -8337,7 +8337,7 @@ app.get('/', (c) => {
                 <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
                     <div class="flex items-center gap-2 min-w-0">
                         <div id="friendMessengerAvatar" class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center overflow-hidden">
-                            <i class="fas fa-user text-xs"></i>
+                            <i class="fas fa-user font-size-mini1"></i>
                         </div>
                         <h3 id="friendMessengerTitle" class="font-bold text-gray-800 truncate">메시지</h3>
                     </div>
@@ -8349,7 +8349,7 @@ app.get('/', (c) => {
                 <div id="friendMessengerComposerWrap" class="border-t border-gray-200 bg-white px-3 py-2">
                     <div id="friendMessengerPreview" class="hidden mb-2 p-2 rounded-xl border border-gray-200 bg-gray-50">
                         <div class="flex items-center justify-between gap-2">
-                            <div class="text-xs font-semibold text-gray-600 truncate">
+                            <div class="font-size-mini1 font-semibold text-gray-600 truncate">
                                 <i class="fas fa-paperclip mr-1 text-blue-500"></i>첨부 미리보기
                             </div>
                             <button type="button" onclick="removeFriendMessengerAttachment()" class="w-7 h-7 rounded-full hover:bg-white text-gray-500 hover:text-gray-800 transition" title="첨부 제거">
@@ -8363,14 +8363,14 @@ app.get('/', (c) => {
                         <input id="friendMessengerImageInput" type="file" accept="image/*" class="hidden" />
                         <input id="friendMessengerVideoInput" type="file" accept="video/*" class="hidden" />
                         <button id="friendMessengerImageBtn" type="button" onclick="pickFriendMessengerImage()" class="w-9 h-9 rounded-full border border-gray-300 text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition" title="사진 보내기">
-                            <i class="fas fa-image text-sm"></i>
+                            <i class="fas fa-image font-size-desc"></i>
                         </button>
                         <button id="friendMessengerVideoBtn" type="button" onclick="pickFriendMessengerVideo()" class="w-9 h-9 rounded-full border border-gray-300 text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition" title="동영상 보내기">
-                            <i class="fas fa-video text-sm"></i>
+                            <i class="fas fa-video font-size-desc"></i>
                         </button>
-                        <textarea id="friendMessengerInput" rows="1" maxlength="500" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 border border-gray-300 rounded-2xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400" oninput="friendMessengerAutoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFriendMessage()}"></textarea>
+                        <textarea id="friendMessengerInput" rows="1" maxlength="500" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 border border-gray-300 rounded-2xl px-3 py-2 font-size-desc resize-none focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400" oninput="friendMessengerAutoGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFriendMessage()}"></textarea>
                         <button id="friendMessengerSendBtn" type="button" onclick="sendFriendMessage()" class="w-10 h-9 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">
-                            <i class="fas fa-paper-plane text-sm"></i>
+                            <i class="fas fa-paper-plane font-size-desc"></i>
                         </button>
                     </div>
                 </div>
@@ -8381,18 +8381,18 @@ app.get('/', (c) => {
         <div id="feedbackModal" class="hidden fixed inset-0 z-[116] bg-black/55 flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="if(event.target===this) hideFeedbackModal()">
             <div class="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl border border-amber-100 overflow-hidden flex flex-col max-h-[92vh]" onclick="event.stopPropagation()">
                 <div class="px-5 py-4 border-b border-amber-100 flex items-center justify-between shrink-0 bg-gradient-to-r from-white to-amber-50/30">
-                    <h3 class="font-bold text-gray-900 text-lg flex items-center gap-2.5">
+                    <h3 class="font-bold text-gray-900 font-size-title flex items-center gap-2.5">
                         <span class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-600">
                             <i class="fas fa-lightbulb"></i>
                         </span>
                         피드백 요청
                     </h3>
                     <button type="button" onclick="hideFeedbackModal()" class="w-9 h-9 rounded-full hover:bg-amber-50 text-gray-500 hover:text-gray-800 transition" title="닫기" aria-label="닫기">
-                        <i class="fas fa-times text-lg"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
                 <div class="px-5 py-4 overflow-y-auto flex-1 min-h-0">
-                    <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                    <p class="font-size-desc text-gray-600 leading-relaxed mb-4">
                         관리자에게 전달할 의견/문의 내용을 입력해주세요. 앱 내 메신저로 전달됩니다.
                     </p>
                     <label for="feedbackModalText" class="sr-only">피드백 내용</label>
@@ -8400,15 +8400,15 @@ app.get('/', (c) => {
                         id="feedbackModalText"
                         rows="6"
                         maxlength="2000"
-                        class="w-full px-4 py-3 rounded-xl border-2 border-amber-400 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-500 resize-y min-h-[140px]"
+                        class="w-full px-4 py-3 rounded-xl border-2 border-amber-400 font-size-desc text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-500 resize-y min-h-[140px]"
                         placeholder="예) 모바일 UI 점검 부탁드립니다."
                     ></textarea>
                     <div id="feedbackAttachmentPreview" class="hidden mt-4 p-3 rounded-xl border border-amber-200 bg-amber-50/50">
                         <div class="flex items-center justify-between gap-2 mb-2">
-                            <span class="text-xs font-semibold text-amber-900/80">
+                            <span class="font-size-mini1 font-semibold text-amber-900/80">
                                 <i class="fas fa-paperclip mr-1 text-amber-600"></i>첨부 미리보기
                             </span>
-                            <button type="button" onclick="removeFeedbackAttachment()" class="text-xs font-medium text-red-600 hover:text-red-800">제거</button>
+                            <button type="button" onclick="removeFeedbackAttachment()" class="font-size-mini1 font-medium text-red-600 hover:text-red-800">제거</button>
                         </div>
                         <img id="feedbackAttachmentImagePreview" class="hidden mt-1 max-w-full max-h-48 rounded-lg border border-amber-200/80 object-contain bg-white" alt="첨부 이미지" />
                         <video id="feedbackAttachmentVideoPreview" class="hidden mt-1 max-w-full max-h-48 rounded-lg border border-amber-200/80 bg-black" controls controlsList="nodownload"></video>
@@ -8416,19 +8416,19 @@ app.get('/', (c) => {
                     <div class="flex flex-wrap items-center gap-2 mt-4">
                         <input type="file" id="feedbackImageInput" accept="image/*" class="hidden" />
                         <input type="file" id="feedbackVideoInput" accept="video/*" class="hidden" />
-                        <button type="button" onclick="pickFeedbackImage()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-amber-300 text-amber-900 bg-white hover:bg-amber-50 transition shadow-sm">
+                        <button type="button" onclick="pickFeedbackImage()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-size-mini1 font-medium border border-amber-300 text-amber-900 bg-white hover:bg-amber-50 transition shadow-sm">
                             <i class="fas fa-image text-amber-600"></i>사진
                         </button>
-                        <button type="button" onclick="pickFeedbackVideo()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-amber-300 text-amber-900 bg-white hover:bg-amber-50 transition shadow-sm">
+                        <button type="button" onclick="pickFeedbackVideo()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-size-mini1 font-medium border border-amber-300 text-amber-900 bg-white hover:bg-amber-50 transition shadow-sm">
                             <i class="fas fa-video text-amber-600"></i>동영상
                         </button>
                     </div>
                 </div>
                 <div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2 shrink-0 bg-white">
-                    <button type="button" onclick="hideFeedbackModal()" class="px-4 py-2.5 rounded-xl text-sm font-medium border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 transition">
+                    <button type="button" onclick="hideFeedbackModal()" class="px-4 py-2.5 rounded-xl font-size-desc font-medium border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 transition">
                         취소
                     </button>
-                    <button type="button" id="feedbackModalSubmitBtn" onclick="submitFeedbackToAdmin()" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 shadow-sm transition">
+                    <button type="button" id="feedbackModalSubmitBtn" onclick="submitFeedbackToAdmin()" class="px-5 py-2.5 rounded-xl font-size-desc font-semibold text-white bg-amber-500 hover:bg-amber-600 shadow-sm transition">
                         관리자에게 전송
                     </button>
                 </div>
@@ -8439,11 +8439,11 @@ app.get('/', (c) => {
         <div id="editPostModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-edit text-blue-600 mr-2"></i>게시물 수정
                     </h2>
                     <button onclick="hideEditPostModal()" class="text-gray-500 hover:text-gray-700 transition">
-                        <i class="fas fa-times text-xl"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
                 
@@ -8453,7 +8453,7 @@ app.get('/', (c) => {
                 <div class="space-y-4">
                     <!-- Content -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">
                             <i class="fas fa-pen mr-2"></i>내용
                         </label>
                         <textarea 
@@ -8465,7 +8465,7 @@ app.get('/', (c) => {
                     
                     <!-- Current Media Preview -->
                     <div id="editCurrentMedia" class="hidden">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">
                             <i class="fas fa-image mr-2"></i>현재 첨부된 미디어
                         </label>
                         <div id="editCurrentMediaPreview" class="relative">
@@ -8475,14 +8475,14 @@ app.get('/', (c) => {
                     
                     <!-- Image Upload -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">
                             <i class="fas fa-image mr-2"></i>이미지 업로드 (새로운 이미지로 교체)
                         </label>
                         <div id="editImagePreview" class="hidden mb-3">
                             <img id="editImagePreviewImg" class="max-w-full h-auto rounded-lg border border-gray-300" />
                             <button 
                                 onclick="removeEditImage()"
-                                class="mt-2 text-sm text-red-600 hover:text-red-700">
+                                class="mt-2 font-size-desc text-red-600 hover:text-red-700">
                                 <i class="fas fa-times mr-1"></i>이미지 제거
                             </button>
                         </div>
@@ -8497,19 +8497,19 @@ app.get('/', (c) => {
                             class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition">
                             <i class="fas fa-upload mr-2"></i>이미지 선택
                         </label>
-                        <p class="text-xs text-gray-500 mt-1">새 이미지를 선택하면 기존 이미지를 대체합니다</p>
+                        <p class="font-size-mini1 text-gray-500 mt-1">새 이미지를 선택하면 기존 이미지를 대체합니다</p>
                     </div>
                     
                     <!-- Video Upload -->
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">
                             <i class="fas fa-video mr-2"></i>동영상 업로드 (새로운 동영상으로 교체)
                         </label>
                         <div id="editVideoPreview" class="hidden mb-3">
                             <video id="editVideoPreviewVideo" class="max-w-full h-auto rounded-lg border border-gray-300" controls></video>
                             <button 
                                 onclick="removeEditVideo()"
-                                class="mt-2 text-sm text-red-600 hover:text-red-700">
+                                class="mt-2 font-size-desc text-red-600 hover:text-red-700">
                                 <i class="fas fa-times mr-1"></i>동영상 제거
                             </button>
                         </div>
@@ -8524,17 +8524,17 @@ app.get('/', (c) => {
                             class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition">
                             <i class="fas fa-upload mr-2"></i>동영상 선택
                         </label>
-                        <p class="text-xs text-gray-500 mt-1">새 동영상을 선택하면 기존 동영상을 대체합니다</p>
+                        <p class="font-size-mini1 text-gray-500 mt-1">새 동영상을 선택하면 기존 동영상을 대체합니다</p>
                     </div>
                     
                     <!-- Upload Progress -->
                     <div id="editUploadProgress" class="hidden">
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <p class="text-sm text-blue-800 mb-2" id="editUploadStatus">업로드 중...</p>
+                            <p class="font-size-desc text-blue-800 mb-2" id="editUploadStatus">업로드 중...</p>
                             <div class="w-full bg-blue-200 rounded-full h-2">
                                 <div id="editUploadProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                             </div>
-                            <p class="text-xs text-blue-600 mt-1" id="editUploadPercent">0%</p>
+                            <p class="font-size-mini1 text-blue-600 mt-1" id="editUploadPercent">0%</p>
                         </div>
                     </div>
                     
@@ -8560,16 +8560,16 @@ app.get('/', (c) => {
         <div id="signupModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 pt-[4vh] sm:pt-[10vh]">
             <div class="bg-white rounded-lg shadow-xl p-3 w-[88vw] max-w-[330px] sm:max-w-md max-h-[88vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-2 sticky top-0 bg-white z-10 pb-2 border-b border-gray-100">
-                    <h2 class="text-base font-bold text-gray-800">
+                    <h2 class="font-size-base font-bold text-gray-800">
                         <i class="fas fa-user-plus text-blue-600 mr-1.5"></i>회원가입
                     </h2>
                     <button onclick="hideSignupModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-lg"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
                 
                 <div id="signupFormContent">
-                <div id="signupEmailVerifyBanner" class="mb-3 p-2.5 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-800 flex items-start gap-2">
+                <div id="signupEmailVerifyBanner" class="mb-3 p-2.5 rounded-lg bg-blue-50 border border-blue-100 font-size-mini1 text-blue-800 flex items-start gap-2">
                     <i class="fas fa-envelope-circle-check mt-0.5 flex-shrink-0"></i>
                     <div>
                         <span class="font-semibold">이메일 인증이 필요합니다.</span>
@@ -8579,20 +8579,20 @@ app.get('/', (c) => {
 
                 <div class="space-y-2">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">이름 <span class="text-red-500">*</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">이름 <span class="text-red-500">*</span></label>
                         <input 
                             id="signupName"
                             type="text"
                             placeholder="홍길동"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2 font-size-desc border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">성별 <span class="text-red-500">*</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">성별 <span class="text-red-500">*</span></label>
                         <select 
                             id="signupGender"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            class="w-full p-2 font-size-desc border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
                             <option value="남성">남성</option>
                             <option value="여성">여성</option>
@@ -8600,19 +8600,19 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">이메일 <span class="text-red-500">*</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">이메일 <span class="text-red-500">*</span></label>
                         <input 
                             id="signupEmail"
                             type="email"
                             placeholder="email@example.com"
                             list="emailHistory"
                             autocomplete="email"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2 font-size-desc border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">전화번호 <span class="text-gray-400 text-xs font-normal">(선택)</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">전화번호 <span class="text-gray-400 font-size-mini1 font-normal">(선택)</span></label>
                         <input
                             id="signupPhone"
                             type="tel"
@@ -8620,46 +8620,46 @@ app.get('/', (c) => {
                             autocomplete="off"
                             readonly
                             onfocus="this.removeAttribute('readonly')"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2 font-size-desc border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">비밀번호 <span class="text-red-500">*</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">비밀번호 <span class="text-red-500">*</span></label>
                         <input
                             id="signupPassword"
                             type="password"
                             placeholder="영문 소문자 + 숫자 혼합 8자"
                             autocomplete="new-password"
                             oninput="validatePasswordRealtime()"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2 font-size-desc border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
-                        <div id="passwordRules" class="mt-1.5 space-y-0.5 text-[11px] hidden">
-                            <div id="rule-length" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>8자 이상</div>
-                            <div id="rule-lower" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>영문 소문자 3개 이상</div>
-                            <div id="rule-digit" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>숫자 3개 이상</div>
-                            <div id="rule-noUpper" class="flex items-center text-gray-400"><i class="fas fa-circle text-[5px] mr-1.5"></i>대문자·특수문자 사용 불가</div>
+                        <div id="passwordRules" class="mt-1.5 space-y-0.5 font-size-mini1 hidden">
+                            <div id="rule-length" class="flex items-center text-gray-400"><i class="fas fa-circle font-size-mini1 mr-1.5"></i>8자 이상</div>
+                            <div id="rule-lower" class="flex items-center text-gray-400"><i class="fas fa-circle font-size-mini1 mr-1.5"></i>영문 소문자 3개 이상</div>
+                            <div id="rule-digit" class="flex items-center text-gray-400"><i class="fas fa-circle font-size-mini1 mr-1.5"></i>숫자 3개 이상</div>
+                            <div id="rule-noUpper" class="flex items-center text-gray-400"><i class="fas fa-circle font-size-mini1 mr-1.5"></i>대문자·특수문자 사용 불가</div>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">비밀번호 확인 <span class="text-red-500">*</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">비밀번호 확인 <span class="text-red-500">*</span></label>
                         <input
                             id="signupPasswordConfirm"
                             type="password"
                             placeholder="비밀번호 재입력"
                             autocomplete="new-password"
                             oninput="validatePasswordRealtime()"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2 font-size-desc border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
-                        <div id="passwordMatchMsg" class="mt-1 text-[11px] hidden"></div>
+                        <div id="passwordMatchMsg" class="mt-1 font-size-mini1 hidden"></div>
                     </div>
                     
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">프로필 사진 <span class="text-gray-400 text-xs font-normal">(선택)</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">프로필 사진 <span class="text-gray-400 font-size-mini1 font-normal">(선택)</span></label>
                         <div class="flex items-center space-x-3">
                             <div id="avatarPreview" class="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                                <i class="fas fa-user text-gray-400 text-base"></i>
+                                <i class="fas fa-user text-gray-400 font-size-base"></i>
                             </div>
                             <div class="flex-1">
                                 <input 
@@ -8671,16 +8671,16 @@ app.get('/', (c) => {
                                 />
                                 <label 
                                     for="signupAvatar"
-                                    class="cursor-pointer inline-block px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition">
+                                    class="cursor-pointer inline-block px-3 py-1.5 bg-gray-100 text-gray-700 font-size-mini1 rounded hover:bg-gray-200 transition">
                                     <i class="fas fa-upload mr-1"></i>사진 선택
                                 </label>
-                                <p class="text-xs text-gray-500 mt-1">JPG, PNG</p>
+                                <p class="font-size-mini1 text-gray-500 mt-1">JPG, PNG</p>
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">커버 사진 <span class="text-gray-400 text-xs font-normal">(선택)</span></label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1">커버 사진 <span class="text-gray-400 font-size-mini1 font-normal">(선택)</span></label>
                         <div class="space-y-2">
                             <input
                                 id="signupCover"
@@ -8691,18 +8691,18 @@ app.get('/', (c) => {
                             />
                             <label
                                 for="signupCover"
-                                class="cursor-pointer inline-block px-3 py-1.5 bg-gray-100 text-gray-700 text-xs rounded hover:bg-gray-200 transition">
+                                class="cursor-pointer inline-block px-3 py-1.5 bg-gray-100 text-gray-700 font-size-mini1 rounded hover:bg-gray-200 transition">
                                 <i class="fas fa-image mr-1"></i>커버 선택
                             </label>
-                            <p class="text-xs text-gray-500">가로형 권장 · 최대 10MB</p>
+                            <p class="font-size-mini1 text-gray-500">가로형 권장 · 최대 10MB</p>
                             <div id="signupCoverPreview" class="w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center overflow-hidden">
-                                <span class="text-gray-500 text-xs">미리보기</span>
+                                <span class="text-gray-500 font-size-mini1">미리보기</span>
                             </div>
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">교단 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">교단 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <select 
                             id="signupDenomination"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -8770,7 +8770,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">소속 교회 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">소속 교회 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <input 
                             id="signupChurch"
                             type="text"
@@ -8780,7 +8780,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">담임목사 이름 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">담임목사 이름 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <input 
                             id="signupPastor"
                             type="text"
@@ -8790,12 +8790,12 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 위치 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">교회 위치 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <div class="grid grid-cols-2 gap-2">
                             <select 
                                 id="signupProvince"
                                 onchange="updateCities()"
-                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm">
+                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none font-size-desc">
                                 <option value="">도/시 선택</option>
                                 <option value="서울특별시">서울특별시</option>
                                 <option value="부산광역시">부산광역시</option>
@@ -8818,7 +8818,7 @@ app.get('/', (c) => {
                             
                             <select 
                                 id="signupCity"
-                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm"
+                                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none font-size-desc"
                                 disabled>
                                 <option value="">시/군/구 선택</option>
                             </select>
@@ -8826,7 +8826,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 직분 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">교회 직분 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <select 
                             id="signupPosition"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -8871,7 +8871,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">결혼 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <select 
                             id="signupMaritalStatus"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -8883,18 +8883,18 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">주소 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">주소 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <input 
                             id="signupAddress"
                             type="text"
                             placeholder="예) 서울특별시 강남구 테헤란로 123"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
-                        <p class="text-xs text-gray-500 mt-1">도로명 주소 또는 지번 주소를 입력해주세요</p>
+                        <p class="font-size-mini1 text-gray-500 mt-1">도로명 주소 또는 지번 주소를 입력해주세요</p>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">전화번호 <span class="text-xs text-gray-500">(선택)</span></label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">전화번호 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <input 
                             id="signupPhone"
                             type="tel"
@@ -8902,19 +8902,19 @@ app.get('/', (c) => {
                             pattern="[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
-                        <p class="text-xs text-gray-500 mt-1">하이픈(-)을 포함하여 입력해주세요</p>
+                        <p class="font-size-mini1 text-gray-500 mt-1">하이픈(-)을 포함하여 입력해주세요</p>
                     </div>
                     
                     <!-- 신앙 고백 질문 섹션 -->
                     <div class="border-t pt-4 mt-6">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4">
-                            <i class="fas fa-cross text-blue-600 mr-2"></i>신앙 고백 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                        <h3 class="font-size-title font-bold text-gray-800 mb-4">
+                            <i class="fas fa-cross text-blue-600 mr-2"></i>신앙 고백 <span class="font-size-mini1 text-gray-500 font-normal">(선택사항)</span>
                         </h3>
-                        <p class="text-sm text-gray-600 mb-4">신앙 고백 질문은 선택사항입니다. 원하시는 질문에만 답변하셔도 됩니다.</p>
+                        <p class="font-size-desc text-gray-600 mb-4">신앙 고백 질문은 선택사항입니다. 원하시는 질문에만 답변하셔도 됩니다.</p>
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">1. 당신은 예수님이 창조주 하나님임을 믿습니까?</label>
-                                <select id="faith_q1" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">1. 당신은 예수님이 창조주 하나님임을 믿습니까?</label>
+                                <select id="faith_q1" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8923,8 +8923,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">2. 당신은 예수님이 당신의 죄로 인해 대신 십자가에서 죽으신 것을 믿습니까?</label>
-                                <select id="faith_q2" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">2. 당신은 예수님이 당신의 죄로 인해 대신 십자가에서 죽으신 것을 믿습니까?</label>
+                                <select id="faith_q2" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8933,8 +8933,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">3. 당신은 예수님이 부활하신 것을 믿습니까?</label>
-                                <select id="faith_q3" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">3. 당신은 예수님이 부활하신 것을 믿습니까?</label>
+                                <select id="faith_q3" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8943,8 +8943,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">4. 당신은 예수님을 주님으로 영접했습니까?</label>
-                                <select id="faith_q4" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">4. 당신은 예수님을 주님으로 영접했습니까?</label>
+                                <select id="faith_q4" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8953,8 +8953,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">5. 당신 안에 성령님이 계십니까?</label>
-                                <select id="faith_q5" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">5. 당신 안에 성령님이 계십니까?</label>
+                                <select id="faith_q5" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8963,8 +8963,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">6. 당신은 죽으면 천국 갈 것을 확신 합니까?</label>
-                                <select id="faith_q6" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">6. 당신은 죽으면 천국 갈 것을 확신 합니까?</label>
+                                <select id="faith_q6" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8973,8 +8973,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">7. 당신은 성경을 진리로 믿습니까?</label>
-                                <select id="faith_q7" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">7. 당신은 성경을 진리로 믿습니까?</label>
+                                <select id="faith_q7" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8983,8 +8983,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">8. 당신은 정기적으로 예배에 참석합니까?</label>
-                                <select id="faith_q8" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">8. 당신은 정기적으로 예배에 참석합니까?</label>
+                                <select id="faith_q8" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -8993,8 +8993,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">9. 당신은 정기적으로 기도합니까?</label>
-                                <select id="faith_q9" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">9. 당신은 정기적으로 기도합니까?</label>
+                                <select id="faith_q9" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9003,8 +9003,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">10. 당신은 가끔 전도 합니까?</label>
-                                <select id="faith_q10" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">10. 당신은 가끔 전도 합니까?</label>
+                                <select id="faith_q10" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9015,11 +9015,11 @@ app.get('/', (c) => {
 
                 <button 
                     onclick="handleSignup()"
-                    class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold text-sm">
+                    class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold font-size-desc">
                     가입
                 </button>
                 
-                <p class="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-gray-600">
+                <p class="mt-3 sm:mt-4 text-center font-size-desc text-gray-600">
                     이미 계정이 있으신가요? 
                     <button onclick="hideSignupModal(); showLoginModal();" class="text-blue-600 hover:underline">로그인</button>
                 </p>
@@ -9033,7 +9033,7 @@ app.get('/', (c) => {
         <div id="howToUseModal" class="hidden fixed inset-0 z-50 bg-black bg-opacity-50 p-4">
             <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl max-h-[70vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold text-gray-800 flex items-center">
+                    <h2 class="font-size-title font-bold text-gray-800 flex items-center">
                         <div class="cross-icon mr-3" style="width: 28px; height: 28px;">
                             <div class="cross-dot top"></div>
                             <div class="cross-dot bottom"></div>
@@ -9043,14 +9043,14 @@ app.get('/', (c) => {
                         크로스프렌즈 사용법
                     </h2>
                     <button onclick="hideHowToUse()" class="text-gray-500 hover:text-gray-700 transition">
-                        <i class="fas fa-times text-2xl"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
                 
                 <div class="space-y-6">
                     <!-- Welcome Section -->
                     <div class="bg-white rounded-xl p-6 shadow-md">
-                        <h3 class="text-xl font-bold text-gray-800 mb-3">
+                        <h3 class="font-size-title font-bold text-gray-800 mb-3">
                             환영합니다!
                         </h3>
                         <p class="text-gray-700 leading-relaxed mb-4">
@@ -9061,7 +9061,7 @@ app.get('/', (c) => {
                         <!-- Bible Verse about Reward -->
                         <div class="bg-blue-50 border-l-4 border-blue-600 rounded-r-lg p-4 mt-4">
                             <div class="flex items-start">
-                                <i class="fas fa-book-open text-blue-600 mt-1 mr-3 text-lg"></i>
+                                <i class="fas fa-book-open text-blue-600 mt-1 mr-3 font-size-title"></i>
                                 <div>
                                     <p class="font-bold text-blue-800 mb-2">마태복음 5:12</p>
                                     <p class="text-gray-700 leading-relaxed italic">
@@ -9074,7 +9074,7 @@ app.get('/', (c) => {
 
                     <!-- Score System -->
                     <div class="bg-white rounded-xl p-6 shadow-md">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <h3 class="font-size-title font-bold text-gray-800 mb-4">
                             점수 시스템
                         </h3>
                         
@@ -9174,7 +9174,7 @@ app.get('/', (c) => {
 
                     <!-- Main Features -->
                     <div class="bg-white rounded-xl p-6 shadow-md">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">
+                        <h3 class="font-size-title font-bold text-gray-800 mb-4">
                             주요 기능
                         </h3>
                         <div class="space-y-3">
@@ -9182,49 +9182,49 @@ app.get('/', (c) => {
                                 <i class="fas fa-check-circle text-blue-500 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-semibold text-gray-800">포스팅 작성</h4>
-                                    <p class="text-sm text-gray-600">말씀(파란색), 기도(보라색), 활동(초록색) 카테고리로 포스팅을 작성하세요.</p>
+                                    <p class="font-size-desc text-gray-600">말씀(파란색), 기도(보라색), 활동(초록색) 카테고리로 포스팅을 작성하세요.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-purple-500 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-size-desc font-semibold text-gray-800">말씀 타이핑 <span class="font-semibold text-gray-800">(기본 리워드)</span></h4>
-                                    <p class="text-sm text-gray-600">성경 말씀을 따라 쓰며 타이핑 연습을 하고 점수를 획득하세요.</p>
+                                    <p class="font-size-desc text-gray-600">성경 말씀을 따라 쓰며 타이핑 연습을 하고 점수를 획득하세요.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-semibold text-gray-800">소통하기</h4>
-                                    <p class="text-sm text-gray-600">댓글, 좋아요, 기도하기 기능으로 형제 자매들과 교제하세요.</p>
+                                    <p class="font-size-desc text-gray-600">댓글, 좋아요, 기도하기 기능으로 형제 자매들과 교제하세요.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-red-500 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-semibold text-gray-800">나의 홈페이지</h4>
-                                    <p class="text-sm text-gray-600">헤더의 <strong>원형 프사</strong>를 클릭하면 커버, 프로필, 내 포스팅이 표시됩니다.</p>
+                                    <p class="font-size-desc text-gray-600">헤더의 <strong>원형 프사</strong>를 클릭하면 커버, 프로필, 내 포스팅이 표시됩니다.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-teal-500 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-semibold text-gray-800">메인으로 돌아가기</h4>
-                                    <p class="text-sm text-gray-600"><strong>로고</strong>를 누르면 QT, 친구 목록, 알림, 프로필 등이 모두 닫히고 전체 메인 화면으로 돌아갑니다.</p>
+                                    <p class="font-size-desc text-gray-600"><strong>로고</strong>를 누르면 QT, 친구 목록, 알림, 프로필 등이 모두 닫히고 전체 메인 화면으로 돌아갑니다.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-indigo-500 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-semibold text-gray-800">헤더 버튼 (QT, 친구, 알림, 관리자, 프사)</h4>
-                                    <p class="text-sm text-gray-600">첫 번째 클릭 시 해당 기능이 열립니다. 닫으려면 <strong>로고</strong>를 클릭하세요.</p>
+                                    <p class="font-size-desc text-gray-600">첫 번째 클릭 시 해당 기능이 열립니다. 닫으려면 <strong>로고</strong>를 클릭하세요.</p>
                                 </div>
                             </div>
                             <div class="flex items-start">
                                 <i class="fas fa-check-circle text-yellow-500 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-semibold text-gray-800">놀라운 보상</h4>
-                                    <p class="text-sm text-gray-600">특정 점수 이상 획득 시 놀라운 리워드가 계속 주어집니다.</p>
+                                    <p class="font-size-desc text-gray-600">특정 점수 이상 획득 시 놀라운 리워드가 계속 주어집니다.</p>
                                 </div>
                             </div>
                         </div>
@@ -9232,10 +9232,10 @@ app.get('/', (c) => {
 
                     <!-- Tips -->
                     <div class="bg-blue-50 border-2 border-blue-200 rounded-xl p-6 shadow-md">
-                        <h3 class="text-xl font-bold mb-3 text-blue-800">
+                        <h3 class="font-size-title font-bold mb-3 text-blue-800">
                             <i class="fas fa-lightbulb mr-2 text-blue-600"></i>Tips
                         </h3>
-                        <ul class="space-y-2 text-sm text-gray-700">
+                        <ul class="space-y-2 font-size-desc text-gray-700">
                             <li class="flex items-start">
                                 <i class="fas fa-arrow-right mr-2 mt-1 text-blue-600"></i>
                                 <span>매일 조금씩 활동하여 꾸준히 점수를 쌓아보세요!</span>
@@ -9261,7 +9261,7 @@ app.get('/', (c) => {
 
                     <!-- μ 설명 -->
                     <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 shadow-md">
-                        <p class="text-sm text-gray-700 leading-relaxed">
+                        <p class="font-size-desc text-gray-700 leading-relaxed">
                             <strong>μ</strong>는 뮤라고 발음하며, μισθός(미스토스)의 첫글자로 성경에 나오는 상급을 의미합니다. 100μ는 100뮤라고 하고, 말하자면 100점을 의미합니다.
                         </p>
                     </div>
@@ -9279,31 +9279,31 @@ app.get('/', (c) => {
         <div id="forgotPasswordModal" class="hidden fixed inset-0 z-[110] bg-black bg-opacity-50 pt-[5vh] sm:pt-[15vh] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
             <div class="bg-white rounded-lg shadow-xl p-4 w-[85vw] max-w-[320px] sm:max-w-sm sm:p-6 my-auto sm:my-0 shrink-0">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-base font-bold text-gray-800">
+                    <h2 class="font-size-base font-bold text-gray-800">
                         <i class="fas fa-unlock-keyhole text-blue-600 mr-1.5"></i>비밀번호 초기화
                     </h2>
                     <button onclick="hideForgotPasswordModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-lg"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
 
-                <p class="text-xs text-gray-600 mb-2 leading-relaxed">가입 시 사용한 이메일을 입력하면, 비밀번호 재설정 링크가 메일로 발송됩니다. (스팸함도 확인해주세요)</p>
+                <p class="font-size-mini1 text-gray-600 mb-2 leading-relaxed">가입 시 사용한 이메일을 입력하면, 비밀번호 재설정 링크가 메일로 발송됩니다. (스팸함도 확인해주세요)</p>
                 <div class="space-y-2.5">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1.5">이메일</label>
+                        <label class="block font-size-mini1 font-semibold text-gray-700 mb-1.5">이메일</label>
                         <input
                             id="forgotPasswordEmail"
                             type="email"
                             placeholder="이메일 주소"
                             autocomplete="email"
-                            class="w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-2 font-size-desc border rounded focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                 </div>
-                <button type="button" id="forgotPasswordSubmitBtn" onclick="requestPasswordReset()" class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                <button type="button" id="forgotPasswordSubmitBtn" onclick="requestPasswordReset()" class="w-full mt-3 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition font-semibold font-size-desc disabled:opacity-60 disabled:cursor-not-allowed">
                     비밀번호 초기화 요청
                 </button>
-                <p class="mt-2 text-center text-xs text-gray-500">
+                <p class="mt-2 text-center font-size-mini1 text-gray-500">
                     <button type="button" onclick="hideForgotPasswordModal(); showLoginModal();" class="text-blue-600 hover:underline">로그인으로 돌아가기</button>
                 </p>
             </div>
@@ -9312,20 +9312,20 @@ app.get('/', (c) => {
         <div id="loginModal" class="hidden fixed inset-0 z-[100] bg-black/50 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
             <div class="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-[17.5rem] sm:max-w-[18.5rem] p-4 sm:p-5 shrink-0">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <h2 class="font-size-base font-bold text-gray-900 flex items-center gap-2">
                         <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                            <i class="fas fa-right-to-bracket text-base"></i>
+                            <i class="fas fa-right-to-bracket font-size-base"></i>
                         </span>
                         로그인
                     </h2>
                     <button type="button" onclick="hideLoginModal()" class="text-gray-400 hover:text-gray-600 p-1.5 -mr-1 rounded-lg hover:bg-gray-100 touch-manipulation" aria-label="닫기">
-                        <i class="fas fa-times text-lg"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
 
                 <form onsubmit="event.preventDefault(); handleLogin(); return false;" class="space-y-3.5" autocomplete="on">
                     <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" for="loginEmail">이메일</label>
+                        <label class="block font-size-mini1 font-medium text-gray-600 mb-1" for="loginEmail">이메일</label>
                         <input
                             id="loginEmail"
                             name="username"
@@ -9334,14 +9334,14 @@ app.get('/', (c) => {
                             placeholder="email@example.com"
                             list="emailHistory"
                             autocomplete="username"
-                            class="w-full px-3 py-2.5 text-sm bg-slate-100 border-0 rounded-lg text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:outline-none min-h-[42px] touch-manipulation"
+                            class="w-full px-3 py-2.5 font-size-desc bg-slate-100 border-0 rounded-lg text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:outline-none min-h-[42px] touch-manipulation"
                         />
                         <datalist id="emailHistory">
                             <!-- Email suggestions will be loaded here -->
                         </datalist>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" for="loginPassword">비밀번호</label>
+                        <label class="block font-size-mini1 font-medium text-gray-600 mb-1" for="loginPassword">비밀번호</label>
                         <div class="relative">
                             <input
                                 id="loginPassword"
@@ -9349,29 +9349,29 @@ app.get('/', (c) => {
                                 type="password"
                                 placeholder="비밀번호 입력"
                                 autocomplete="current-password"
-                                class="w-full px-3 py-2.5 pr-10 text-sm bg-slate-100 border-0 rounded-lg text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:outline-none min-h-[42px] touch-manipulation"
+                                class="w-full px-3 py-2.5 pr-10 font-size-desc bg-slate-100 border-0 rounded-lg text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:outline-none min-h-[42px] touch-manipulation"
                             />
                             <button type="button" onclick="toggleLoginPasswordVisibility()" class="absolute inset-y-0 right-0 flex items-center justify-center px-2.5 text-gray-400 hover:text-gray-600 touch-manipulation" title="비밀번호 보기">
-                                <i id="loginPasswordToggleIcon" class="fas fa-eye text-sm leading-none"></i>
+                                <i id="loginPasswordToggleIcon" class="fas fa-eye font-size-desc leading-none"></i>
                             </button>
                         </div>
                     </div>
 
                     <label class="flex items-center gap-2 cursor-pointer select-none group">
                         <input type="checkbox" id="loginRememberCredentials" class="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 shrink-0" />
-                        <span class="text-xs font-medium text-gray-700 group-hover:text-gray-900">이 기기에서 비밀번호 저장</span>
+                        <span class="font-size-mini1 font-medium text-gray-700 group-hover:text-gray-900">이 기기에서 비밀번호 저장</span>
                     </label>
 
                     <button
                         type="submit"
-                        class="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-semibold text-sm min-h-[42px] touch-manipulation">
+                        class="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition font-semibold font-size-desc min-h-[42px] touch-manipulation">
                         로그인
                     </button>
 
-                    <p class="text-center text-xs pt-0.5">
+                    <p class="text-center font-size-mini1 pt-0.5">
                         <button type="button" onclick="showForgotPasswordModal()" class="text-blue-500 hover:text-blue-600 hover:underline py-0.5 touch-manipulation">비밀번호를 잊으셨나요?</button>
                     </p>
-                    <p class="text-center text-xs text-gray-600 leading-relaxed">
+                    <p class="text-center font-size-mini1 text-gray-600 leading-relaxed">
                         <span>계정이 없으신가요? </span>
                         <button type="button" onclick="hideLoginModal(); showSignupModal();" class="text-blue-500 font-semibold hover:text-blue-600 hover:underline py-0.5 touch-manipulation">회원가입</button>
                     </p>
@@ -9404,19 +9404,19 @@ app.get('/', (c) => {
                     <span class="login-reward-spark lr-s6"></span>
                 </div>
                 <div class="relative z-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 px-4 py-3.5 text-white text-center border-b border-white/20">
-                    <h2 id="loginRewardCelebrationTitle" class="login-reward-fanfare-title text-lg sm:text-xl font-bold leading-snug drop-shadow-sm">환영합니다</h2>
+                    <h2 id="loginRewardCelebrationTitle" class="login-reward-fanfare-title font-size-title font-bold leading-snug drop-shadow-sm">환영합니다</h2>
                 </div>
                 <div class="relative z-10 p-5 sm:p-6 space-y-4 bg-gradient-to-b from-white to-indigo-50/40 overflow-y-auto flex-1">
                     <div class="text-center rounded-xl bg-white/80 border border-blue-100 px-3 py-3 shadow-sm">
-                        <p class="text-sm text-gray-600 mb-1">
+                        <p class="font-size-desc text-gray-600 mb-1">
                             종합 μ <span class="text-gray-400">(성경+기도+활동)</span>
                         </p>
-                        <div id="loginRewardCelebrationTotal" class="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 tabular-nums">0</div>
-                        <p id="loginRewardCelebrationNextHint" class="text-xs text-violet-800 font-medium mt-2"></p>
+                        <div id="loginRewardCelebrationTotal" class="font-size-title font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 tabular-nums">0</div>
+                        <p id="loginRewardCelebrationNextHint" class="font-size-mini1 text-violet-800 font-medium mt-2"></p>
                     </div>
 
                     <div>
-                        <p class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                        <p class="font-size-mini1 font-bold text-gray-700 mb-2 flex items-center gap-1.5">
                             <i class="fas fa-chart-column text-indigo-600"></i> μ 구성 · 상승 그래프
                         </p>
                         <div class="flex items-end justify-center gap-2 sm:gap-3 px-1 rounded-xl bg-white/70 border border-indigo-100 py-3">
@@ -9424,38 +9424,38 @@ app.get('/', (c) => {
                                 <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
                                     <div id="loginRewardBarScripture" class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 min-h-0 shadow-sm" style="height:0%"></div>
                                 </div>
-                                <span class="text-[10px] text-amber-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationScripture">0</span>μ</span>
-                                <span class="text-[10px] text-amber-800/90 font-medium">성경</span>
+                                <span class="font-size-mini1 text-amber-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationScripture">0</span>μ</span>
+                                <span class="font-size-mini1 text-amber-800/90 font-medium">성경</span>
                             </div>
                             <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                                 <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
                                     <div id="loginRewardBarPrayer" class="w-full rounded-t-lg bg-gradient-to-t from-purple-500 to-purple-400 min-h-0 shadow-sm" style="height:0%"></div>
                                 </div>
-                                <span class="text-[10px] text-purple-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationPrayer">0</span>μ</span>
-                                <span class="text-[10px] text-purple-800/90 font-medium">기도</span>
+                                <span class="font-size-mini1 text-purple-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationPrayer">0</span>μ</span>
+                                <span class="font-size-mini1 text-purple-800/90 font-medium">기도</span>
                             </div>
                             <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                                 <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
                                     <div id="loginRewardBarActivity" class="w-full rounded-t-lg bg-gradient-to-t from-rose-500 to-rose-400 min-h-0 shadow-sm" style="height:0%"></div>
                                 </div>
-                                <span class="text-[10px] text-rose-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationActivity">0</span>μ</span>
-                                <span class="text-[10px] text-rose-800/90 font-medium">활동</span>
+                                <span class="font-size-mini1 text-rose-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationActivity">0</span>μ</span>
+                                <span class="font-size-mini1 text-rose-800/90 font-medium">활동</span>
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <p class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                        <p class="font-size-mini1 font-bold text-gray-700 mb-2 flex items-center gap-1.5">
                             <i class="fas fa-check-circle text-emerald-600"></i> 달성한 리워드
                         </p>
                         <ul id="loginRewardUnlockList" class="space-y-2 text-left list-none p-0 m-0"></ul>
                     </div>
 
                     <div class="text-center px-1 space-y-1.5">
-                        <p class="text-xs text-gray-700 leading-relaxed">
+                        <p class="font-size-mini1 text-gray-700 leading-relaxed">
                             "기뻐하고 즐거워하라 하늘에서 너희의 상이 큼이라"
                         </p>
-                        <p class="text-[11px] text-gray-500">마태복음 5:12</p>
+                        <p class="font-size-mini1 text-gray-500">마태복음 5:12</p>
                     </div>
                     <button type="button" onclick="hideLoginRewardCelebrationModal()" class="login-reward-fanfare-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold hover:from-blue-700 hover:to-violet-700 transition shadow-lg shadow-indigo-500/25">
                         함께 지어져가요
@@ -9476,36 +9476,36 @@ app.get('/', (c) => {
                     <span class="milestone-spark milestone-spark-5"></span>
                 </div>
                 <div id="milestoneCelebrationHeader" class="relative z-10 px-5 py-4 text-white text-center rounded-t-2xl border-b border-white/20 bg-gradient-to-r from-blue-600 to-indigo-600">
-                    <p class="text-sm opacity-90">마일스톤 달성</p>
-                    <h2 id="milestoneCelebrationTitle" class="text-xl font-bold mt-1">200μ 달성!</h2>
-                    <p id="milestoneCelebrationSubtitle" class="text-xs opacity-90 mt-1 leading-snug">리워드가 열렸습니다</p>
+                    <p class="font-size-desc opacity-90">마일스톤 달성</p>
+                    <h2 id="milestoneCelebrationTitle" class="font-size-title font-bold mt-1">200μ 달성!</h2>
+                    <p id="milestoneCelebrationSubtitle" class="font-size-mini1 opacity-90 mt-1 leading-snug">리워드가 열렸습니다</p>
                 </div>
                 <div class="p-5 sm:p-6 space-y-4 relative z-10 overflow-y-auto flex-1">
                     <div class="text-center">
-                        <p class="text-sm text-gray-600 mb-1">종합 μ <span class="text-gray-400">(성경+기도+활동)</span></p>
-                        <div id="milestoneCelebrationBigMu" class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 tabular-nums">0μ</div>
+                        <p class="font-size-desc text-gray-600 mb-1">종합 μ <span class="text-gray-400">(성경+기도+활동)</span></p>
+                        <div id="milestoneCelebrationBigMu" class="font-size-title font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 tabular-nums">0μ</div>
                     </div>
                     <div class="relative z-10 flex items-end justify-center gap-2 sm:gap-3 px-1">
                         <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                             <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-200 overflow-hidden">
                                 <div id="milestoneBarScripture" class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 min-h-0" style="height:0%"></div>
                             </div>
-                            <span class="text-[10px] text-amber-800 font-semibold mt-1.5">성경</span>
+                            <span class="font-size-mini1 text-amber-800 font-semibold mt-1.5">성경</span>
                         </div>
                         <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                             <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-200 overflow-hidden">
                                 <div id="milestoneBarPrayer" class="w-full rounded-t-lg bg-gradient-to-t from-purple-500 to-purple-400 min-h-0" style="height:0%"></div>
                             </div>
-                            <span class="text-[10px] text-purple-800 font-semibold mt-1.5">기도</span>
+                            <span class="font-size-mini1 text-purple-800 font-semibold mt-1.5">기도</span>
                         </div>
                         <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                             <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-200 overflow-hidden">
                                 <div id="milestoneBarActivity" class="w-full rounded-t-lg bg-gradient-to-t from-rose-500 to-rose-400 min-h-0" style="height:0%"></div>
                             </div>
-                            <span class="text-[10px] text-rose-800 font-semibold mt-1.5">활동</span>
+                            <span class="font-size-mini1 text-rose-800 font-semibold mt-1.5">활동</span>
                         </div>
                     </div>
-                    <p id="milestoneCelebrationRewardHint" class="text-center text-xs text-gray-500 leading-relaxed"></p>
+                    <p id="milestoneCelebrationRewardHint" class="text-center font-size-mini1 text-gray-500 leading-relaxed"></p>
                     <button type="button" onclick="hideScoreMilestoneCelebrationModal()" class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md">확인</button>
                 </div>
             </div>
@@ -9515,11 +9515,11 @@ app.get('/', (c) => {
         <div id="viewProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-user-circle text-blue-600 mr-2"></i>내 프로필
                     </h2>
                     <button onclick="hideViewProfileModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-xl"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
                 
@@ -9539,52 +9539,52 @@ app.get('/', (c) => {
         <div id="editProfileModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-10 pb-4">
-                    <h2 class="text-2xl font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-user-edit text-blue-600 mr-2"></i>회원정보 수정
                     </h2>
                     <button onclick="hideEditProfileModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-xl"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
                 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">이메일</label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">이메일</label>
                         <input 
                             id="editEmail"
                             type="email"
                             disabled
                             class="w-full p-3 border rounded-lg bg-gray-100 cursor-not-allowed"
                         />
-                        <p class="text-xs text-gray-500 mt-1">이메일은 변경할 수 없습니다.</p>
+                        <p class="font-size-mini1 text-gray-500 mt-1">이메일은 변경할 수 없습니다.</p>
                     </div>
 
                     <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
-                        <h3 class="text-sm font-bold text-gray-800 mb-1">
+                        <h3 class="font-size-desc font-bold text-gray-800 mb-1">
                             <i class="fas fa-key text-blue-600 mr-2"></i>비밀번호 변경
                         </h3>
-                        <p class="text-xs text-gray-500 mb-3">가입 시와 동일 규칙(소문자·숫자 각 3자 이상, 8자 이상, 대문자·특수문자 불가)</p>
+                        <p class="font-size-mini1 text-gray-500 mb-3">가입 시와 동일 규칙(소문자·숫자 각 3자 이상, 8자 이상, 대문자·특수문자 불가)</p>
                         <div class="space-y-2">
                             <div>
-                                <label class="block text-xs font-medium text-gray-700 mb-1" for="editPasswordCurrent">현재 비밀번호</label>
-                                <input type="password" id="editPasswordCurrent" autocomplete="current-password" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <label class="block font-size-mini1 font-medium text-gray-700 mb-1" for="editPasswordCurrent">현재 비밀번호</label>
+                                <input type="password" id="editPasswordCurrent" autocomplete="current-password" class="w-full p-2.5 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-700 mb-1" for="editPasswordNew">새 비밀번호</label>
-                                <input type="password" id="editPasswordNew" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <label class="block font-size-mini1 font-medium text-gray-700 mb-1" for="editPasswordNew">새 비밀번호</label>
+                                <input type="password" id="editPasswordNew" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2.5 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-700 mb-1" for="editPasswordConfirm">새 비밀번호 확인</label>
-                                <input type="password" id="editPasswordConfirm" autocomplete="new-password" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <label class="block font-size-mini1 font-medium text-gray-700 mb-1" for="editPasswordConfirm">새 비밀번호 확인</label>
+                                <input type="password" id="editPasswordConfirm" autocomplete="new-password" class="w-full p-2.5 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
-                            <button type="button" onclick="submitChangePasswordLegacy()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">
+                            <button type="button" onclick="submitChangePasswordLegacy()" class="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg font-size-desc font-semibold hover:bg-indigo-700 transition">
                                 비밀번호 변경
                             </button>
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">이름</label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">이름</label>
                         <input 
                             id="editName"
                             type="text"
@@ -9594,7 +9594,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">성별</label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">성별</label>
                         <select 
                             id="editGender"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -9605,12 +9605,12 @@ app.get('/', (c) => {
                     </div>
                     
                     <div class="border-t pt-4">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">
                             <i class="fas fa-user-circle text-blue-600 mr-2"></i>프로필 사진
                         </label>
                         <div class="flex items-center space-x-4">
                             <div id="editAvatarPreview" class="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
-                                <i class="fas fa-user text-gray-400 text-2xl"></i>
+                                <i class="fas fa-user text-gray-400 font-size-title"></i>
                             </div>
                             <div class="flex-1">
                                 <input 
@@ -9658,18 +9658,18 @@ app.get('/', (c) => {
                                         </button>
                                     </div>
                                 </div>
-                                <p id="editAvatarNote" class="text-xs text-gray-500 mt-2">
+                                <p id="editAvatarNote" class="font-size-mini1 text-gray-500 mt-2">
                                     프로필: JPG, PNG (최대 5MB) / 커버: JPG, PNG (최대 10MB)
                                 </p>
                                 <div id="editCoverPreview" class="w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
-                                    <span class="text-white text-sm font-semibold drop-shadow-lg">📸 커버 사진 미리보기</span>
+                                    <span class="text-white font-size-desc font-semibold drop-shadow-lg">📸 커버 사진 미리보기</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">소속 교회</label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">소속 교회</label>
                         <input 
                             id="editChurch"
                             type="text"
@@ -9679,7 +9679,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">담임목사 이름</label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">담임목사 이름</label>
                         <input 
                             id="editPastor"
                             type="text"
@@ -9689,7 +9689,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">교회 직분</label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">교회 직분</label>
                         <select 
                             id="editPosition"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -9734,7 +9734,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">결혼</label>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">결혼</label>
                         <select 
                             id="editMaritalStatus"
                             class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
@@ -9747,14 +9747,14 @@ app.get('/', (c) => {
                     
                     <!-- 신앙 고백 질문 섹션 -->
                     <div class="border-t pt-4 mt-6">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4">
-                            <i class="fas fa-cross text-blue-600 mr-2"></i>신앙 고백 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                        <h3 class="font-size-title font-bold text-gray-800 mb-4">
+                            <i class="fas fa-cross text-blue-600 mr-2"></i>신앙 고백 <span class="font-size-mini1 text-gray-500 font-normal">(선택사항)</span>
                         </h3>
-                        <p class="text-sm text-gray-600 mb-4">신앙 고백 질문은 선택사항입니다. 원하시는 질문에만 답변하셔도 됩니다.</p>
+                        <p class="font-size-desc text-gray-600 mb-4">신앙 고백 질문은 선택사항입니다. 원하시는 질문에만 답변하셔도 됩니다.</p>
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">1. 당신은 예수님이 창조주 하나님임을 믿습니까?</label>
-                                <select id="edit_faith_q1" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">1. 당신은 예수님이 창조주 하나님임을 믿습니까?</label>
+                                <select id="edit_faith_q1" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9763,8 +9763,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">2. 당신은 예수님이 당신의 죄로 인해 대신 십자가에서 죽으신 것을 믿습니까?</label>
-                                <select id="edit_faith_q2" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">2. 당신은 예수님이 당신의 죄로 인해 대신 십자가에서 죽으신 것을 믿습니까?</label>
+                                <select id="edit_faith_q2" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9773,8 +9773,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">3. 당신은 예수님이 부활하신 것을 믿습니까?</label>
-                                <select id="edit_faith_q3" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">3. 당신은 예수님이 부활하신 것을 믿습니까?</label>
+                                <select id="edit_faith_q3" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9783,8 +9783,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">4. 당신은 성경이 하나님의 말씀임을 믿습니까?</label>
-                                <select id="edit_faith_q4" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">4. 당신은 성경이 하나님의 말씀임을 믿습니까?</label>
+                                <select id="edit_faith_q4" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9793,8 +9793,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">5. 당신은 사람들에게 복음을 전해야 한다고 믿습니까?</label>
-                                <select id="edit_faith_q5" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">5. 당신은 사람들에게 복음을 전해야 한다고 믿습니까?</label>
+                                <select id="edit_faith_q5" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9803,8 +9803,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">6. 당신은 십일조를 드리고 있습니까?</label>
-                                <select id="edit_faith_q6" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">6. 당신은 십일조를 드리고 있습니까?</label>
+                                <select id="edit_faith_q6" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9813,8 +9813,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">7. 당신은 성경을 읽습니까?</label>
-                                <select id="edit_faith_q7" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">7. 당신은 성경을 읽습니까?</label>
+                                <select id="edit_faith_q7" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9823,8 +9823,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">8. 정기적으로 예배에 참석합니까?</label>
-                                <select id="edit_faith_q8" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">8. 정기적으로 예배에 참석합니까?</label>
+                                <select id="edit_faith_q8" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9833,8 +9833,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">9. 정기적으로 기도합니까?</label>
-                                <select id="edit_faith_q9" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">9. 정기적으로 기도합니까?</label>
+                                <select id="edit_faith_q9" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9843,8 +9843,8 @@ app.get('/', (c) => {
                             </div>
                             
                             <div class="flex items-center justify-between">
-                                <label class="text-sm text-gray-700 flex-1">10. 가끔 전도합니까?</label>
-                                <select id="edit_faith_q10" class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                                <label class="font-size-desc text-gray-700 flex-1">10. 가끔 전도합니까?</label>
+                                <select id="edit_faith_q10" class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none">
                                     <option value="">선택</option>
                                     <option value="예">예</option>
                                     <option value="아니오">아니오</option>
@@ -9867,19 +9867,19 @@ app.get('/', (c) => {
         <div id="qtInviteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-envelope text-red-600 mr-2"></i>친구에게 QT 추천하기
                     </h2>
                     <button onclick="hideQtInviteModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-xl"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
-                <p class="text-sm text-gray-600 mb-4">이메일을 입력하면 오늘의 샘플 QT 카드와 함께 회원가입 링크가 발송됩니다.</p>
+                <p class="font-size-desc text-gray-600 mb-4">이메일을 입력하면 오늘의 샘플 QT 카드와 함께 회원가입 링크가 발송됩니다.</p>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="email" id="qtInviteEmail" placeholder="친구 이메일" class="w-full min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
-                    <button id="qtInviteBtn" onclick="sendQtInvite()" class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium whitespace-nowrap">초대 보내기</button>
+                    <input type="email" id="qtInviteEmail" placeholder="친구 이메일" class="w-full min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg font-size-desc focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    <button id="qtInviteBtn" onclick="sendQtInvite()" class="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-size-desc font-medium whitespace-nowrap">초대 보내기</button>
                 </div>
-                <p id="qtInviteMsg" class="text-xs mt-2 hidden"></p>
+                <p id="qtInviteMsg" class="font-size-mini1 mt-2 hidden"></p>
             </div>
         </div>
 
@@ -9887,19 +9887,19 @@ app.get('/', (c) => {
         <div id="friendInviteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-gray-800">
+                    <h2 class="font-size-title font-bold text-gray-800">
                         <i class="fas fa-envelope text-amber-600 mr-2"></i>지인 초대하기
                     </h2>
                     <button onclick="hideFriendInviteModal()" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times text-xl"></i>
+                        <i class="fas fa-times font-size-title"></i>
                     </button>
                 </div>
-                <p class="text-sm text-gray-600 mb-4">이메일을 입력하면 CROSSfriends 초대 메일이 발송됩니다. 가입 시 +20μ, 친구가 가입하면 +40μ를 받아요!</p>
+                <p class="font-size-desc text-gray-600 mb-4">이메일을 입력하면 CROSSfriends 초대 메일이 발송됩니다. 가입 시 +20μ, 친구가 가입하면 +40μ를 받아요!</p>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="email" id="friendInviteEmail" placeholder="초대할 이메일 주소" class="w-full min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
-                    <button id="friendInviteBtn" onclick="sendFriendInvite()" class="w-full sm:w-auto px-3 py-2 border-2 border-gray-500 bg-white text-gray-500 rounded-lg hover:border-blue-600 hover:text-blue-600 text-sm font-medium whitespace-nowrap">초대 보내기</button>
+                    <input type="email" id="friendInviteEmail" placeholder="초대할 이메일 주소" class="w-full min-w-0 flex-1 px-3 py-2 border border-gray-300 rounded-lg font-size-desc focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                    <button id="friendInviteBtn" onclick="sendFriendInvite()" class="w-full sm:w-auto px-3 py-2 border-2 border-gray-500 bg-white text-gray-500 rounded-lg hover:border-blue-600 hover:text-blue-600 font-size-desc font-medium whitespace-nowrap">초대 보내기</button>
                 </div>
-                <p id="friendInviteMsg" class="text-xs mt-2 hidden"></p>
+                <p id="friendInviteMsg" class="font-size-mini1 mt-2 hidden"></p>
             </div>
         </div>
 
@@ -9947,7 +9947,7 @@ app.get('/', (c) => {
                     
                     if (!userInput) {
                         result.classList.remove('hidden');
-                        result.className = 'mt-2 text-sm text-yellow-600';
+                        result.className = 'mt-2 font-size-desc text-yellow-600';
                         result.textContent = '⚠️ 구절을 입력해주세요.';
                         return;
                     }
@@ -9957,7 +9957,7 @@ app.get('/', (c) => {
                     
                     if (isCorrect) {
                         result.classList.remove('hidden');
-                        result.className = 'mt-2 text-sm text-green-600 font-bold';
+                        result.className = 'mt-2 font-size-desc text-green-600 font-bold';
                         result.textContent = '✅ 정확합니다! 말씀을 마음에 새기셨습니다.';
                         
                         // Clear input after success
@@ -9970,7 +9970,7 @@ app.get('/', (c) => {
                         console.log('말씀 타이핑 성공!');
                     } else {
                         result.classList.remove('hidden');
-                        result.className = 'mt-2 text-sm text-red-600';
+                        result.className = 'mt-2 font-size-desc text-red-600';
                         result.textContent = '❌ 다시 한 번 확인해보세요.';
                     }
                 }

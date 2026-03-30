@@ -123,13 +123,13 @@ function buildYouTubePreviewHtml(content) {
                 <img src="${thumb}" alt="YouTube preview" class="w-full object-cover" onerror="this.style.display='none'" />
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div class="w-12 h-12 rounded-full bg-black/70 flex items-center justify-center">
-                        <i class="fab fa-youtube text-red-500 text-2xl"></i>
+                        <i class="fab fa-youtube text-red-500 font-size-title"></i>
                     </div>
                 </div>
             </div>
             <div class="px-3 py-2">
-                <p class="text-xs font-semibold text-red-600 uppercase tracking-wide">YouTube</p>
-                <p class="text-sm text-gray-700 truncate">${safeLink}</p>
+                <p class="font-size-mini1 font-semibold text-red-600 uppercase tracking-wide">YouTube</p>
+                <p class="font-size-desc text-gray-700 truncate">${safeLink}</p>
             </div>
         </a>
     `;
@@ -149,10 +149,10 @@ function buildGenericLinkPreviewHtml(content) {
                 <div class="px-3 py-2.5 flex items-center gap-3">
                     <img src="${favicon}" alt="" class="w-6 h-6 rounded shrink-0" onerror="this.style.display='none'" />
                     <div class="min-w-0 flex-1">
-                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-wide truncate">${host}</p>
-                        <p class="text-sm text-gray-700 truncate">${safeLink}</p>
+                        <p class="font-size-mini1 font-semibold text-blue-600 uppercase tracking-wide truncate">${host}</p>
+                        <p class="font-size-desc text-gray-700 truncate">${safeLink}</p>
                     </div>
-                    <i class="fas fa-external-link-alt text-gray-400 text-xs shrink-0"></i>
+                    <i class="fas fa-external-link-alt text-gray-400 font-size-mini1 shrink-0"></i>
                 </div>
             </a>
         `;
@@ -484,13 +484,13 @@ function hideSignupModal() {
         if (el) el.value = '';
     }
     const preview = document.getElementById('avatarPreview');
-    if (preview) preview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+    if (preview) preview.innerHTML = '<i class="fas fa-user text-gray-400 font-size-title"></i>';
     const coverPrev = document.getElementById('signupCoverPreview');
     if (coverPrev) {
         coverPrev.style.backgroundImage = '';
         coverPrev.className =
             'w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center overflow-hidden';
-        coverPrev.innerHTML = '<span class="text-gray-500 text-xs">미리보기</span>';
+        coverPrev.innerHTML = '<span class="text-gray-500 font-size-mini1">미리보기</span>';
     }
     const rulesDiv = document.getElementById('passwordRules');
     const matchDiv = document.getElementById('passwordMatchMsg');
@@ -719,7 +719,7 @@ function showSermonLocked(currentScore) {
         unlockBtn.disabled = false;
         unlockBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
         unlockBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white', 'hover:from-purple-600', 'hover:to-pink-600', 'cursor-pointer', 'animate-pulse');
-        unlockBtn.innerHTML = '<i class="fas fa-unlock text-2xl"></i><span>클릭하여 언락!</span>';
+        unlockBtn.innerHTML = '<i class="fas fa-unlock font-size-title"></i><span>클릭하여 언락!</span>';
         unlockBtn.onclick = function () {
             showSermonUnlocked(currentScore);
             if (!initSermonYoutubePlayer()) {
@@ -732,7 +732,7 @@ function showSermonLocked(currentScore) {
         unlockBtn.onclick = null;
         unlockBtn.className =
             'w-full py-3 px-4 bg-gray-300 text-gray-600 rounded-xl font-bold font-size-desc cursor-not-allowed flex items-center justify-center gap-2 transition-all';
-        unlockBtn.innerHTML = '<i class="fas fa-lock text-base text-gray-500"></i><span>200μ 달성 후 공개 가능</span>';
+        unlockBtn.innerHTML = '<i class="fas fa-lock font-size-base text-gray-500"></i><span>200μ 달성 후 공개 가능</span>';
     }
 }
 
@@ -924,16 +924,16 @@ function showVideoCompletionReward(points, totalScore) {
         <div class="bg-green-50 border-2 border-green-600 rounded-lg p-4">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    <i class="fas fa-check-circle text-green-600 font-size-title"></i>
                     <span class="font-bold text-green-600">설교 시청 완료! 🎉</span>
                 </div>
-                <span class="text-sm text-gray-600">시청률: <strong>${Math.round((maxWatchedTime / videoDuration) * 100)}%</strong></span>
+                <span class="font-size-desc text-gray-600">시청률: <strong>${Math.round((maxWatchedTime / videoDuration) * 100)}%</strong></span>
             </div>
-            <div class="text-sm text-gray-700">
+            <div class="font-size-desc text-gray-700">
                 <p class="mb-1">획득 점수: <strong class="text-green-600">+${points}점</strong></p>
                 <p>총 성경 점수: <strong class="text-blue-600">${totalScore}점</strong></p>
             </div>
-            <p class="text-xs text-gray-500 mt-2">
+            <p class="font-size-mini1 text-gray-500 mt-2">
                 <i class="fas fa-heart mr-1"></i>말씀을 끝까지 들으셨습니다. 은혜가 충만하시길!
             </p>
         </div>
@@ -1176,7 +1176,7 @@ function updateTypingScoreDisplay() {
                 unlockBtn.disabled = false;
                 unlockBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
                 unlockBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white', 'hover:from-purple-600', 'hover:to-pink-600', 'cursor-pointer', 'animate-pulse');
-                unlockBtn.innerHTML = '<i class="fas fa-unlock text-2xl"></i><span>클릭하여 언락!</span>';
+                unlockBtn.innerHTML = '<i class="fas fa-unlock font-size-title"></i><span>클릭하여 언락!</span>';
                 unlockBtn.onclick = function() {
                     showSermonUnlocked(combinedScore);
                     if (!initSermonYoutubePlayer()) {
@@ -1384,7 +1384,7 @@ function checkTyping() {
         pointsEarned = 100;
         completedVerses.add(verseId);
     } else if (isAlreadyCompleted) {
-        bonusMessage = '<p class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 완료한 구절입니다 (점수 미지급)</p>';
+        bonusMessage = '<p class="font-size-mini1 text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>이미 완료한 구절입니다 (점수 미지급)</p>';
     }
     
     // Update total score only if points earned
@@ -1423,10 +1423,10 @@ function checkTyping() {
     typingResult.innerHTML = `
         <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-3">
             <div class="flex items-center justify-center ${resultColor}">
-                <i class="fas ${resultIcon} text-xl mr-2"></i>
-                <p class="text-sm font-semibold">${resultMessage}</p>
+                <i class="fas ${resultIcon} font-size-title mr-2"></i>
+                <p class="font-size-desc font-semibold">${resultMessage}</p>
             </div>
-            <p class="text-xs text-gray-600 mt-2 text-center">
+            <p class="font-size-mini1 text-gray-600 mt-2 text-center">
                 정확도: <strong class="${resultColor}">${accuracy}%</strong>
                 ${pointsEarned > 0 ? ` | 획득 점수: <strong class="text-green-600">+${pointsEarned}점</strong>` : ' | 획득 점수: 0점'}
             </p>
@@ -1705,7 +1705,7 @@ async function showEditProfileModal(targetUserId) {
                 <div class="md:col-span-1">
                     <div class="bg-gray-50 rounded-lg p-6 text-center">
                         <div 
-                            class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" 
+                            class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white font-size-title mb-4 cursor-pointer hover:ring-4 hover:ring-blue-300 transition" 
                             id="editAvatarPreviewInline"
                             onclick="cancelEditProfile()"
                             title="프로필 보기로 돌아가기">
@@ -1716,11 +1716,11 @@ async function showEditProfileModal(targetUserId) {
                                   : '<i class="fas fa-user"></i>'}
                         </div>
                         
-                        <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
-                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">
+                        <h3 class="font-size-title font-bold text-gray-800 mb-2">${user.name}</h3>
+                        <span class="inline-block px-3 py-1 rounded-full font-size-desc font-semibold ${roleColor}">
                             ${roleName}
                         </span>
-                        <div class="mt-3 mb-4 text-xs text-gray-500">
+                        <div class="mt-3 mb-4 font-size-mini1 text-gray-500">
                             <p>회원 ID: #${user.id}</p>
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                         </div>
@@ -1741,33 +1741,33 @@ async function showEditProfileModal(targetUserId) {
                             
                             <label 
                                 for="editAvatarInline"
-                                class="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition text-sm font-semibold text-center">
+                                class="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition font-size-desc font-semibold text-center">
                                 <i class="fas fa-upload mr-2"></i>프로필 사진 변경
                             </label>
                             <button 
                                 type="button"
                                 onclick="deleteAvatarInline()"
-                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-semibold">
+                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-size-desc font-semibold">
                                 <i class="fas fa-trash mr-2"></i>프로필 사진 삭제
                             </button>
                             
                             <label 
                                 for="editCoverInline"
-                                class="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition text-sm font-semibold text-center">
+                                class="block w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition font-size-desc font-semibold text-center">
                                 <i class="fas fa-image mr-2"></i>커버 사진 변경
                             </label>
                             <button 
                                 type="button"
                                 onclick="deleteCoverInline()"
-                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-semibold">
+                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-size-desc font-semibold">
                                 <i class="fas fa-trash mr-2"></i>커버 사진 삭제
                             </button>
                             
                             <div id="editCoverPreviewInline" class="w-full h-24 rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
-                                <span class="text-gray-600 text-sm font-semibold"><i class="fas fa-image mr-2"></i>커버 사진</span>
+                                <span class="text-gray-600 font-size-desc font-semibold"><i class="fas fa-image mr-2"></i>커버 사진</span>
                             </div>
                             
-                            <p class="text-xs text-gray-500 mt-2 text-center">프로필: 최대 5MB / 커버: 최대 10MB</p>
+                            <p class="font-size-mini1 text-gray-500 mt-2 text-center">프로필: 최대 5MB / 커버: 최대 10MB</p>
                         </div>
                     </div>
                 </div>
@@ -1778,9 +1778,9 @@ async function showEditProfileModal(targetUserId) {
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
                         <div class="flex items-center justify-between mb-3">
                             <h4 class="font-semibold text-purple-800">
-                                <i class="fas fa-trophy mr-2"></i>나의 점수 <span class="text-xs text-gray-500 font-normal">(읽기 전용)</span>
+                                <i class="fas fa-trophy mr-2"></i>나의 점수 <span class="font-size-mini1 text-gray-500 font-normal">(읽기 전용)</span>
                             </h4>
-                            <label class="flex items-center text-sm cursor-pointer">
+                            <label class="flex items-center font-size-desc cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     id="privacyScores"
@@ -1792,27 +1792,27 @@ async function showEditProfileModal(targetUserId) {
                         <div class="grid grid-cols-3 gap-4">
                             <div class="text-center bg-white p-3 rounded-lg">
                                 <div class="flex flex-col items-center">
-                                    <i class="fas fa-praying-hands text-purple-600 text-xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">기도 점수</span>
-                                    <span class="text-xl font-bold text-purple-900">${user.prayer_score || 0}</span>
+                                    <i class="fas fa-praying-hands text-purple-600 font-size-title mb-2"></i>
+                                    <span class="font-size-mini1 text-gray-600 mb-1">기도 점수</span>
+                                    <span class="font-size-title font-bold text-purple-900">${user.prayer_score || 0}</span>
                                 </div>
                             </div>
                             <div class="text-center bg-white p-3 rounded-lg">
                                 <div class="flex flex-col items-center">
-                                    <i class="fas fa-bible text-purple-600 text-xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">성경 점수</span>
-                                    <span class="text-xl font-bold text-purple-900">${user.scripture_score || 0}</span>
+                                    <i class="fas fa-bible text-purple-600 font-size-title mb-2"></i>
+                                    <span class="font-size-mini1 text-gray-600 mb-1">성경 점수</span>
+                                    <span class="font-size-title font-bold text-purple-900">${user.scripture_score || 0}</span>
                                 </div>
                             </div>
                             <div class="text-center bg-white p-3 rounded-lg">
                                 <div class="flex flex-col items-center">
-                                    <i class="fas fa-chart-line text-purple-600 text-xl mb-2"></i>
-                                    <span class="text-xs text-gray-600 mb-1">활동 점수</span>
-                                    <span class="text-xl font-bold text-purple-900">${user.activity_score || 0}</span>
+                                    <i class="fas fa-chart-line text-purple-600 font-size-title mb-2"></i>
+                                    <span class="font-size-mini1 text-gray-600 mb-1">활동 점수</span>
+                                    <span class="font-size-title font-bold text-purple-900">${user.activity_score || 0}</span>
                                 </div>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-2 text-center">
+                        <p class="font-size-mini1 text-gray-500 mt-2 text-center">
                             <i class="fas fa-info-circle mr-1"></i>점수는 활동으로 자동 적립되며 수정할 수 없습니다.
                         </p>
                     </div>
@@ -1823,7 +1823,7 @@ async function showEditProfileModal(targetUserId) {
                             <h4 class="font-semibold text-blue-800">
                                 <i class="fas fa-info-circle mr-2"></i>기본 정보
                             </h4>
-                            <label class="flex items-center text-sm cursor-pointer">
+                            <label class="flex items-center font-size-desc cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     id="privacyBasicInfo"
@@ -1834,45 +1834,45 @@ async function showEditProfileModal(targetUserId) {
                         </div>
                         <div class="space-y-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">이메일 (수정 불가)</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">이메일 (수정 불가)</label>
                                 <input 
                                     type="email" 
                                     value="${user.email || ''}"
                                     disabled
-                                    class="w-full p-2 border rounded-lg bg-gray-100 text-gray-600 text-sm" />
+                                    class="w-full p-2 border rounded-lg bg-gray-100 text-gray-600 font-size-desc" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">이름 *</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">이름 *</label>
                                 <input 
                                     type="text" 
                                     id="editNameInline"
                                     value="${user.name || ''}"
                                     required
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-size-desc" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">자기소개</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">자기소개</label>
                                 <textarea 
                                     id="editBioInline"
                                     rows="3"
                                     placeholder="간단한 자기소개를 입력하세요..."
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">${user.bio || ''}</textarea>
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-size-desc">${user.bio || ''}</textarea>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">성별</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">성별</label>
                                 <select 
                                     id="editGenderInline"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-size-desc">
                                     <option value="">선택</option>
                                     <option value="남성" ${user.gender === '남성' ? 'selected' : ''}>남성</option>
                                     <option value="여성" ${user.gender === '여성' ? 'selected' : ''}>여성</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">결혼</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">결혼</label>
                                 <select 
                                     id="editMaritalStatusInline"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-size-desc">
                                     <option value="">선택</option>
                                     <option value="single" ${user.marital_status === 'single' ? 'selected' : ''}>미혼</option>
                                     <option value="married" ${user.marital_status === 'married' ? 'selected' : ''}>기혼</option>
@@ -1880,22 +1880,22 @@ async function showEditProfileModal(targetUserId) {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">전화번호</label>
                                 <input 
                                     type="tel" 
                                     id="editPhoneInline"
                                     placeholder="010-1234-5678"
                                     value="${user.phone || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-size-desc" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">주소</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">주소</label>
                                 <input 
                                     type="text" 
                                     id="editAddressInline"
                                     placeholder="서울특별시 강남구..."
                                     value="${user.address || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-size-desc" />
                             </div>
                         </div>
                     </div>
@@ -1906,7 +1906,7 @@ async function showEditProfileModal(targetUserId) {
                             <h4 class="font-semibold text-green-800">
                                 <i class="fas fa-church mr-2"></i>교회 정보
                             </h4>
-                            <label class="flex items-center text-sm cursor-pointer">
+                            <label class="flex items-center font-size-desc cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     id="privacyChurchInfo"
@@ -1917,26 +1917,26 @@ async function showEditProfileModal(targetUserId) {
                         </div>
                         <div class="space-y-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">소속 교회</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">소속 교회</label>
                                 <input 
                                     type="text" 
                                     id="editChurchInline"
                                     value="${user.church || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 font-size-desc" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">담임목사</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">담임목사</label>
                                 <input 
                                     type="text" 
                                     id="editPastorInline"
                                     value="${user.pastor || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 font-size-desc" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">직분</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">직분</label>
                                 <select 
                                     id="editPositionInline"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 text-sm">
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 font-size-desc">
                                     <option value="">선택</option>
                                     <option value="평신도" ${user.position === '평신도' ? 'selected' : ''}>평신도</option>
                                     <option value="새신자" ${user.position === '새신자' ? 'selected' : ''}>새신자</option>
@@ -1962,7 +1962,7 @@ async function showEditProfileModal(targetUserId) {
                             <h4 class="font-semibold text-yellow-800">
                                 <i class="fas fa-cross mr-2"></i>신앙 고백
                             </h4>
-                            <label class="flex items-center text-sm cursor-pointer">
+                            <label class="flex items-center font-size-desc cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     id="privacyFaithAnswers"
@@ -1971,7 +1971,7 @@ async function showEditProfileModal(targetUserId) {
                                 <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
                             </label>
                         </div>
-                        <div class="space-y-2 text-sm">
+                        <div class="space-y-2 font-size-desc">
                             ${Array.from({length: 10}, (_, i) => {
                                 const questions = [
                                     '1. 예수님이 창조주 하나님임을 믿습니까?',
@@ -1992,7 +1992,7 @@ async function showEditProfileModal(targetUserId) {
                                         <label class="text-gray-700 flex-1">${questions[i]}</label>
                                         <select 
                                             id="editFaithQ${qNum}Inline"
-                                            class="ml-3 p-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-600">
+                                            class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-yellow-600">
                                             <option value="">선택</option>
                                             <option value="예" ${faithAnswers[qKey] === '예' ? 'selected' : ''}>예</option>
                                             <option value="아니오" ${faithAnswers[qKey] === '아니오' ? 'selected' : ''}>아니오</option>
@@ -2008,9 +2008,9 @@ async function showEditProfileModal(targetUserId) {
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
                         <div class="flex items-center justify-between mb-3">
                             <h4 class="font-semibold text-purple-800">
-                                <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                                <i class="fas fa-briefcase mr-2"></i>직업 정보 <span class="font-size-mini1 text-gray-500 font-normal">(선택사항)</span>
                             </h4>
-                            <label class="flex items-center text-sm cursor-pointer">
+                            <label class="flex items-center font-size-desc cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     id="privacyCareerInfo"
@@ -2022,11 +2022,11 @@ async function showEditProfileModal(targetUserId) {
                         <div class="space-y-3">
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <label class="block text-sm font-medium text-gray-700">경력</label>
+                                    <label class="block font-size-desc font-medium text-gray-700">경력</label>
                                     <button 
                                         type="button"
                                         onclick="addCareerEntry()"
-                                        class="text-xs px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition">
+                                        class="font-size-mini1 px-2 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition">
                                         <i class="fas fa-plus mr-1"></i>추가
                                     </button>
                                 </div>
@@ -2043,19 +2043,19 @@ async function showEditProfileModal(targetUserId) {
                                                     <div class="flex-1 space-y-2">
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 font-size-desc"
                                                             placeholder="회사/기관명 (예: 삼성전자)"
                                                             value="${career.company || ''}"
                                                             data-field="company" />
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 font-size-desc"
                                                             placeholder="직책/직위 (예: 책임연구원)"
                                                             value="${career.position || ''}"
                                                             data-field="position" />
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 font-size-desc"
                                                             placeholder="재직기간 (예: 2020-2023 또는 2020-현재)"
                                                             value="${career.period || ''}"
                                                             data-field="period" />
@@ -2065,7 +2065,7 @@ async function showEditProfileModal(targetUserId) {
                                                             type="button"
                                                             onclick="removeCareerEntry(this)"
                                                             class="text-red-500 hover:text-red-700 p-2">
-                                                            <i class="fas fa-trash text-sm"></i>
+                                                            <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
                                                 </div>
@@ -2081,9 +2081,9 @@ async function showEditProfileModal(targetUserId) {
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
                         <div class="flex items-center justify-between mb-3">
                             <h4 class="font-semibold text-orange-800">
-                                <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="text-xs text-gray-500 font-normal">(선택사항)</span>
+                                <i class="fas fa-graduation-cap mr-2"></i>학교 정보 <span class="font-size-mini1 text-gray-500 font-normal">(선택사항)</span>
                             </h4>
-                            <label class="flex items-center text-sm cursor-pointer">
+                            <label class="flex items-center font-size-desc cursor-pointer">
                                 <input 
                                     type="checkbox" 
                                     id="privacyEducationInfo"
@@ -2094,39 +2094,39 @@ async function showEditProfileModal(targetUserId) {
                         </div>
                         <div class="space-y-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">초등학교</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">초등학교</label>
                                 <input 
                                     type="text" 
                                     id="editElementarySchoolInline"
                                     value="${user.elementary_school || ''}"
                                     placeholder="예: 서울초등학교"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">중학교</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">중학교</label>
                                 <input 
                                     type="text" 
                                     id="editMiddleSchoolInline"
                                     value="${user.middle_school || ''}"
                                     placeholder="예: 서울중학교"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">고등학교</label>
+                                <label class="block font-size-desc font-medium text-gray-700 mb-1">고등학교</label>
                                 <input 
                                     type="text" 
                                     id="editHighSchoolInline"
                                     value="${user.high_school || ''}"
                                     placeholder="예: 서울고등학교"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc" />
                             </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <label class="block text-sm font-medium text-gray-700">대학교</label>
+                                    <label class="block font-size-desc font-medium text-gray-700">대학교</label>
                                     <button 
                                         type="button"
                                         onclick="addEducationEntry('university')"
-                                        class="text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
+                                        class="font-size-mini1 px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
                                         <i class="fas fa-plus mr-1"></i>추가
                                     </button>
                                 </div>
@@ -2147,13 +2147,13 @@ async function showEditProfileModal(targetUserId) {
                                                     <div class="flex-1 space-y-2">
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                                                             placeholder="예: 서울대학교"
                                                             value="${edu.school || ''}"
                                                             data-field="school" />
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                                                             placeholder="전공 (예: 컴퓨터공학)"
                                                             value="${edu.major || ''}"
                                                             data-field="major" />
@@ -2163,7 +2163,7 @@ async function showEditProfileModal(targetUserId) {
                                                             type="button"
                                                             onclick="removeEducationEntry(this)"
                                                             class="text-red-500 hover:text-red-700 p-2">
-                                                            <i class="fas fa-trash text-sm"></i>
+                                                            <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
                                                 </div>
@@ -2174,11 +2174,11 @@ async function showEditProfileModal(targetUserId) {
                             </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <label class="block text-sm font-medium text-gray-700">석사</label>
+                                    <label class="block font-size-desc font-medium text-gray-700">석사</label>
                                     <button 
                                         type="button"
                                         onclick="addEducationEntry('masters')"
-                                        class="text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
+                                        class="font-size-mini1 px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
                                         <i class="fas fa-plus mr-1"></i>추가
                                     </button>
                                 </div>
@@ -2199,13 +2199,13 @@ async function showEditProfileModal(targetUserId) {
                                                     <div class="flex-1 space-y-2">
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                                                             placeholder="예: 서울대학교 대학원"
                                                             value="${edu.school || ''}"
                                                             data-field="school" />
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                                                             placeholder="전공 (예: 신학)"
                                                             value="${edu.major || ''}"
                                                             data-field="major" />
@@ -2215,7 +2215,7 @@ async function showEditProfileModal(targetUserId) {
                                                             type="button"
                                                             onclick="removeEducationEntry(this)"
                                                             class="text-red-500 hover:text-red-700 p-2">
-                                                            <i class="fas fa-trash text-sm"></i>
+                                                            <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
                                                 </div>
@@ -2226,11 +2226,11 @@ async function showEditProfileModal(targetUserId) {
                             </div>
                             <div>
                                 <div class="flex items-center justify-between mb-2">
-                                    <label class="block text-sm font-medium text-gray-700">박사</label>
+                                    <label class="block font-size-desc font-medium text-gray-700">박사</label>
                                     <button 
                                         type="button"
                                         onclick="addEducationEntry('phd')"
-                                        class="text-xs px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
+                                        class="font-size-mini1 px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
                                         <i class="fas fa-plus mr-1"></i>추가
                                     </button>
                                 </div>
@@ -2251,13 +2251,13 @@ async function showEditProfileModal(targetUserId) {
                                                     <div class="flex-1 space-y-2">
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                                                             placeholder="예: 하버드대학교"
                                                             value="${edu.school || ''}"
                                                             data-field="school" />
                                                         <input 
                                                             type="text" 
-                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                                                            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                                                             placeholder="전공 (예: 조직신학)"
                                                             value="${edu.major || ''}"
                                                             data-field="major" />
@@ -2267,7 +2267,7 @@ async function showEditProfileModal(targetUserId) {
                                                             type="button"
                                                             onclick="removeEducationEntry(this)"
                                                             class="text-red-500 hover:text-red-700 p-2">
-                                                            <i class="fas fa-trash text-sm"></i>
+                                                            <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
                                                 </div>
@@ -2286,21 +2286,21 @@ async function showEditProfileModal(targetUserId) {
                         <h4 class="font-semibold text-gray-800 mb-1">
                             <i class="fas fa-key mr-2 text-blue-600"></i>비밀번호 변경
                         </h4>
-                        <p class="text-xs text-gray-500 mb-3">현재 비밀번호 확인 후 새 비밀번호로 변경합니다. (가입 시와 동일 규칙: 소문자 3자 이상·숫자 3자 이상·8자 이상, 대문자·특수문자 불가)</p>
+                        <p class="font-size-mini1 text-gray-500 mb-3">현재 비밀번호 확인 후 새 비밀번호로 변경합니다. (가입 시와 동일 규칙: 소문자 3자 이상·숫자 3자 이상·8자 이상, 대문자·특수문자 불가)</p>
                         <div class="space-y-2 max-w-md">
                             <div>
-                                <label class="block text-sm text-gray-700 mb-1" for="editCurrentPasswordInline">현재 비밀번호</label>
-                                <input type="password" id="editCurrentPasswordInline" autocomplete="current-password" class="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <label class="block font-size-desc text-gray-700 mb-1" for="editCurrentPasswordInline">현재 비밀번호</label>
+                                <input type="password" id="editCurrentPasswordInline" autocomplete="current-password" class="w-full p-2 border border-gray-200 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
                             <div>
-                                <label class="block text-sm text-gray-700 mb-1" for="editNewPasswordInline">새 비밀번호</label>
-                                <input type="password" id="editNewPasswordInline" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <label class="block font-size-desc text-gray-700 mb-1" for="editNewPasswordInline">새 비밀번호</label>
+                                <input type="password" id="editNewPasswordInline" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2 border border-gray-200 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
                             <div>
-                                <label class="block text-sm text-gray-700 mb-1" for="editNewPasswordConfirmInline">새 비밀번호 확인</label>
-                                <input type="password" id="editNewPasswordConfirmInline" autocomplete="new-password" class="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <label class="block font-size-desc text-gray-700 mb-1" for="editNewPasswordConfirmInline">새 비밀번호 확인</label>
+                                <input type="password" id="editNewPasswordConfirmInline" autocomplete="new-password" class="w-full p-2 border border-gray-200 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
-                            <button type="button" onclick="submitChangePasswordInline()" class="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">
+                            <button type="button" onclick="submitChangePasswordInline()" class="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-size-desc font-semibold hover:bg-indigo-700 transition">
                                 비밀번호 변경
                             </button>
                         </div>
@@ -2404,7 +2404,7 @@ async function deleteAvatarInline() {
         // Update preview to default
         const preview = document.getElementById('editAvatarPreviewInline');
         if (preview) {
-            preview.innerHTML = '<i class="fas fa-user text-gray-400 text-4xl"></i>';
+            preview.innerHTML = '<i class="fas fa-user text-gray-400 font-size-title"></i>';
             // Re-add click event after updating innerHTML
             preview.onclick = cancelEditProfile;
             preview.title = '프로필 보기로 돌아가기';
@@ -2479,7 +2479,7 @@ async function deleteCoverInline() {
         if (preview) {
             preview.style.backgroundImage = '';
             preview.className = 'w-full h-24 rounded-lg bg-gray-200 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-2';
-            preview.innerHTML = '<span class="text-gray-600 text-sm font-semibold"><i class="fas fa-image mr-2"></i>커버 사진</span>';
+            preview.innerHTML = '<span class="text-gray-600 font-size-desc font-semibold"><i class="fas fa-image mr-2"></i>커버 사진</span>';
         }
         
         // Clear file input
@@ -2842,7 +2842,7 @@ async function deleteAvatar() {
         
         // Update preview to default
         const preview = document.getElementById('editAvatarPreview');
-        preview.innerHTML = '<i class="fas fa-user text-gray-400 text-2xl"></i>';
+        preview.innerHTML = '<i class="fas fa-user text-gray-400 font-size-title"></i>';
         
         // Refresh user data
         const userResponse = await axios.get('/api/users/' + currentUserId);
@@ -3181,23 +3181,23 @@ function fillLoginRewardUnlockList(combined, listEl) {
         const li = document.createElement('li');
         li.className = 'flex items-start gap-3 rounded-xl border p-3 bg-emerald-50/95 border-emerald-200';
         li.innerHTML =
-            '<span class="shrink-0 mt-0.5 text-lg"><i class="fas fa-check-circle text-emerald-600"></i></span>' +
+            '<span class="shrink-0 mt-0.5 font-size-title"><i class="fas fa-check-circle text-emerald-600"></i></span>' +
             '<div class="min-w-0 flex-1">' +
-            '<p class="font-semibold text-sm text-gray-900">' +
+            '<p class="font-semibold font-size-desc text-gray-900">' +
             t.label +
             ' <span class="text-blue-600">' +
             t.mu +
             'μ</span></p>' +
-            '<p class="text-xs text-gray-600 mt-0.5">' +
+            '<p class="font-size-mini1 text-gray-600 mt-0.5">' +
             t.desc +
             '</p>' +
-            '<p class="text-xs text-emerald-800 font-semibold mt-1">언락됨 · 왼쪽 사이드바에서 이용하세요</p>' +
+            '<p class="font-size-mini1 text-emerald-800 font-semibold mt-1">언락됨 · 왼쪽 사이드바에서 이용하세요</p>' +
             '</div>';
         listEl.appendChild(li);
     }
     if (!anyUnlocked) {
         const emptyLi = document.createElement('li');
-        emptyLi.className = 'text-sm text-gray-500 text-center py-3 px-2 leading-relaxed';
+        emptyLi.className = 'font-size-desc text-gray-500 text-center py-3 px-2 leading-relaxed';
         emptyLi.textContent = '아직 달성한 리워드가 없습니다. 종합 μ를 올려 보세요.';
         listEl.appendChild(emptyLi);
     }
@@ -3561,7 +3561,7 @@ function syncQtRewardSidebars(combinedScore) {
             unlockW.className =
                 'w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all';
             unlockW.innerHTML =
-                '<i class="fas fa-lock text-lg"></i><span>1000μ 달성 후 공개 가능</span>';
+                '<i class="fas fa-lock font-size-title"></i><span>1000μ 달성 후 공개 가능</span>';
         }
     }
 
@@ -3584,7 +3584,7 @@ function syncQtRewardSidebars(combinedScore) {
             unlockA.className =
                 'w-full py-3 px-4 bg-gray-300 text-gray-500 rounded-lg font-bold font-size-desc cursor-not-allowed flex items-center justify-center space-x-2 transition-all';
             unlockA.innerHTML =
-                '<i class="fas fa-lock text-lg"></i><span>1400μ 달성 후 공개 가능</span>';
+                '<i class="fas fa-lock font-size-title"></i><span>1400μ 달성 후 공개 가능</span>';
         }
     }
 
@@ -4957,7 +4957,7 @@ function updateAuthUI() {
         const applyAvatarTo = (container) => {
             if (!container) return;
             if (currentUser.role === 'admin') {
-                container.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
+                container.innerHTML = '<i class="fas fa-crown text-yellow-400 font-size-title"></i>';
                 return;
             }
             if (currentUser.avatar_url) {
@@ -4980,7 +4980,7 @@ function updateAuthUI() {
 
         if (newPostAvatar) {
             if (currentUser.role === 'admin') {
-                newPostAvatar.innerHTML = '<i class="fas fa-crown text-yellow-400 text-2xl"></i>';
+                newPostAvatar.innerHTML = '<i class="fas fa-crown text-yellow-400 font-size-title"></i>';
             } else if (currentUser.avatar_url) {
                 const postImg = document.createElement('img');
                 postImg.src = toCanonicalSiteUrl(currentUser.avatar_url);
@@ -5192,7 +5192,7 @@ function renderEmbeddedOriginalPostCard(post, fieldMode, options = {}) {
     const backgroundStyle = bg ? `style="background-color: ${bg};"` : '';
 
     const avatarHtml = p.user_role === 'admin'
-        ? '<i class="fas fa-crown text-yellow-400 text-2xl"></i>'
+        ? '<i class="fas fa-crown text-yellow-400 font-size-title"></i>'
         : p.user_avatar
             ? `<img src="${toCanonicalSiteUrl(p.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
             : '<i class="fas fa-user"></i>';
@@ -5224,7 +5224,7 @@ function renderEmbeddedOriginalPostCard(post, fieldMode, options = {}) {
         ? `
         <div class="absolute top-2 right-2 z-10">
             <button type="button" onclick="removeSharedPost()" class="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition shadow-md" title="공유 취소">
-                <i class="fas fa-times text-sm"></i>
+                <i class="fas fa-times font-size-desc"></i>
             </button>
         </div>
     `
@@ -5482,7 +5482,7 @@ function openPostMediaExpand(postId) {
         el.className = 'fixed inset-0 z-[10050] hidden flex items-center justify-center bg-black/85 p-3';
         el.innerHTML = `
             <button type="button" class="absolute top-3 right-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20" data-lb-close aria-label="닫기">
-                <i class="fas fa-times text-xl"></i>
+                <i class="fas fa-times font-size-title"></i>
             </button>
             <button type="button" class="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 hidden" data-lb-prev aria-label="이전"><i class="fas fa-chevron-left"></i></button>
             <button type="button" class="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 hidden" data-lb-next aria-label="다음"><i class="fas fa-chevron-right"></i></button>
@@ -5754,13 +5754,13 @@ function createPostImagePreviewCell(file, idx, wrapExtra = '', imgClass = 'w-ful
     img.style.backgroundColor = previewBg;
     img.onload = () => URL.revokeObjectURL(src);
     const badge = document.createElement('span');
-    badge.className = 'absolute bottom-2 left-2 z-[1] flex h-6 min-w-[1.5rem] items-center justify-center rounded-md bg-black/50 px-1.5 text-[10px] font-bold text-white backdrop-blur-sm';
+    badge.className = 'absolute bottom-2 left-2 z-[1] flex h-6 min-w-[1.5rem] items-center justify-center rounded-md bg-black/50 px-1.5 font-size-mini1 font-bold text-white backdrop-blur-sm';
     badge.textContent = String(idx + 1);
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'absolute top-2 right-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white shadow backdrop-blur-sm transition hover:bg-red-500';
     btn.title = '이 사진만 제거';
-    btn.innerHTML = '<i class="fas fa-times text-xs"></i>';
+    btn.innerHTML = '<i class="fas fa-times font-size-mini1"></i>';
     btn.onclick = (e) => {
         e.stopPropagation();
         removePostImageAtIndex(idx);
@@ -5820,7 +5820,7 @@ function renderPostImagePreviewFiles(files) {
         const slotRow = document.createElement('div');
         slotRow.className = 'mt-2 flex flex-wrap items-center gap-2';
         const hint = document.createElement('span');
-        hint.className = 'text-[10px] text-gray-500 sm:text-xs';
+        hint.className = 'font-size-mini1 text-gray-500 font-size-mini1';
         hint.textContent = `사진 버튼으로 ${remain}장 더 추가할 수 있어요`;
         slotRow.appendChild(hint);
         for (let s = 0; s < remain; s++) {
@@ -5828,7 +5828,7 @@ function renderPostImagePreviewFiles(files) {
             chip.type = 'button';
             chip.className =
                 'inline-flex h-8 min-w-[2rem] items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white/80 text-gray-400 shadow-sm transition hover:border-blue-400 hover:text-blue-500';
-            chip.innerHTML = '<i class="fas fa-plus text-xs"></i>';
+            chip.innerHTML = '<i class="fas fa-plus font-size-mini1"></i>';
             chip.title = '사진 추가';
             chip.onclick = () => document.getElementById('postImageFile')?.click();
             slotRow.appendChild(chip);
@@ -6269,7 +6269,7 @@ async function refreshComments(postId) {
                 
                 // Avatar HTML - Admin shows crown icon
                 const avatarHtml = comment.user_role === 'admin'
-                    ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
+                    ? '<i class="fas fa-crown text-yellow-400 font-size-title"></i>'
                     : comment.user_avatar
                         ? `<img src="${toCanonicalSiteUrl(comment.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                         : '<i class="fas fa-user"></i>';
@@ -6283,19 +6283,19 @@ async function refreshComments(postId) {
                 commentsHtml += `
                     <div class="flex space-x-3">
                         <div class="admin-badge-container">
-                            <div onclick="showUserProfileModal(${comment.user_id})" class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
+                            <div onclick="showUserProfileModal(${comment.user_id})" class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white font-size-desc flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
-                                <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition inline-block" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
-                                <p class="text-sm text-gray-700 mt-1">${comment.content}</p>
+                                <p class="font-semibold font-size-desc text-gray-800 cursor-pointer hover:text-blue-600 transition inline-block" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
+                                <p class="font-size-desc text-gray-700 mt-1">${comment.content}</p>
                             </div>
                             <div class="flex items-center space-x-4 mt-1">
-                                <p class="text-xs text-gray-500">${formatDate(comment.created_at)}</p>
+                                <p class="font-size-mini1 text-gray-500">${formatDate(comment.created_at)}</p>
                                 <button 
                                     onclick="toggleCommentLike(${comment.id}, ${postId})" 
-                                    class="flex items-center space-x-1 text-xs ${isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'} transition"
+                                    class="flex items-center space-x-1 font-size-mini1 ${isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'} transition"
                                     title="좋아요">
                                     <i class="fas fa-heart"></i>
                                     <span>${comment.likes_count || 0}</span>
@@ -6314,11 +6314,11 @@ async function refreshComments(postId) {
                             id="comment-input-${postId}"
                             rows="1"
                             placeholder="댓글을 작성하세요..."
-                            class="flex-1 p-2 border rounded-lg text-sm resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="flex-1 p-2 border rounded-lg font-size-desc resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         ></textarea>
                         <button 
                             id="comment-submit-${postId}"
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -6688,7 +6688,7 @@ async function loadComments(postId) {
                 
                 // Avatar HTML - Admin shows crown icon
                 const avatarHtml = comment.user_role === 'admin'
-                    ? '<i class="fas fa-crown text-yellow-400 text-lg"></i>'
+                    ? '<i class="fas fa-crown text-yellow-400 font-size-title"></i>'
                     : comment.user_avatar
                         ? `<img src="${toCanonicalSiteUrl(comment.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                         : '<i class="fas fa-user"></i>';
@@ -6702,13 +6702,13 @@ async function loadComments(postId) {
                 commentsHtml += `
                     <div class="flex space-x-3" id="comment-${comment.id}">
                         <div class="admin-badge-container">
-                            <div onclick="showUserProfileModal(${comment.user_id})" class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white text-sm flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
+                            <div onclick="showUserProfileModal(${comment.user_id})" class="w-8 h-8 rounded-full overflow-hidden bg-gray-400 flex items-center justify-center text-white font-size-desc flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition">${avatarHtml}</div>
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1">
                             <div class="bg-gray-50 rounded-lg p-3">
                                 <div class="flex justify-between items-start">
-                                    <p class="font-semibold text-sm text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
+                                    <p class="font-semibold font-size-desc text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
                                     ${canEdit ? `
                                         <div class="relative">
                                             <button 
@@ -6719,13 +6719,13 @@ async function loadComments(postId) {
                                             <div id="comment-menu-${comment.id}" class="hidden absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1">
                                                 <button 
                                                     onclick="editComment(${comment.id}, ${postId})"
-                                                    class="w-full text-left px-3 py-2 hover:bg-gray-50 transition flex items-center text-xs">
+                                                    class="w-full text-left px-3 py-2 hover:bg-gray-50 transition flex items-center font-size-mini1">
                                                     <i class="fas fa-edit text-blue-600 w-4"></i>
                                                     <span class="ml-2">수정</span>
                                                 </button>
                                                 <button 
                                                     onclick="deleteComment(${comment.id}, ${postId})"
-                                                    class="w-full text-left px-3 py-2 hover:bg-gray-50 transition flex items-center text-xs">
+                                                    class="w-full text-left px-3 py-2 hover:bg-gray-50 transition flex items-center font-size-mini1">
                                                     <i class="fas fa-trash text-red-600 w-4"></i>
                                                     <span class="ml-2">삭제</span>
                                                 </button>
@@ -6733,33 +6733,33 @@ async function loadComments(postId) {
                                         </div>
                                     ` : ''}
                                 </div>
-                                <p class="text-sm text-gray-700 mt-1" id="comment-content-${comment.id}">${comment.content}</p>
+                                <p class="font-size-desc text-gray-700 mt-1" id="comment-content-${comment.id}">${comment.content}</p>
                                 <div id="comment-edit-form-${comment.id}" class="hidden mt-2">
                                     <input 
                                         type="text" 
                                         id="comment-edit-input-${comment.id}"
                                         value="${comment.content.replace(/"/g, '&quot;')}"
-                                        class="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                                        class="w-full p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none"
                                     />
                                     <div class="flex space-x-2 mt-2">
                                         <button 
                                             onclick="saveCommentEdit(${comment.id}, ${postId})"
-                                            class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition">
+                                            class="bg-blue-600 text-white px-3 py-1 rounded font-size-mini1 hover:bg-blue-700 transition">
                                             <i class="fas fa-save mr-1"></i>저장
                                         </button>
                                         <button 
                                             onclick="cancelCommentEdit(${comment.id})"
-                                            class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-400 transition">
+                                            class="bg-gray-300 text-gray-700 px-3 py-1 rounded font-size-mini1 hover:bg-gray-400 transition">
                                             <i class="fas fa-times mr-1"></i>취소
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-4 mt-1">
-                                <p class="text-xs text-gray-500">${formatDate(comment.created_at)}</p>
+                                <p class="font-size-mini1 text-gray-500">${formatDate(comment.created_at)}</p>
                                 <button 
                                     onclick="toggleCommentLike(${comment.id}, ${postId})" 
-                                    class="flex items-center space-x-1 text-xs ${isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'} transition"
+                                    class="flex items-center space-x-1 font-size-mini1 ${isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'} transition"
                                     title="좋아요">
                                     <i class="fas fa-heart"></i>
                                     <span>${comment.likes_count || 0}</span>
@@ -6778,11 +6778,11 @@ async function loadComments(postId) {
                             id="comment-input-${postId}"
                             rows="1"
                             placeholder="댓글을 작성하세요..."
-                            class="flex-1 p-2 border rounded-lg text-sm resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="flex-1 p-2 border rounded-lg font-size-desc resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         ></textarea>
                         <button 
                             id="comment-submit-${postId}"
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -6996,7 +6996,7 @@ async function loadPosts() {
             
             // Avatar HTML - Admin shows crown icon
             const avatarHtml = post.user_role === 'admin'
-                ? '<i class="fas fa-crown text-yellow-400 text-2xl"></i>'
+                ? '<i class="fas fa-crown text-yellow-400 font-size-title"></i>'
                 : post.user_avatar 
                     ? `<img src="${toCanonicalSiteUrl(post.user_avatar)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                     : '<i class="fas fa-user"></i>';
@@ -7109,12 +7109,12 @@ async function loadPosts() {
                                 <div class="flex space-x-2 mt-2">
                                     <button 
                                         onclick="savePostEdit(${post.id})"
-                                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                                         <i class="fas fa-save mr-1"></i>저장
                                     </button>
-                                    <button 
+                                    <button
                                         onclick="cancelPostEdit(${post.id})"
-                                        class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition text-sm">
+                                        class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition font-size-desc">
                                         <i class="fas fa-times mr-1"></i>취소
                                     </button>
                                 </div>
@@ -7436,21 +7436,21 @@ async function fillProfileViewPanelForUser(user) {
         } else if (hasIncomingPendingRequest && pendingRequestId) {
             friendActionHtml = `
                 <div class="w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 shadow-sm">
-                    <div class="text-[11px] text-blue-700 font-semibold mb-2"><i class="fas fa-user-clock mr-1"></i>${user.name}님 요청</div>
+                    <div class="font-size-mini1 text-blue-700 font-semibold mb-2"><i class="fas fa-user-clock mr-1"></i>${user.name}님 요청</div>
                     <div class="flex gap-2">
-                        <button type="button" onclick="acceptFriendRequest(${pendingRequestId}, null, ${user.id})" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-semibold">
+                        <button type="button" onclick="acceptFriendRequest(${pendingRequestId}, null, ${user.id})" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-size-desc font-semibold">
                             <i class="fas fa-check mr-1"></i>승인
                         </button>
-                        <button type="button" onclick="rejectFriendRequest(${pendingRequestId}, ${user.id})" class="flex-1 px-3 py-2 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition text-sm font-semibold">
+                        <button type="button" onclick="rejectFriendRequest(${pendingRequestId}, ${user.id})" class="flex-1 px-3 py-2 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition font-size-desc font-semibold">
                             <i class="fas fa-times mr-1"></i>거부
                         </button>
                     </div>
                 </div>
             `;
         } else if (hasPendingRequest) {
-            friendActionHtml = `<button type="button" disabled class="w-full px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-clock mr-1"></i>친구</div><div class="text-sm">승인 대기중</div></div></button>`;
+            friendActionHtml = `<button type="button" disabled class="w-full px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-clock mr-1"></i>친구</div><div class="font-size-desc">승인 대기중</div></div></button>`;
         } else {
-            friendActionHtml = `<button type="button" onclick="sendFriendRequest(${user.id}, '${safeNameForOnclick}')" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-user-plus mr-1"></i>친구</div><div class="text-sm">제안 전송</div></div></button>`;
+            friendActionHtml = `<button type="button" onclick="sendFriendRequest(${user.id}, '${safeNameForOnclick}')" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md font-semibold leading-tight"><div class="flex flex-col items-center"><div><i class="fas fa-user-plus mr-1"></i>친구</div><div class="font-size-desc">제안 전송</div></div></button>`;
         }
     }
 
@@ -7471,18 +7471,18 @@ async function fillProfileViewPanelForUser(user) {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-1">
                     <div class="bg-gray-50 rounded-lg p-6 text-center">
-                        <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white text-4xl mb-4">
+                        <div class="w-32 h-32 mx-auto rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white font-size-title mb-4">
                             ${user.avatar_url
                                 ? `<img src="${av}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
                                 : user.role === 'admin'
                                   ? '<i class="fas fa-crown text-yellow-400"></i>'
                                   : '<i class="fas fa-user"></i>'}
                         </div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-2">${user.name}</h3>
-                        ${user.position ? `<p class="text-sm text-gray-600 mb-2"><i class="fas fa-user-tie mr-1"></i>${user.position}</p>` : ''}
-                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold ${roleColor}">${roleName}</span>
-                        ${user.bio ? `<p class="text-sm text-gray-600 mt-3 px-2">${user.bio}</p>` : ''}
-                        <div class="mt-4 text-xs text-gray-500 space-y-1">
+                        <h3 class="font-size-title font-bold text-gray-800 mb-2">${user.name}</h3>
+                        ${user.position ? `<p class="font-size-desc text-gray-600 mb-2"><i class="fas fa-user-tie mr-1"></i>${user.position}</p>` : ''}
+                        <span class="inline-block px-3 py-1 rounded-full font-size-desc font-semibold ${roleColor}">${roleName}</span>
+                        ${user.bio ? `<p class="font-size-desc text-gray-600 mt-3 px-2">${user.bio}</p>` : ''}
+                        <div class="mt-4 font-size-mini1 text-gray-500 space-y-1">
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                             <p><i class="fas fa-user-friends text-pink-500 mr-1"></i>친구 ${friendCount}명</p>
                         </div>
@@ -7493,10 +7493,10 @@ async function fillProfileViewPanelForUser(user) {
                     ${showScores && (isOwnProfile || user.prayer_score !== null || user.scripture_score !== null || user.activity_score !== null)
                         ? `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-3 rounded">
-                        <h4 class="font-semibold text-purple-800 mb-2 text-sm">
+                        <h4 class="font-semibold text-purple-800 mb-2 font-size-desc">
                             <i class="fas fa-trophy mr-2"></i>${isOwnProfile ? '나의 점수' : '점수 정보'}
                         </h4>
-                        <div class="flex items-center justify-center space-x-3 text-xs">
+                        <div class="flex items-center justify-center space-x-3 font-size-mini1">
                             <i class="fas fa-book-bible text-yellow-600"></i>
                             <span class="font-semibold text-yellow-600">${user.scripture_score ?? 0}</span>
                             <span class="text-gray-300">|</span>
@@ -7534,7 +7534,7 @@ async function fillProfileViewPanelForUser(user) {
                         return `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <h4 class="font-semibold text-blue-800 mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
-                        <div class="space-y-2 text-sm text-gray-700">${basicItems}</div>
+                        <div class="space-y-2 font-size-desc text-gray-700">${basicItems}</div>
                     </div>`;
                     })()}
                     ${(() => {
@@ -7549,7 +7549,7 @@ async function fillProfileViewPanelForUser(user) {
                         return `
                     <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
                         <h4 class="font-semibold text-green-800 mb-3"><i class="fas fa-church mr-2"></i>교회 정보</h4>
-                        <div class="space-y-2 text-sm text-gray-700">${churchItems}</div>
+                        <div class="space-y-2 font-size-desc text-gray-700">${churchItems}</div>
                     </div>`;
                     })()}
                     ${(() => {
@@ -7568,7 +7568,7 @@ async function fillProfileViewPanelForUser(user) {
                         return `
                     <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
                         <h4 class="font-semibold text-yellow-800 mb-3"><i class="fas fa-cross mr-2"></i>신앙 고백</h4>
-                        <div class="space-y-2 text-sm">${rows}</div>
+                        <div class="space-y-2 font-size-desc">${rows}</div>
                     </div>`;
                     })()}
                     ${(() => {
@@ -7594,7 +7594,7 @@ async function fillProfileViewPanelForUser(user) {
                         return `
                     <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
                         <h4 class="font-semibold text-purple-800 mb-3"><i class="fas fa-briefcase mr-2"></i>직업 정보</h4>
-                        <div class="space-y-3 text-sm text-gray-700"><div><p class="font-medium text-gray-800 mb-1">경력:</p>${careerItems}</div></div>
+                        <div class="space-y-3 font-size-desc text-gray-700"><div><p class="font-medium text-gray-800 mb-1">경력:</p>${careerItems}</div></div>
                     </div>`;
                     })()}
                     ${(() => {
@@ -7679,7 +7679,7 @@ async function fillProfileViewPanelForUser(user) {
                         return `
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
                         <h4 class="font-semibold text-orange-800 mb-3"><i class="fas fa-graduation-cap mr-2"></i>학교 정보</h4>
-                        <div class="space-y-3 text-sm text-gray-700">${educationItems}</div>
+                        <div class="space-y-3 font-size-desc text-gray-700">${educationItems}</div>
                     </div>`;
                     })()}
                 </div>
@@ -7704,7 +7704,7 @@ async function fillProfileViewPanelForUser(user) {
                 };
                 editBtn.className = 'text-blue-600 hover:text-blue-700 transition ml-3 relative -top-0.5';
                 editBtn.title = isOwnProfile ? '프로필 수정' : '프로필 수정 (관리자)';
-                editBtn.innerHTML = '<i class="fas fa-edit text-lg"></i>';
+                editBtn.innerHTML = '<i class="fas fa-edit font-size-title"></i>';
                 h2.appendChild(editBtn);
             }
         }
@@ -7803,19 +7803,19 @@ function addCareerEntry() {
             <div class="flex-1 space-y-2">
                 <input 
                     type="text" 
-                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 font-size-desc"
                     placeholder="회사/기관명 (예: 삼성전자)"
                     value=""
                     data-field="company" />
                 <input 
                     type="text" 
-                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 font-size-desc"
                     placeholder="직책/직위 (예: 책임연구원)"
                     value=""
                     data-field="position" />
                 <input 
                     type="text" 
-                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500 font-size-desc"
                     placeholder="재직기간 (예: 2020-2023 또는 2020-현재)"
                     value=""
                     data-field="period" />
@@ -7824,7 +7824,7 @@ function addCareerEntry() {
                 type="button"
                 onclick="removeCareerEntry(this)"
                 class="text-red-500 hover:text-red-700 p-2">
-                <i class="fas fa-trash text-sm"></i>
+                <i class="fas fa-trash font-size-desc"></i>
             </button>
         </div>
     `;
@@ -7869,7 +7869,7 @@ function updateCareerDeleteButtons() {
                 deleteBtn.type = 'button';
                 deleteBtn.className = 'text-red-500 hover:text-red-700 p-2';
                 deleteBtn.onclick = function() { removeCareerEntry(this); };
-                deleteBtn.innerHTML = '<i class="fas fa-trash text-sm"></i>';
+                deleteBtn.innerHTML = '<i class="fas fa-trash font-size-desc"></i>';
                 parentDiv.appendChild(deleteBtn);
             }
         } else {
@@ -7911,13 +7911,13 @@ function addEducationEntry(type) {
             <div class="flex-1 space-y-2">
                 <input 
                     type="text" 
-                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                     placeholder="${placeholder.school}"
                     value=""
                     data-field="school" />
                 <input 
                     type="text" 
-                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 text-sm"
+                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-orange-500 font-size-desc"
                     placeholder="${placeholder.major}"
                     value=""
                     data-field="major" />
@@ -7926,7 +7926,7 @@ function addEducationEntry(type) {
                 type="button"
                 onclick="removeEducationEntry(this)"
                 class="text-red-500 hover:text-red-700 p-2">
-                <i class="fas fa-trash text-sm"></i>
+                <i class="fas fa-trash font-size-desc"></i>
             </button>
         </div>
     `;
@@ -7971,7 +7971,7 @@ function updateDeleteButtons(containerId) {
                 deleteBtn.type = 'button';
                 deleteBtn.className = 'text-red-500 hover:text-red-700 p-2';
                 deleteBtn.onclick = function() { removeEducationEntry(this); };
-                deleteBtn.innerHTML = '<i class="fas fa-trash text-sm"></i>';
+                deleteBtn.innerHTML = '<i class="fas fa-trash font-size-desc"></i>';
                 parentDiv.appendChild(deleteBtn);
             }
         } else {
@@ -8109,15 +8109,15 @@ async function showUserProfileCover(userId) {
         if (user.avatar_url) {
             avatar.innerHTML = `<img src="${toCanonicalSiteUrl(user.avatar_url)}" alt="${user.name}" class="w-full h-full object-cover">`;
         } else {
-            avatar.innerHTML = '<i class="fas fa-user text-5xl"></i>';
+            avatar.innerHTML = '<i class="fas fa-user font-size-title"></i>';
         }
         
         // Add role badge
         const badge = document.getElementById('profileCoverBadge');
         if (user.role === 'admin') {
-            badge.innerHTML = '<div class="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="관리자"><i class="fas fa-crown text-white text-sm"></i></div>';
+            badge.innerHTML = '<div class="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="관리자"><i class="fas fa-crown text-white font-size-desc"></i></div>';
         } else if (user.role === 'moderator') {
-            badge.innerHTML = '<div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="운영자"><i class="fas fa-shield-alt text-white text-sm"></i></div>';
+            badge.innerHTML = '<div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="운영자"><i class="fas fa-shield-alt text-white font-size-desc"></i></div>';
         } else {
             badge.innerHTML = '';
         }
@@ -8153,7 +8153,7 @@ async function showUserProfileCover(userId) {
                 positionElement.innerHTML = `
                     <div class="flex items-center space-x-2">
                         <i class="fas fa-user-tie text-blue-600"></i>
-                        <span class="text-sm text-gray-700">${user.position}</span>
+                        <span class="font-size-desc text-gray-700">${user.position}</span>
                     </div>
                 `;
                 positionElement.classList.remove('hidden');
@@ -8169,7 +8169,7 @@ async function showUserProfileCover(userId) {
                 locationElement.innerHTML = `
                     <div class="flex items-center space-x-2">
                         <i class="fas fa-map-marker-alt text-green-600"></i>
-                        <span class="text-sm text-gray-700">${user.location}</span>
+                        <span class="font-size-desc text-gray-700">${user.location}</span>
                     </div>
                 `;
                 locationElement.classList.remove('hidden');
@@ -8264,7 +8264,7 @@ async function deleteCover() {
         const preview = document.getElementById('editCoverPreview');
         preview.style.backgroundImage = '';
         preview.className = 'w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative';
-        preview.innerHTML = '<span class="text-white text-sm font-medium">커버 사진을 선택하세요</span>';
+        preview.innerHTML = '<span class="text-white font-size-desc font-medium">커버 사진을 선택하세요</span>';
         
         // Clear file input
         document.getElementById('editCover').value = '';
@@ -8420,7 +8420,7 @@ function renderSidebarEngagementUsers(users) {
         return `
             <div class="text-center py-8 text-gray-400">
                 <i class="fas fa-user-friends font-size-title mb-3 opacity-40"></i>
-                <p class="text-sm">아직 없습니다</p>
+                <p class="font-size-desc">아직 없습니다</p>
             </div>
         `;
     }
@@ -8470,12 +8470,12 @@ async function openPostEngagementPanel(kind, postId) {
     if (!rs || !reactorsTab || !listEl) return;
 
     if (titleEl) titleEl.textContent = titles[kind] || '가입자';
-    if (iconEl) iconEl.className = `fas ${icons[kind] || 'fa-users'} text-blue-600 text-xl mr-2`;
+    if (iconEl) iconEl.className = `fas ${icons[kind] || 'fa-users'} text-blue-600 font-size-title mr-2`;
 
     listEl.innerHTML = `
         <div class="text-center py-6 text-gray-400">
-            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-            <p class="text-sm">불러오는 중...</p>
+            <i class="fas fa-spinner fa-spin font-size-title mb-2"></i>
+            <p class="font-size-desc">불러오는 중...</p>
         </div>`;
 
     reactorsTab.classList.remove('hidden');
@@ -8500,7 +8500,7 @@ async function openPostEngagementPanel(kind, postId) {
         showToast('목록을 불러오지 못했습니다.', 'error');
         listEl.innerHTML = `
             <div class="text-center py-8 text-gray-400">
-                <p class="text-sm">불러오는 데 실패했습니다</p>
+                <p class="font-size-desc">불러오는 데 실패했습니다</p>
             </div>`;
     }
 }
@@ -8708,7 +8708,7 @@ async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
         const res = await axios.get(`/api/messages/${currentUserId}/${friendMessengerTargetId}`);
         const messages = (res.data && res.data.messages) ? res.data.messages : [];
         if (!messages.length) {
-            listEl.innerHTML = `<div class="text-center text-gray-400 text-sm py-6">첫 메시지를 보내보세요.</div>`;
+            listEl.innerHTML = `<div class="text-center text-gray-400 font-size-desc py-6">첫 메시지를 보내보세요.</div>`;
             return;
         }
         listEl.innerHTML = messages.map((msg) => {
@@ -8726,14 +8726,14 @@ async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
             const mediaDownloadHtml = `
                 ${msg.image_url ? `
                     <div class="mt-2">
-                        <a href="${imageUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
+                        <a href="${imageUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md font-size-mini1 font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
                             <i class="fas fa-download mr-1"></i>사진 다운로드
                         </a>
                     </div>
                 ` : ''}
                 ${msg.video_url ? `
                     <div class="mt-2">
-                        <a href="${videoUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
+                        <a href="${videoUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md font-size-mini1 font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
                             <i class="fas fa-download mr-1"></i>동영상 다운로드
                         </a>
                     </div>
@@ -8742,11 +8742,11 @@ async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
             return `
                 <div id="${rowId || ''}" class="flex scroll-mt-2 ${mine ? 'justify-end' : 'justify-start'} friend-msg-row" data-msg-id="${mid || ''}">
                     <div class="max-w-[78%] px-3 py-2 rounded-2xl friend-msg-bubble transition-shadow duration-300 ${mine ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'}">
-                        ${msg.content ? `<div class="text-sm leading-snug break-words whitespace-pre-wrap">${escapeHtml(msg.content || '')}</div>` : ''}
+                        ${msg.content ? `<div class="font-size-desc leading-snug break-words whitespace-pre-wrap">${escapeHtml(msg.content || '')}</div>` : ''}
                         ${imgHtml}
                         ${vidHtml}
                         ${mediaDownloadHtml}
-                        <div class="mt-1 text-[10px] ${mine ? 'text-blue-100' : 'text-gray-400'} text-right">${formatFriendMessengerTime(msg.created_at)}</div>
+                        <div class="mt-1 font-size-mini1 ${mine ? 'text-blue-100' : 'text-gray-400'} text-right">${formatFriendMessengerTime(msg.created_at)}</div>
                     </div>
                 </div>
             `;
@@ -8764,7 +8764,7 @@ async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
         }
     } catch (error) {
         console.error('Failed to load friend messages:', error);
-        listEl.innerHTML = `<div class="text-center text-red-400 text-sm py-6">메시지를 불러오지 못했습니다.</div>`;
+        listEl.innerHTML = `<div class="text-center text-red-400 font-size-desc py-6">메시지를 불러오지 못했습니다.</div>`;
     }
 }
 
@@ -8785,7 +8785,7 @@ function openFriendMessenger(friendId, friendName, friendAvatarUrl, scrollToMess
         if (friendAvatarUrl) {
             avatarEl.innerHTML = `<img src="${toCanonicalSiteUrl(friendAvatarUrl)}" alt="${friendName}" class="w-full h-full object-cover" />`;
         } else {
-            avatarEl.innerHTML = '<i class="fas fa-user text-xs"></i>';
+            avatarEl.innerHTML = '<i class="fas fa-user font-size-mini1"></i>';
         }
     }
     if (modal) modal.classList.remove('hidden');
@@ -9274,8 +9274,8 @@ function updateSidebarNotificationsList() {
             const encAvatar = encodeURIComponent(notification.from_user_avatar || '');
             const previewRaw = String(notification.preview_text || '').trim();
             const previewBlock = previewRaw
-                ? `<p class="text-xs text-gray-600 mt-1.5 line-clamp-3 leading-snug">「${escapeHtml(previewRaw)}」</p>`
-                : `<p class="text-xs text-gray-500 mt-1.5 italic">내용 요약 없음 · 메신저에서 확인하세요</p>`;
+                ? `<p class="font-size-mini1 text-gray-600 mt-1.5 line-clamp-3 leading-snug">「${escapeHtml(previewRaw)}」</p>`
+                : `<p class="font-size-mini1 text-gray-500 mt-1.5 italic">내용 요약 없음 · 메신저에서 확인하세요</p>`;
             const nid = Number(notification.id);
             const fid = Number(notification.from_user_id);
             const fmId =

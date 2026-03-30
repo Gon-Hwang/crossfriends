@@ -3947,6 +3947,15 @@ function setQtSectionBtnActive(panel, sectionKey, active) {
     b.classList.toggle('bg-gray-100', !active);
     b.classList.toggle('text-gray-700', !active);
     b.classList.toggle('border-gray-300', !active);
+    if (!active) {
+        b.style.backgroundColor = 'rgb(243,244,246)';
+        b.style.color = 'rgb(55,65,81)';
+        b.style.borderColor = 'rgb(209,213,219)';
+    } else {
+        b.style.backgroundColor = '';
+        b.style.color = '';
+        b.style.borderColor = '';
+    }
 }
 
 function resetAllQtSectionButtonStyles() {

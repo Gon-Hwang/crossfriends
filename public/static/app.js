@@ -4818,6 +4818,7 @@ function logout() {
 
 // Go to admin panel
 function goToAdmin() {
+    sessionStorage.setItem('suppressLoginCelebration', '1');
     window.location.href = '/admin';
 }
 
@@ -7231,8 +7232,10 @@ async function autoLogin() {
                 password: savedPassword
             });
             if (response.data.user) {
+                const suppress = sessionStorage.getItem('suppressLoginCelebration') === '1';
+                if (suppress) sessionStorage.removeItem('suppressLoginCelebration');
                 await finishAutoLoginSession(response.data.user, {
-                    showCelebration: true,
+                    showCelebration: !suppress,
                     logPrefix: '자동 로그인 성공'
                 });
             }
@@ -7728,7 +7731,9 @@ function goToHome() {
     const notificationsContent = document.getElementById('notificationsTabContent');
     if (friendsContent) friendsContent.classList.remove('hidden');
     if (notificationsContent) notificationsContent.classList.add('hidden');
-    if (typeof setSocialHeaderButtonActive === 'function') setSocialHeaderButtonActive('friends');
+    if (typeof setSocialHeaderButtonActive === 'function') {
+        setSocialHeaderButtonActive(window.matchMedia('(max-width: 1023px)').matches ? 'none' : 'friends');
+    }
 
     const postsFeed = document.getElementById('postsFeed');
     const postsFeedWrapper = document.getElementById('postsFeedWrapper');
@@ -7950,7 +7955,7 @@ function updateDeleteButtons(containerId) {
 updateAuthUI();
 updateEmailDatalist(); // Load email history
 autoLogin(); // Auto-login if session exists
-setSocialHeaderButtonActive('friends'); // 기본 노말뷰: 친구 버튼 활성
+if (!window.matchMedia('(max-width: 1023px)').matches) setSocialHeaderButtonActive('friends'); // 기본 노말뷰: 친구 버튼 활성 (데스크탑만)
 
 // =====================
 // User Filter Functions
@@ -7985,7 +7990,13 @@ async function filterByUser(userId, userName) {
         await fillProfileViewPanelForUser(viewedUser);
     }
     loadPosts();
+
+    // 커버페이지가 보이도록 스크롤 (데스크탑: 독립 스크롤 컬럼, 모바일: window)
+    const centerCol = document.getElementById('centerFeedColumn');
+    if (centerCol) centerCol.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    const cover = document.getElementById('userProfileCover');
+    if (cover) setTimeout(() => cover.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
     const displayName =
         (userName && String(userName).trim()) ||
@@ -8470,6 +8481,10 @@ function closePostReactors() {
         rs.classList.remove('reactors-only', 'mobile-fullscreen-overlay');
         if (window.matchMedia('(max-width: 1023px)').matches) {
             rs.classList.add('hidden');
+            const backdrop = document.getElementById('mobileSidebarBackdrop');
+            if (backdrop) backdrop.classList.add('hidden');
+            if (typeof setSocialHeaderButtonActive === 'function') setSocialHeaderButtonActive('none');
+            return;
         }
     }
     const friendsContent = document.getElementById('friendsTabContent');
@@ -8822,12 +8837,64 @@ function setSocialHeaderButtonActive(kind) {
     }
 }
 
+function showMobileSidebarBackdrop() {
+    let backdrop = document.getElementById('mobileSidebarBackdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.id = 'mobileSidebarBackdrop';
+        backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:49;';
+        backdrop.addEventListener('click', closeMobileSidebarPanel);
+        document.body.appendChild(backdrop);
+    }
+    backdrop.classList.remove('hidden');
+}
+
+function applyMobileSidebarTopPosition(rs) {
+    const header = document.getElementById('mainHeader');
+    if (!header || !rs) return;
+    const headerBottom = header.getBoundingClientRect().bottom;
+    // 성경구절 카드 상단 위치 = 헤더~콘텐츠 사이의 실제 간격
+    const verseCard = document.getElementById('verseRewardSection');
+    let topVal = headerBottom + 12; // fallback: py-3
+    if (verseCard) {
+        const cardTop = verseCard.getBoundingClientRect().top;
+        if (cardTop > headerBottom) topVal = cardTop;
+    }
+    rs.style.top = topVal + 'px';
+    rs.style.bottom = 'auto';
+}
+
+function closeMobileSidebarPanel() {
+    const rs = document.getElementById('rightSidebar');
+    if (rs) {
+        rs.classList.add('hidden');
+        rs.classList.remove('mobile-fullscreen-overlay', 'reactors-only');
+        rs.style.top = '';
+        rs.style.bottom = '';
+    }
+    const backdrop = document.getElementById('mobileSidebarBackdrop');
+    if (backdrop) backdrop.classList.add('hidden');
+    setSocialHeaderButtonActive('none');
+}
+
 function toggleFriendsList() {
     const friendsContent = document.getElementById('friendsTabContent');
     const notificationsContent = document.getElementById('notificationsTabContent');
     if (!friendsContent || !notificationsContent) return;
 
-    // Always keep friends active when clicked; do not toggle off on re-click.
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+        const rs = document.getElementById('rightSidebar');
+        const isOpen = rs && !rs.classList.contains('hidden') && !friendsContent.classList.contains('hidden');
+        if (isOpen) { closeMobileSidebarPanel(); return; }
+        friendsContent.classList.remove('hidden');
+        notificationsContent.classList.add('hidden');
+        isNotificationActive = false;
+        if (rs) { rs.classList.remove('hidden', 'reactors-only'); rs.classList.add('mobile-fullscreen-overlay'); applyMobileSidebarTopPosition(rs); }
+        showMobileSidebarBackdrop();
+        setSocialHeaderButtonActive('friends');
+        return;
+    }
+
     friendsContent.classList.remove('hidden');
     notificationsContent.classList.add('hidden');
     isNotificationActive = false;
@@ -8840,7 +8907,21 @@ function toggleNotifications() {
     const notificationsContent = document.getElementById('notificationsTabContent');
     if (!friendsContent || !notificationsContent) return;
 
-    // Always keep notifications active when clicked; do not toggle off on re-click.
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+        const rs = document.getElementById('rightSidebar');
+        const isOpen = rs && !rs.classList.contains('hidden') && !notificationsContent.classList.contains('hidden');
+        if (isOpen) { closeMobileSidebarPanel(); return; }
+        isNotificationActive = true;
+        friendsContent.classList.add('hidden');
+        notificationsContent.classList.remove('hidden');
+        if (rs) { rs.classList.remove('hidden', 'reactors-only'); rs.classList.add('mobile-fullscreen-overlay'); applyMobileSidebarTopPosition(rs); }
+        showMobileSidebarBackdrop();
+        setSocialHeaderButtonActive('notifications');
+        loadNotifications(true);
+        updatePushButtonState();
+        return;
+    }
+
     isNotificationActive = true;
     friendsContent.classList.add('hidden');
     notificationsContent.classList.remove('hidden');

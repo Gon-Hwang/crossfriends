@@ -5058,7 +5058,7 @@ app.get('/admin', (c) => {
                     <h1 class="text-2xl font-bold">
                         <i class="fas fa-shield-alt mr-2"></i>관리자 패널
                     </h1>
-                    <a href="/" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                    <a href="/" onclick="sessionStorage.setItem('suppressLoginCelebration','1')" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
                         <i class="fas fa-home"></i>
                     </a>
                 </div>
@@ -6996,6 +6996,10 @@ app.get('/', (c) => {
                 overflow: hidden;
                 touch-action: pan-y;
                 overscroll-behavior: contain;
+            }
+            /* 친구/알림 패널: 헤더 바로 아래부터 표시 (JS에서 top 값 동적 주입) */
+            #rightSidebar.mobile-fullscreen-overlay:not(.reactors-only) {
+                bottom: auto !important;
             }
             #rightSidebar.mobile-fullscreen-overlay #rightSidebarInner {
                 padding-right: 0 !important;

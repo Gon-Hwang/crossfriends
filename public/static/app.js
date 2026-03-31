@@ -118,12 +118,12 @@ function buildYouTubePreviewHtml(content) {
     const safeLink = escapeHtml(link);
     const thumb = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
     return `
-        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="block mt-3 rounded-lg border border-gray-300 overflow-hidden bg-white hover:border-red-400 hover:shadow-sm transition">
+        <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="block mt-3 rounded-lg border border-gray-300 overflow-hidden bg-white hover:border-red-600 hover:shadow-sm transition">
             <div class="relative">
                 <img src="${thumb}" alt="YouTube preview" class="w-full object-cover" onerror="this.style.display='none'" />
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div class="w-12 h-12 rounded-full bg-black/70 flex items-center justify-center">
-                        <i class="fab fa-youtube text-red-500 font-size-title"></i>
+                        <i class="fab fa-youtube text-red-600 font-size-title"></i>
                     </div>
                 </div>
             </div>
@@ -145,7 +145,7 @@ function buildGenericLinkPreviewHtml(content) {
         const host = escapeHtml(parsed.hostname.replace(/^www\./i, ''));
         const favicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsed.hostname)}&sz=128`;
         return `
-            <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="block mt-3 rounded-lg border border-gray-300 overflow-hidden bg-white hover:border-blue-400 hover:shadow-sm transition">
+            <a href="${safeLink}" target="_blank" rel="noopener noreferrer" class="block mt-3 rounded-lg border border-gray-300 overflow-hidden bg-white hover:border-blue-600 hover:shadow-sm transition">
                 <div class="px-3 py-2.5 flex items-center gap-3">
                     <img src="${favicon}" alt="" class="w-6 h-6 rounded shrink-0" onerror="this.style.display='none'" />
                     <div class="min-w-0 flex-1">
@@ -168,7 +168,7 @@ function linkifyText(text) {
         (matched) => {
             const normalized = normalizeExternalUrl(matched);
             if (!normalized) return matched;
-            return `<a href="${normalized}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700 underline break-all">${matched}</a>`;
+            return `<a href="${normalized}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-600 underline break-all">${matched}</a>`;
         }
     );
 }
@@ -489,7 +489,7 @@ function hideSignupModal() {
     if (coverPrev) {
         coverPrev.style.backgroundImage = '';
         coverPrev.className =
-            'w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-200 flex items-center justify-center overflow-hidden';
+            'w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-300 flex items-center justify-center overflow-hidden';
         coverPrev.innerHTML = '<span class="text-gray-500 font-size-mini1">미리보기</span>';
     }
     const rulesDiv = document.getElementById('passwordRules');
@@ -1693,7 +1693,7 @@ async function showEditProfileModal(targetUserId) {
             }
         }
         
-        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-50' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
+        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-100' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
         const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
         
         const content = `
@@ -1747,7 +1747,7 @@ async function showEditProfileModal(targetUserId) {
                             <button 
                                 type="button"
                                 onclick="deleteAvatarInline()"
-                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-size-desc font-semibold">
+                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-600 transition font-size-desc font-semibold">
                                 <i class="fas fa-trash mr-2"></i>프로필 사진 삭제
                             </button>
                             
@@ -1759,7 +1759,7 @@ async function showEditProfileModal(targetUserId) {
                             <button 
                                 type="button"
                                 onclick="deleteCoverInline()"
-                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-size-desc font-semibold">
+                                class="block w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-600 transition font-size-desc font-semibold">
                                 <i class="fas fa-trash mr-2"></i>커버 사진 삭제
                             </button>
                             
@@ -1820,7 +1820,7 @@ async function showEditProfileModal(targetUserId) {
                     <!-- Basic Info -->
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
                         <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-semibold text-blue-800">
+                            <h4 class="font-semibold text-blue-600">
                                 <i class="fas fa-info-circle mr-2"></i>기본 정보
                             </h4>
                             <label class="flex items-center font-size-desc cursor-pointer">
@@ -2038,7 +2038,7 @@ async function showEditProfileModal(targetUserId) {
                                             careers.push({ company: '', position: '', period: '' });
                                         }
                                         return careers.map((career, idx) => `
-                                            <div class="career-entry border border-gray-200 rounded p-2" data-index="${idx}">
+                                            <div class="career-entry border border-gray-300 rounded p-2" data-index="${idx}">
                                                 <div class="flex items-start gap-2">
                                                     <div class="flex-1 space-y-2">
                                                         <input 
@@ -2064,7 +2064,7 @@ async function showEditProfileModal(targetUserId) {
                                                         <button 
                                                             type="button"
                                                             onclick="removeCareerEntry(this)"
-                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            class="text-red-600 hover:text-red-600 p-2">
                                                             <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
@@ -2142,7 +2142,7 @@ async function showEditProfileModal(targetUserId) {
                                             universities.push({ school: '', major: '' });
                                         }
                                         return universities.map((edu, idx) => `
-                                            <div class="education-entry border border-gray-200 rounded p-2" data-type="university" data-index="${idx}">
+                                            <div class="education-entry border border-gray-300 rounded p-2" data-type="university" data-index="${idx}">
                                                 <div class="flex items-start gap-2">
                                                     <div class="flex-1 space-y-2">
                                                         <input 
@@ -2162,7 +2162,7 @@ async function showEditProfileModal(targetUserId) {
                                                         <button 
                                                             type="button"
                                                             onclick="removeEducationEntry(this)"
-                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            class="text-red-600 hover:text-red-600 p-2">
                                                             <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
@@ -2194,7 +2194,7 @@ async function showEditProfileModal(targetUserId) {
                                             masters.push({ school: '', major: '' });
                                         }
                                         return masters.map((edu, idx) => `
-                                            <div class="education-entry border border-gray-200 rounded p-2" data-type="masters" data-index="${idx}">
+                                            <div class="education-entry border border-gray-300 rounded p-2" data-type="masters" data-index="${idx}">
                                                 <div class="flex items-start gap-2">
                                                     <div class="flex-1 space-y-2">
                                                         <input 
@@ -2214,7 +2214,7 @@ async function showEditProfileModal(targetUserId) {
                                                         <button 
                                                             type="button"
                                                             onclick="removeEducationEntry(this)"
-                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            class="text-red-600 hover:text-red-600 p-2">
                                                             <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
@@ -2246,7 +2246,7 @@ async function showEditProfileModal(targetUserId) {
                                             phds.push({ school: '', major: '' });
                                         }
                                         return phds.map((edu, idx) => `
-                                            <div class="education-entry border border-gray-200 rounded p-2" data-type="phd" data-index="${idx}">
+                                            <div class="education-entry border border-gray-300 rounded p-2" data-type="phd" data-index="${idx}">
                                                 <div class="flex items-start gap-2">
                                                     <div class="flex-1 space-y-2">
                                                         <input 
@@ -2266,7 +2266,7 @@ async function showEditProfileModal(targetUserId) {
                                                         <button 
                                                             type="button"
                                                             onclick="removeEducationEntry(this)"
-                                                            class="text-red-500 hover:text-red-700 p-2">
+                                                            class="text-red-600 hover:text-red-600 p-2">
                                                             <i class="fas fa-trash font-size-desc"></i>
                                                         </button>
                                                     ` : ''}
@@ -2290,15 +2290,15 @@ async function showEditProfileModal(targetUserId) {
                         <div class="space-y-2 max-w-md">
                             <div>
                                 <label class="block font-size-desc text-gray-700 mb-1" for="editCurrentPasswordInline">현재 비밀번호</label>
-                                <input type="password" id="editCurrentPasswordInline" autocomplete="current-password" class="w-full p-2 border border-gray-200 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <input type="password" id="editCurrentPasswordInline" autocomplete="current-password" class="w-full p-2 border border-gray-300 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
                             <div>
                                 <label class="block font-size-desc text-gray-700 mb-1" for="editNewPasswordInline">새 비밀번호</label>
-                                <input type="password" id="editNewPasswordInline" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2 border border-gray-200 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <input type="password" id="editNewPasswordInline" autocomplete="new-password" placeholder="예: abc12345" class="w-full p-2 border border-gray-300 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
                             <div>
                                 <label class="block font-size-desc text-gray-700 mb-1" for="editNewPasswordConfirmInline">새 비밀번호 확인</label>
-                                <input type="password" id="editNewPasswordConfirmInline" autocomplete="new-password" class="w-full p-2 border border-gray-200 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+                                <input type="password" id="editNewPasswordConfirmInline" autocomplete="new-password" class="w-full p-2 border border-gray-300 rounded-lg font-size-desc focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                             </div>
                             <button type="button" onclick="submitChangePasswordInline()" class="mt-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-size-desc font-semibold hover:bg-indigo-700 transition">
                                 비밀번호 변경
@@ -3112,7 +3112,7 @@ function validatePasswordRealtime() {
         matchDiv.classList.remove('hidden');
         matchDiv.innerHTML = (pw === cf)
             ? '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>비밀번호가 일치합니다</span>'
-            : '<span class="text-red-500"><i class="fas fa-times-circle mr-1"></i>비밀번호가 일치하지 않습니다</span>';
+            : '<span class="text-red-600"><i class="fas fa-times-circle mr-1"></i>비밀번호가 일치하지 않습니다</span>';
     }
 }
 
@@ -3804,7 +3804,7 @@ function setQtHeaderButtonActive(active) {
         if (!b) continue;
         b.classList.toggle('text-red-600', active);
         b.classList.toggle('border-red-600', active);
-        b.classList.toggle('bg-red-50', active);
+        b.classList.toggle('bg-red-100', active);
         b.classList.toggle('text-gray-500', !active);
         b.classList.toggle('border-gray-500', !active);
         b.classList.toggle('bg-transparent', !active);
@@ -3942,8 +3942,8 @@ function setQtSectionBtnActive(panel, sectionKey, active) {
     const b = panel.querySelector(`[data-qt-sec-btn="${sectionKey}"]`);
     if (!b) return;
     b.classList.toggle('bg-red-100', active);
-    b.classList.toggle('text-red-800', active);
-    b.classList.toggle('border-red-300', active);
+    b.classList.toggle('text-red-600', active);
+    b.classList.toggle('border-red-600', active);
     b.classList.toggle('bg-gray-100', !active);
     b.classList.toggle('text-gray-700', !active);
     b.classList.toggle('border-gray-300', !active);
@@ -5263,7 +5263,7 @@ function renderEmbeddedOriginalPostCard(post, fieldMode, options = {}) {
     const removeBtn = showRemoveButton
         ? `
         <div class="absolute top-2 right-2 z-10">
-            <button type="button" onclick="removeSharedPost()" class="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition shadow-md" title="공유 취소">
+            <button type="button" onclick="removeSharedPost()" class="bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 transition shadow-md" title="공유 취소">
                 <i class="fas fa-times font-size-desc"></i>
             </button>
         </div>
@@ -5311,7 +5311,7 @@ function applyPostToolbarCountActive(el, active) {
     el.classList.toggle('bg-gray-100', !!active);
     el.classList.toggle('bg-white', !active);
     el.classList.toggle('border-gray-300', !!active);
-    el.classList.toggle('border-gray-200', !active);
+    el.classList.toggle('border-gray-300', !active);
 }
 
 function setPostToolbarCommentActive(postId, active) {
@@ -5413,24 +5413,24 @@ function renderPostActionsToolbar(post, isLiked) {
 
     return `
         <!-- 툴바 A–D 한 줄·고정(스크롤 없음), 간격 유지, 중앙 정렬 -->
-        <div class="post-actions-toolbar mt-4 flex w-full flex-nowrap items-center justify-center border-t border-gray-200/90 pt-3 text-gray-700 gap-x-[18px] sm:gap-x-2.5">
+        <div class="post-actions-toolbar mt-4 flex w-full flex-nowrap items-center justify-center border-t border-gray-300/90 pt-3 text-gray-700 gap-x-[18px] sm:gap-x-2.5">
             <span class="inline-flex shrink-0 items-center" data-toolbar-group="A">
                 <button type="button" id="post-toolbar-react-${pid}" onclick="${reactionHandler}" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition ${reactIconWrap}" title="${title}">
                     <i class="${iconClass} font-size-base ${activeIconCls}"></i>
                 </button>
-                <button type="button" id="post-toolbar-count-react-${pid}" onclick="openPostEngagementPanel('react', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm ${reactCountWrap}">${reactionCount}</button>
+                <button type="button" id="post-toolbar-count-react-${pid}" onclick="openPostEngagementPanel('react', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-300 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm ${reactCountWrap}">${reactionCount}</button>
             </span>
             <span class="inline-flex shrink-0 items-center" data-toolbar-group="B">
                 <button type="button" id="post-toolbar-comment-${pid}" onclick="loadComments(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="댓글">
                     <i class="fas fa-comment font-size-base text-gray-700"></i>
                 </button>
-                <button type="button" id="post-toolbar-count-comment-${pid}" onclick="openPostEngagementPanel('comment', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm">${comments}</button>
+                <button type="button" id="post-toolbar-count-comment-${pid}" onclick="openPostEngagementPanel('comment', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-300 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm">${comments}</button>
             </span>
             <span class="inline-flex shrink-0 items-center" data-toolbar-group="C">
                 <button type="button" id="post-toolbar-share-${pid}" onclick="sharePost(${pid})" class="post-toolbar-ic flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100" title="공유하기">
                     <i class="fas fa-share font-size-base text-gray-700"></i>
                 </button>
-                <button type="button" id="post-toolbar-count-share-${pid}" onclick="openPostEngagementPanel('share', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-200 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm">${shares}</button>
+                <button type="button" id="post-toolbar-count-share-${pid}" onclick="openPostEngagementPanel('share', ${pid})" class="post-toolbar-n -ml-2.5 sm:-ml-[2px] max-sm:translate-x-[10px] inline-flex min-h-[2rem] min-w-[2rem] items-center justify-center rounded-full border border-gray-300 bg-white px-2 font-size-mini1 font-semibold text-gray-800 shadow-sm">${shares}</button>
             </span>
             <span class="inline-flex shrink-0 items-center justify-center" data-toolbar-group="D">${expandBtn}</span>
         </div>
@@ -5798,7 +5798,7 @@ function createPostImagePreviewCell(file, idx, wrapExtra = '', imgClass = 'w-ful
     badge.textContent = String(idx + 1);
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'absolute top-2 right-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white shadow backdrop-blur-sm transition hover:bg-red-500';
+    btn.className = 'absolute top-2 right-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white shadow backdrop-blur-sm transition hover:bg-red-600';
     btn.title = '이 사진만 제거';
     btn.innerHTML = '<i class="fas fa-times font-size-mini1"></i>';
     btn.onclick = (e) => {
@@ -5867,7 +5867,7 @@ function renderPostImagePreviewFiles(files) {
             const chip = document.createElement('button');
             chip.type = 'button';
             chip.className =
-                'inline-flex h-8 min-w-[2rem] items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white/80 text-gray-400 shadow-sm transition hover:border-blue-400 hover:text-blue-500';
+                'inline-flex h-8 min-w-[2rem] items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white/80 text-gray-400 shadow-sm transition hover:border-blue-600 hover:text-blue-600';
             chip.innerHTML = '<i class="fas fa-plus font-size-mini1"></i>';
             chip.title = '사진 추가';
             chip.onclick = () => document.getElementById('postImageFile')?.click();
@@ -6347,7 +6347,7 @@ async function refreshComments(postId) {
             });
             
             const html = `
-                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-200">
+                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-300">
                     ${commentsHtml}
                     <div class="flex space-x-2 mt-3 items-end">
                         <textarea 
@@ -6411,7 +6411,7 @@ async function togglePray(postId) {
         if (response.data.prayed) {
             // Prayer added: +20점
             const successMsg = document.createElement('div');
-            successMsg.className = 'fixed top-20 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+            successMsg.className = 'fixed top-20 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
             successMsg.innerHTML = '<i class="fas fa-praying-hands mr-2"></i>함께 기도합니다! +20점';
             document.body.appendChild(successMsg);
             
@@ -6756,7 +6756,7 @@ async function loadComments(postId) {
                                                 class="text-gray-400 hover:text-gray-600 transition">
                                                 <i class="fas fa-ellipsis-v font-size-desc"></i>
                                             </button>
-                                            <div id="comment-menu-${comment.id}" class="hidden absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1">
+                                            <div id="comment-menu-${comment.id}" class="hidden absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl border border-gray-300 z-[9999] py-1">
                                                 <button 
                                                     onclick="editComment(${comment.id}, ${postId})"
                                                     class="w-full text-left px-3 py-2 hover:bg-gray-50 transition flex items-center font-size-mini1">
@@ -6811,7 +6811,7 @@ async function loadComments(postId) {
             });
             
             const html = `
-                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-200">
+                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-300">
                     ${commentsHtml}
                     <div class="flex space-x-2 mt-3 items-end">
                         <textarea 
@@ -7104,7 +7104,7 @@ async function loadPosts() {
                                                 title="더보기">
                                                 <i class="fas fa-ellipsis-v font-size-desc"></i>
                                             </button>
-                                            <div id="post-menu-${post.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1">
+                                            <div id="post-menu-${post.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-300 z-[9999] py-1">
                                                 ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
                                                     <button 
                                                         onclick="editPost(${post.id})"
@@ -7446,7 +7446,7 @@ async function fillProfileViewPanelForUser(user) {
 
     const roleColor =
         user.role === 'admin'
-            ? 'text-red-600 bg-red-50'
+            ? 'text-red-600 bg-red-100'
             : user.role === 'moderator'
               ? 'text-yellow-600 bg-yellow-50'
               : 'text-gray-600 bg-gray-50';
@@ -7475,13 +7475,13 @@ async function fillProfileViewPanelForUser(user) {
             friendActionHtml = `<button type="button" disabled class="w-full px-4 py-3 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold"><i class="fas fa-user-check mr-2"></i>친구</button>`;
         } else if (hasIncomingPendingRequest && pendingRequestId) {
             friendActionHtml = `
-                <div class="w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 shadow-sm">
-                    <div class="font-size-mini1 text-blue-700 font-semibold mb-2"><i class="fas fa-user-clock mr-1"></i>${user.name}님 요청</div>
+                <div class="w-full rounded-xl border border-blue-600 bg-blue-50 px-3 py-2.5 shadow-sm">
+                    <div class="font-size-mini1 text-blue-600 font-semibold mb-2"><i class="fas fa-user-clock mr-1"></i>${user.name}님 요청</div>
                     <div class="flex gap-2">
                         <button type="button" onclick="acceptFriendRequest(${pendingRequestId}, null, ${user.id})" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-size-desc font-semibold">
                             <i class="fas fa-check mr-1"></i>승인
                         </button>
-                        <button type="button" onclick="rejectFriendRequest(${pendingRequestId}, ${user.id})" class="flex-1 px-3 py-2 bg-white text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition font-size-desc font-semibold">
+                        <button type="button" onclick="rejectFriendRequest(${pendingRequestId}, ${user.id})" class="flex-1 px-3 py-2 bg-white text-red-600 border border-red-600 rounded-lg hover:bg-red-100 transition font-size-desc font-semibold">
                             <i class="fas fa-times mr-1"></i>거부
                         </button>
                     </div>
@@ -7573,7 +7573,7 @@ async function fillProfileViewPanelForUser(user) {
                         if (!basicItems) return '';
                         return `
                     <div class="bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-                        <h4 class="font-semibold text-blue-800 mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
+                        <h4 class="font-semibold text-blue-600 mb-3"><i class="fas fa-info-circle mr-2"></i>기본 정보</h4>
                         <div class="space-y-2 font-size-desc text-gray-700">${basicItems}</div>
                     </div>`;
                     })()}
@@ -7742,7 +7742,7 @@ async function fillProfileViewPanelForUser(user) {
                 editBtn.onclick = function () {
                     showEditProfileModal(user.id);
                 };
-                editBtn.className = 'text-blue-600 hover:text-blue-700 transition ml-3 relative -top-0.5';
+                editBtn.className = 'text-blue-600 hover:text-blue-600 transition ml-3 relative -top-0.5';
                 editBtn.title = isOwnProfile ? '프로필 수정' : '프로필 수정 (관리자)';
                 editBtn.innerHTML = '<i class="fas fa-edit font-size-title"></i>';
                 h2.appendChild(editBtn);
@@ -7836,7 +7836,7 @@ function addCareerEntry() {
     const newIndex = currentEntries.length;
     
     const newEntry = document.createElement('div');
-    newEntry.className = 'career-entry border border-gray-200 rounded p-2';
+    newEntry.className = 'career-entry border border-gray-300 rounded p-2';
     newEntry.setAttribute('data-index', newIndex);
     newEntry.innerHTML = `
         <div class="flex items-start gap-2">
@@ -7863,7 +7863,7 @@ function addCareerEntry() {
             <button 
                 type="button"
                 onclick="removeCareerEntry(this)"
-                class="text-red-500 hover:text-red-700 p-2">
+                class="text-red-600 hover:text-red-600 p-2">
                 <i class="fas fa-trash font-size-desc"></i>
             </button>
         </div>
@@ -7907,7 +7907,7 @@ function updateCareerDeleteButtons() {
             if (!existingButton) {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
-                deleteBtn.className = 'text-red-500 hover:text-red-700 p-2';
+                deleteBtn.className = 'text-red-600 hover:text-red-600 p-2';
                 deleteBtn.onclick = function() { removeCareerEntry(this); };
                 deleteBtn.innerHTML = '<i class="fas fa-trash font-size-desc"></i>';
                 parentDiv.appendChild(deleteBtn);
@@ -7943,7 +7943,7 @@ function addEducationEntry(type) {
     const placeholder = placeholderMap[type];
     
     const newEntry = document.createElement('div');
-    newEntry.className = 'education-entry border border-gray-200 rounded p-2';
+    newEntry.className = 'education-entry border border-gray-300 rounded p-2';
     newEntry.setAttribute('data-type', type);
     newEntry.setAttribute('data-index', newIndex);
     newEntry.innerHTML = `
@@ -7965,7 +7965,7 @@ function addEducationEntry(type) {
             <button 
                 type="button"
                 onclick="removeEducationEntry(this)"
-                class="text-red-500 hover:text-red-700 p-2">
+                class="text-red-600 hover:text-red-600 p-2">
                 <i class="fas fa-trash font-size-desc"></i>
             </button>
         </div>
@@ -8009,7 +8009,7 @@ function updateDeleteButtons(containerId) {
             if (!existingButton) {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.type = 'button';
-                deleteBtn.className = 'text-red-500 hover:text-red-700 p-2';
+                deleteBtn.className = 'text-red-600 hover:text-red-600 p-2';
                 deleteBtn.onclick = function() { removeEducationEntry(this); };
                 deleteBtn.innerHTML = '<i class="fas fa-trash font-size-desc"></i>';
                 parentDiv.appendChild(deleteBtn);
@@ -8404,7 +8404,7 @@ function updateSidebarFriendsList() {
             <button
                 type="button"
                 onclick="openFriendMessenger(${friend.id}, \`${friend.name}\`, \`${friend.avatar_url || ''}\`)"
-                class="w-9 h-9 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
+                class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
                 title="${friend.name} 님에게 메시지 보내기">
                 <i class="fas fa-comment-dots font-size-desc"></i>
             </button>
@@ -8465,8 +8465,10 @@ function renderSidebarEngagementUsers(users) {
         `;
     }
     return users.map((friend) => {
-        const nameJs = JSON.stringify(friend.name || '');
-        const avatarJs = JSON.stringify(friend.avatar_url || '');
+        // JSON.stringify 결과의 큰따옴표를 HTML 엔티티로 치환해야
+        // onclick="..." 속성 안에서 속성값이 조기 종료되지 않는다.
+        const nameAttr = JSON.stringify(friend.name || '').replace(/"/g, '&quot;');
+        const avatarAttr = JSON.stringify(friend.avatar_url || '').replace(/"/g, '&quot;');
         return `
         <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition">
             <div class="w-10 h-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-blue-300 transition"
@@ -8479,7 +8481,7 @@ function renderSidebarEngagementUsers(users) {
             </div>
             <div class="flex-1 min-w-0">
                 <div class="font-bold text-gray-800 font-size-desc truncate cursor-pointer hover:text-blue-600 transition"
-                     onclick="filterByUser(${friend.id}, ${nameJs})"
+                     onclick="filterByUser(${friend.id}, ${nameAttr})"
                      title="${escapeHtml(friend.name || '')} 님의 포스팅만 보기">
                     ${escapeHtml(friend.name || '')}
                 </div>
@@ -8489,8 +8491,8 @@ function renderSidebarEngagementUsers(users) {
             </div>
             <button
                 type="button"
-                onclick="openFriendMessenger(${friend.id}, ${nameJs}, ${avatarJs})"
-                class="w-9 h-9 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
+                onclick="openFriendMessenger(${friend.id}, ${nameAttr}, ${avatarAttr})"
+                class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 hover:bg-blue-200 transition"
                 title="${escapeHtml(friend.name || '')} 님에게 메시지 보내기">
                 <i class="fas fa-comment-dots font-size-desc"></i>
             </button>
@@ -8758,22 +8760,22 @@ async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
             const imageUrl = msg.image_url ? toCanonicalSiteUrl(msg.image_url) : '';
             const videoUrl = msg.video_url ? toCanonicalSiteUrl(msg.video_url) : '';
             const imgHtml = msg.image_url
-                ? `<img src="${imageUrl}" alt="사진" class="max-w-full max-h-52 rounded-lg mt-2 border border-gray-200 bg-white object-contain cursor-pointer" onclick="window.open(this.src, '_blank')" />`
+                ? `<img src="${imageUrl}" alt="사진" class="max-w-full max-h-52 rounded-lg mt-2 border border-gray-300 bg-white object-contain cursor-pointer" onclick="window.open(this.src, '_blank')" />`
                 : '';
             const vidHtml = msg.video_url
-                ? `<video controls class="max-w-full max-h-52 rounded-lg mt-2 border border-gray-200 bg-white"><source src="${videoUrl}"></video>`
+                ? `<video controls class="max-w-full max-h-52 rounded-lg mt-2 border border-gray-300 bg-white"><source src="${videoUrl}"></video>`
                 : '';
             const mediaDownloadHtml = `
                 ${msg.image_url ? `
                     <div class="mt-2">
-                        <a href="${imageUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md font-size-mini1 font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
+                        <a href="${imageUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md font-size-mini1 font-semibold border ${mine ? 'border-blue-600 text-blue-600 hover:bg-blue-500/40' : 'border-blue-600 text-blue-600 hover:bg-blue-50'} transition">
                             <i class="fas fa-download mr-1"></i>사진 다운로드
                         </a>
                     </div>
                 ` : ''}
                 ${msg.video_url ? `
                     <div class="mt-2">
-                        <a href="${videoUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md font-size-mini1 font-semibold border ${mine ? 'border-blue-200 text-blue-100 hover:bg-blue-500/40' : 'border-blue-200 text-blue-600 hover:bg-blue-50'} transition">
+                        <a href="${videoUrl}" download class="inline-flex items-center px-2.5 py-1 rounded-md font-size-mini1 font-semibold border ${mine ? 'border-blue-600 text-blue-600 hover:bg-blue-500/40' : 'border-blue-600 text-blue-600 hover:bg-blue-50'} transition">
                             <i class="fas fa-download mr-1"></i>동영상 다운로드
                         </a>
                     </div>
@@ -8781,12 +8783,12 @@ async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
             `;
             return `
                 <div id="${rowId || ''}" class="flex scroll-mt-2 ${mine ? 'justify-end' : 'justify-start'} friend-msg-row" data-msg-id="${mid || ''}">
-                    <div class="max-w-[78%] px-3 py-2 rounded-2xl friend-msg-bubble transition-shadow duration-300 ${mine ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md'}">
+                    <div class="max-w-[78%] px-3 py-2 rounded-2xl friend-msg-bubble transition-shadow duration-300 ${mine ? 'bg-blue-600 text-white rounded-br-md' : 'bg-white text-gray-800 border border-gray-300 rounded-bl-md'}">
                         ${msg.content ? `<div class="font-size-desc leading-snug break-words whitespace-pre-wrap">${escapeHtml(msg.content || '')}</div>` : ''}
                         ${imgHtml}
                         ${vidHtml}
                         ${mediaDownloadHtml}
-                        <div class="mt-1 font-size-mini1 ${mine ? 'text-blue-100' : 'text-gray-400'} text-right">${formatFriendMessengerTime(msg.created_at)}</div>
+                        <div class="mt-1 font-size-mini1 ${mine ? 'text-blue-600' : 'text-gray-400'} text-right">${formatFriendMessengerTime(msg.created_at)}</div>
                     </div>
                 </div>
             `;
@@ -8804,7 +8806,7 @@ async function loadFriendMessengerMessages(scrollToMessageId, fromPoll) {
         }
     } catch (error) {
         console.error('Failed to load friend messages:', error);
-        listEl.innerHTML = `<div class="text-center text-red-400 font-size-desc py-6">메시지를 불러오지 못했습니다.</div>`;
+        listEl.innerHTML = `<div class="text-center text-red-600 font-size-desc py-6">메시지를 불러오지 못했습니다.</div>`;
     }
 }
 
@@ -9049,12 +9051,12 @@ async function updatePushButtonState() {
     if (!btn) return;
     const setOnState = () => {
         btn.classList.remove('border-gray-300', 'text-gray-600', 'bg-white');
-        btn.classList.add('border-blue-500', 'text-blue-600', 'bg-blue-100', 'hover:bg-blue-200');
+        btn.classList.add('border-blue-600', 'text-blue-600', 'bg-blue-100', 'hover:bg-blue-200');
         btn.innerHTML = '<i class="fas fa-bell"></i>';
         btn.title = '푸시 켜짐 (클릭하여 끄기)';
     };
     const setOffState = () => {
-        btn.classList.remove('border-blue-500', 'text-blue-600', 'bg-blue-100', 'hover:bg-blue-200');
+        btn.classList.remove('border-blue-600', 'text-blue-600', 'bg-blue-100', 'hover:bg-blue-200');
         btn.classList.add('border-gray-300', 'text-gray-600', 'bg-white');
         btn.innerHTML = '<i class="fas fa-bell-slash"></i>';
         btn.title = '푸시 꺼짐 (클릭하여 켜기)';
@@ -9220,7 +9222,7 @@ function updateSidebarNotificationsList() {
     container.innerHTML = notificationsList.map(notification => {
         if (notification.type === 'friend_request') {
             return `
-                <div class="flex items-start space-x-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <div class="flex items-start space-x-3 p-3 rounded-lg bg-blue-50 border border-blue-600">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
                             ${notification.from_user_avatar

@@ -489,7 +489,7 @@ function hideSignupModal() {
     if (coverPrev) {
         coverPrev.style.backgroundImage = '';
         coverPrev.className =
-            'w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-300 flex items-center justify-center overflow-hidden';
+            'w-full h-20 rounded-lg bg-blue-100 border border-gray-300 flex items-center justify-center overflow-hidden';
         coverPrev.innerHTML = '<span class="text-gray-500 font-size-mini1">미리보기</span>';
     }
     const rulesDiv = document.getElementById('passwordRules');
@@ -718,7 +718,7 @@ function showSermonLocked(currentScore) {
     if (currentScore >= SERMON_REWARD1_THRESHOLD) {
         unlockBtn.disabled = false;
         unlockBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-        unlockBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white', 'hover:from-purple-600', 'hover:to-pink-600', 'cursor-pointer', 'animate-pulse');
+        unlockBtn.classList.add('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'cursor-pointer', 'animate-pulse');
         unlockBtn.innerHTML = '<i class="fas fa-unlock font-size-title"></i><span>클릭하여 언락!</span>';
         unlockBtn.onclick = function () {
             showSermonUnlocked(currentScore);
@@ -921,16 +921,16 @@ function showVideoCompletionReward(points, totalScore) {
     const resultDiv = document.getElementById('videoCompletionResult');
     
     resultDiv.innerHTML = `
-        <div class="bg-green-50 border-2 border-green-600 rounded-lg p-4">
+        <div class="bg-blue-100 border-2 border-blue-600 rounded-lg p-4">
             <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-check-circle text-green-600 font-size-title"></i>
-                    <span class="font-bold text-green-600">설교 시청 완료! 🎉</span>
+                    <i class="fas fa-check-circle text-blue-600 font-size-title"></i>
+                    <span class="font-bold text-blue-600">설교 시청 완료! 🎉</span>
                 </div>
                 <span class="font-size-desc text-gray-600">시청률: <strong>${Math.round((maxWatchedTime / videoDuration) * 100)}%</strong></span>
             </div>
             <div class="font-size-desc text-gray-700">
-                <p class="mb-1">획득 점수: <strong class="text-green-600">+${points}점</strong></p>
+                <p class="mb-1">획득 점수: <strong class="text-blue-600">+${points}점</strong></p>
                 <p>총 성경 점수: <strong class="text-blue-600">${totalScore}점</strong></p>
             </div>
             <p class="font-size-mini1 text-gray-500 mt-2">
@@ -1175,7 +1175,7 @@ function updateTypingScoreDisplay() {
             if (unlockBtn) {
                 unlockBtn.disabled = false;
                 unlockBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-                unlockBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500', 'text-white', 'hover:from-purple-600', 'hover:to-pink-600', 'cursor-pointer', 'animate-pulse');
+                unlockBtn.classList.add('bg-purple-600', 'text-white', 'hover:bg-purple-700', 'cursor-pointer', 'animate-pulse');
                 unlockBtn.innerHTML = '<i class="fas fa-unlock font-size-title"></i><span>클릭하여 언락!</span>';
                 unlockBtn.onclick = function() {
                     showSermonUnlocked(combinedScore);
@@ -1406,7 +1406,7 @@ function checkTyping() {
             resultIcon = 'fa-check-circle';
             resultMessage = '이미 완료한 구절입니다';
         } else {
-            resultColor = 'text-green-600';
+            resultColor = 'text-blue-600';
             resultIcon = 'fa-check-circle';
             resultMessage = '완벽합니다! 100점 획득! 🎉';
         }
@@ -1415,7 +1415,7 @@ function checkTyping() {
         resultIcon = 'fa-meh';
         resultMessage = '아쉽습니다! 100%를 달성해보세요!';
     } else if (accuracy >= 70) {
-        resultColor = 'text-yellow-600';
+        resultColor = 'text-yellow-400';
         resultIcon = 'fa-frown';
         resultMessage = '조금 더 정확하게 입력해주세요!';
     }
@@ -1428,7 +1428,7 @@ function checkTyping() {
             </div>
             <p class="font-size-mini1 text-gray-600 mt-2 text-center">
                 정확도: <strong class="${resultColor}">${accuracy}%</strong>
-                ${pointsEarned > 0 ? ` | 획득 점수: <strong class="text-green-600">+${pointsEarned}점</strong>` : ' | 획득 점수: 0점'}
+                ${pointsEarned > 0 ? ` | 획득 점수: <strong class="text-blue-600">+${pointsEarned}점</strong>` : ' | 획득 점수: 0점'}
             </p>
             ${bonusMessage}
         </div>
@@ -1693,7 +1693,7 @@ async function showEditProfileModal(targetUserId) {
             }
         }
         
-        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-100' : user.role === 'moderator' ? 'text-yellow-600 bg-yellow-50' : 'text-gray-600 bg-gray-50';
+        const roleColor = user.role === 'admin' ? 'text-red-600 bg-red-100' : user.role === 'moderator' ? 'text-yellow-400 bg-yellow-400' : 'text-gray-600 bg-gray-50';
         const roleName = user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
         
         const content = `
@@ -1901,9 +1901,9 @@ async function showEditProfileModal(targetUserId) {
                     </div>
                     
                     <!-- Church Info -->
-                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
+                    <div class="bg-blue-100 border-l-4 border-blue-600 p-4 rounded">
                         <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-semibold text-green-800">
+                            <h4 class="font-semibold text-blue-600">
                                 <i class="fas fa-church mr-2"></i>교회 정보
                             </h4>
                             <label class="flex items-center font-size-desc cursor-pointer">
@@ -1911,7 +1911,7 @@ async function showEditProfileModal(targetUserId) {
                                     type="checkbox" 
                                     id="privacyChurchInfo"
                                     ${privacySettings.church_info !== false ? 'checked' : ''}
-                                    class="mr-2 w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500" />
+                                    class="mr-2 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-600" />
                                 <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
                             </label>
                         </div>
@@ -1922,7 +1922,7 @@ async function showEditProfileModal(targetUserId) {
                                     type="text" 
                                     id="editChurchInline"
                                     value="${user.church || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 font-size-desc" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-600 font-size-desc" />
                             </div>
                             <div>
                                 <label class="block font-size-desc font-medium text-gray-700 mb-1">담임목사</label>
@@ -1930,13 +1930,13 @@ async function showEditProfileModal(targetUserId) {
                                     type="text" 
                                     id="editPastorInline"
                                     value="${user.pastor || ''}"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 font-size-desc" />
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-600 font-size-desc" />
                             </div>
                             <div>
                                 <label class="block font-size-desc font-medium text-gray-700 mb-1">직분</label>
                                 <select 
                                     id="editPositionInline"
-                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 font-size-desc">
+                                    class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-600 font-size-desc">
                                     <option value="">선택</option>
                                     <option value="평신도" ${user.position === '평신도' ? 'selected' : ''}>평신도</option>
                                     <option value="새신자" ${user.position === '새신자' ? 'selected' : ''}>새신자</option>
@@ -1957,9 +1957,9 @@ async function showEditProfileModal(targetUserId) {
                     </div>
                     
                     <!-- Faith Confession -->
-                    <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
+                    <div class="bg-yellow-400 border-l-4 border-yellow-400 p-4 rounded">
                         <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-semibold text-yellow-800">
+                            <h4 class="font-semibold text-yellow-400">
                                 <i class="fas fa-cross mr-2"></i>신앙 고백
                             </h4>
                             <label class="flex items-center font-size-desc cursor-pointer">
@@ -1967,7 +1967,7 @@ async function showEditProfileModal(targetUserId) {
                                     type="checkbox" 
                                     id="privacyFaithAnswers"
                                     ${privacySettings.faith_answers !== false ? 'checked' : ''}
-                                    class="mr-2 w-4 h-4 text-yellow-600 rounded focus:ring-2 focus:ring-yellow-500" />
+                                    class="mr-2 w-4 h-4 text-yellow-400 rounded focus:ring-2 focus:ring-yellow-400" />
                                 <span class="text-gray-700"><i class="fas fa-eye mr-1"></i>공개</span>
                             </label>
                         </div>
@@ -1992,7 +1992,7 @@ async function showEditProfileModal(targetUserId) {
                                         <label class="text-gray-700 flex-1">${questions[i]}</label>
                                         <select 
                                             id="editFaithQ${qNum}Inline"
-                                            class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-yellow-600">
+                                            class="ml-3 p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-yellow-400">
                                             <option value="">선택</option>
                                             <option value="예" ${faithAnswers[qKey] === '예' ? 'selected' : ''}>예</option>
                                             <option value="아니오" ${faithAnswers[qKey] === '아니오' ? 'selected' : ''}>아니오</option>
@@ -3094,7 +3094,7 @@ function validatePasswordRealtime() {
         const el = document.getElementById(id);
         if (!el) return;
         el.classList.toggle('text-gray-400', !ok);
-        el.classList.toggle('text-green-600', ok);
+        el.classList.toggle('text-blue-600', ok);
         const icon = el.querySelector('i');
         if (icon) {
             icon.classList.toggle('fa-circle', !ok);
@@ -3111,7 +3111,7 @@ function validatePasswordRealtime() {
     } else {
         matchDiv.classList.remove('hidden');
         matchDiv.innerHTML = (pw === cf)
-            ? '<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>비밀번호가 일치합니다</span>'
+            ? '<span class="text-blue-600"><i class="fas fa-check-circle mr-1"></i>비밀번호가 일치합니다</span>'
             : '<span class="text-red-600"><i class="fas fa-times-circle mr-1"></i>비밀번호가 일치하지 않습니다</span>';
     }
 }
@@ -3179,9 +3179,9 @@ function fillLoginRewardUnlockList(combined, listEl) {
         if (combined < t.mu) continue;
         anyUnlocked = true;
         const li = document.createElement('li');
-        li.className = 'flex items-start gap-3 rounded-xl border p-3 bg-emerald-50/95 border-emerald-200';
+        li.className = 'flex items-start gap-3 rounded-xl border p-3 bg-blue-100/95 border-blue-600';
         li.innerHTML =
-            '<span class="shrink-0 mt-0.5 font-size-title"><i class="fas fa-check-circle text-emerald-600"></i></span>' +
+            '<span class="shrink-0 mt-0.5 font-size-title"><i class="fas fa-check-circle text-blue-600"></i></span>' +
             '<div class="min-w-0 flex-1">' +
             '<p class="font-semibold font-size-desc text-gray-900">' +
             t.label +
@@ -3191,7 +3191,7 @@ function fillLoginRewardUnlockList(combined, listEl) {
             '<p class="font-size-mini1 text-gray-600 mt-0.5">' +
             t.desc +
             '</p>' +
-            '<p class="font-size-mini1 text-emerald-800 font-semibold mt-1">언락됨 · 왼쪽 사이드바에서 이용하세요</p>' +
+            '<p class="font-size-mini1 text-blue-600 font-semibold mt-1">언락됨 · 왼쪽 사이드바에서 이용하세요</p>' +
             '</div>';
         listEl.appendChild(li);
     }
@@ -3449,19 +3449,19 @@ function openScoreMilestoneCelebrationModal(tier, combinedAtHit) {
             title: '200μ 달성!',
             sub: '리워드1 · 오늘의 설교 말씀이 열렸습니다',
             hint: '왼쪽 사이드바 「오늘의 설교 말씀」에서 영상을 감상해 보세요.',
-            headerClass: 'bg-gradient-to-r from-blue-600 to-indigo-600'
+            headerClass: 'bg-blue-600'
         },
         1000: {
             title: '1000μ 달성!',
             sub: '리워드2 · QT 찬양 기능이 공개되었습니다',
             hint: 'QT 패널 상단의 찬양 버튼으로 찬양을 들을 수 있습니다.',
-            headerClass: 'bg-gradient-to-r from-indigo-600 to-purple-600'
+            headerClass: 'bg-indigo-600'
         },
         1400: {
             title: '1400μ 달성!',
             sub: '리워드3 · QT 예약(알람)이 공개되었습니다',
             hint: 'QT 패널에서 알람을 설정해 매일 QT를 이어가 보세요.',
-            headerClass: 'bg-gradient-to-r from-purple-600 to-violet-700'
+            headerClass: 'bg-purple-600'
         }
     };
     const th = themes[tier] || themes[200];
@@ -4602,16 +4602,16 @@ async function sendQtInvite() {
         if (res.data.success) {
             showToast(res.data.message || '초대 메일을 발송했습니다.', 'success');
             if (input) input.value = '';
-            if (msg) { msg.textContent = '초대 메일이 발송되었습니다.'; msg.classList.remove('hidden', 'text-red-600'); msg.classList.add('text-green-600'); }
+            if (msg) { msg.textContent = '초대 메일이 발송되었습니다.'; msg.classList.remove('hidden', 'text-red-600'); msg.classList.add('text-blue-600'); }
             hideQtInviteModal();
         } else {
             showToast(res.data.error || '발송에 실패했습니다.', 'error');
-            if (msg) { msg.textContent = res.data.error || ''; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+            if (msg) { msg.textContent = res.data.error || ''; msg.classList.remove('hidden', 'text-blue-600'); msg.classList.add('text-red-600'); }
         }
     } catch (e) {
         const err = e.response?.data?.error || '이메일 발송에 실패했습니다.';
         showToast(err, 'error');
-        if (msg) { msg.textContent = err; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+        if (msg) { msg.textContent = err; msg.classList.remove('hidden', 'text-blue-600'); msg.classList.add('text-red-600'); }
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = '초대 보내기'; }
     }
@@ -4646,16 +4646,16 @@ async function sendFriendInvite() {
         if (res.data.success) {
             showToast(res.data.message || '초대 메일을 발송했습니다.', 'success');
             if (input) input.value = '';
-            if (msg) { msg.textContent = '초대 메일이 발송되었습니다.'; msg.classList.remove('hidden', 'text-red-600'); msg.classList.add('text-green-600'); }
+            if (msg) { msg.textContent = '초대 메일이 발송되었습니다.'; msg.classList.remove('hidden', 'text-red-600'); msg.classList.add('text-blue-600'); }
             hideFriendInviteModal();
         } else {
             showToast(res.data.error || '발송에 실패했습니다.', 'error');
-            if (msg) { msg.textContent = res.data.error || ''; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+            if (msg) { msg.textContent = res.data.error || ''; msg.classList.remove('hidden', 'text-blue-600'); msg.classList.add('text-red-600'); }
         }
     } catch (e) {
         const err = e.response?.data?.error || '이메일 발송에 실패했습니다.';
         showToast(err, 'error');
-        if (msg) { msg.textContent = err; msg.classList.remove('hidden', 'text-green-600'); msg.classList.add('text-red-600'); }
+        if (msg) { msg.textContent = err; msg.classList.remove('hidden', 'text-blue-600'); msg.classList.add('text-red-600'); }
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = '초대 보내기'; }
     }
@@ -5367,7 +5367,7 @@ function renderPostActionsToolbar(post, isLiked) {
         reactionCount = post.likes_count || 0;
         iconClass = 'fas fa-book-bible';
         title = '아멘!';
-        activeIconCls = isLiked ? 'text-yellow-600' : 'text-gray-700';
+        activeIconCls = isLiked ? 'text-yellow-400' : 'text-gray-700';
     } else if (bg === '#F5D4B3') {
         reactionHandler = `toggleLike(${pid})`;
         reactionCount = post.likes_count || 0;
@@ -5379,7 +5379,7 @@ function renderPostActionsToolbar(post, isLiked) {
         reactionCount = post.likes_count || 0;
         iconClass = 'fas fa-hands-helping';
         title = '응원합니다';
-        activeIconCls = isLiked ? 'text-green-600' : 'text-gray-700';
+        activeIconCls = isLiked ? 'text-blue-600' : 'text-gray-700';
     } else if (bg === '#C4E5F8') {
         reactionHandler = `toggleLike(${pid})`;
         reactionCount = post.likes_count || 0;
@@ -6476,7 +6476,7 @@ function copyPostLink(postId) {
     
     // Show success message
     const successMsg = document.createElement('div');
-    successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+    successMsg.className = 'fixed top-20 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
     successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>링크가 복사되었습니다!';
     document.body.appendChild(successMsg);
     
@@ -6539,7 +6539,7 @@ async function submitEditPost() {
         
         // Show success message
         const successMsg = document.createElement('div');
-        successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successMsg.className = 'fixed top-20 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50';
         successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>게시물이 수정되었습니다!';
         document.body.appendChild(successMsg);
         
@@ -6689,7 +6689,7 @@ async function sharePost(postId) {
         
         // Show success message
         const successMsg = document.createElement('div');
-        successMsg.className = 'fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
+        successMsg.className = 'fixed top-20 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in';
         successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>포스팅이 공유되었습니다. 의견을 작성하고 게시하세요!';
         document.body.appendChild(successMsg);
         
@@ -7075,7 +7075,7 @@ async function loadPosts() {
             // Background color style
             const backgroundStyle = post.background_color ? `style="background-color: ${post.background_color};"` : '';
             const visibilityBadgeHtml = post.visibility_scope === 'friends'
-                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-green-100 text-green-700"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
+                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-blue-100 text-blue-600"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
                 : '';
             
             const postCardImageUrlsJson = encodeURIComponent(JSON.stringify(getPostImageUrls(post)));
@@ -7116,7 +7116,7 @@ async function loadPosts() {
                                                 <button
                                                     onclick="copyPostLink(${post.id})"
                                                     class="w-full text-left px-4 py-2 hover:bg-gray-50 transition flex items-center font-size-desc">
-                                                    <i class="fas fa-link text-green-600 w-5"></i>
+                                                    <i class="fas fa-link text-blue-600 w-5"></i>
                                                     <span class="ml-2">링크 복사</span>
                                                 </button>
                                                 ${currentUser.id === post.user_id || currentUser.role === 'admin' ? `
@@ -7448,7 +7448,7 @@ async function fillProfileViewPanelForUser(user) {
         user.role === 'admin'
             ? 'text-red-600 bg-red-100'
             : user.role === 'moderator'
-              ? 'text-yellow-600 bg-yellow-50'
+              ? 'text-yellow-400 bg-yellow-400'
               : 'text-gray-600 bg-gray-50';
     const roleName =
         user.role === 'admin' ? '관리자' : user.role === 'moderator' ? '운영자' : '일반 사용자';
@@ -7524,7 +7524,7 @@ async function fillProfileViewPanelForUser(user) {
                         ${user.bio ? `<p class="font-size-desc text-gray-600 mt-3 px-2">${user.bio}</p>` : ''}
                         <div class="mt-4 font-size-mini1 text-gray-500 space-y-1">
                             <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                            <p><i class="fas fa-user-friends text-pink-500 mr-1"></i>친구 ${friendCount}명</p>
+                            <p><i class="fas fa-user-friends text-blue-600 mr-1"></i>친구 ${friendCount}명</p>
                         </div>
                         ${friendActionHtml ? `<div class="mt-3">${friendActionHtml}</div>` : ''}
                     </div>
@@ -7532,22 +7532,22 @@ async function fillProfileViewPanelForUser(user) {
                 <div class="md:col-span-2 space-y-4">
                     ${showScores && (isOwnProfile || user.prayer_score !== null || user.scripture_score !== null || user.activity_score !== null)
                         ? `
-                    <div class="bg-purple-50 border-l-4 border-purple-600 p-3 rounded">
-                        <h4 class="font-semibold text-purple-800 mb-2 font-size-desc">
+                    <div class="bg-blue-50 border-l-4 border-blue-600 p-3 rounded">
+                        <h4 class="font-semibold text-blue-600 mb-2 font-size-desc">
                             <i class="fas fa-trophy mr-2"></i>${isOwnProfile ? '나의 점수' : '점수 정보'}
                         </h4>
                         <div class="flex items-center justify-center space-x-3 font-size-mini1">
-                            <i class="fas fa-book-bible text-yellow-600"></i>
-                            <span class="font-semibold text-yellow-600">${user.scripture_score ?? 0}</span>
+                            <i class="fas fa-book-bible text-blue-600"></i>
+                            <span class="font-semibold text-blue-600">${user.scripture_score ?? 0}</span>
                             <span class="text-gray-300">|</span>
                             <i class="fas fa-praying-hands text-blue-600"></i>
                             <span class="font-semibold text-blue-600">${user.prayer_score ?? 0}</span>
                             <span class="text-gray-300">|</span>
-                            <i class="fas fa-heart text-green-600"></i>
-                            <span class="font-semibold text-green-600">${user.activity_score ?? 0}</span>
+                            <i class="fas fa-heart text-blue-600"></i>
+                            <span class="font-semibold text-blue-600">${user.activity_score ?? 0}</span>
                             <span class="text-gray-300">|</span>
-                            <i class="fas fa-trophy text-purple-600"></i>
-                            <span class="font-semibold text-purple-600">${(user.scripture_score ?? 0) + (user.prayer_score ?? 0) + (user.activity_score ?? 0)}</span>
+                            <i class="fas fa-trophy text-blue-600"></i>
+                            <span class="font-semibold text-blue-600">${(user.scripture_score ?? 0) + (user.prayer_score ?? 0) + (user.activity_score ?? 0)}</span>
                         </div>
                     </div>`
                         : ''}
@@ -7587,8 +7587,8 @@ async function fillProfileViewPanelForUser(user) {
                         if (user.position) churchItems += `<p><strong>직분:</strong> ${user.position}</p>`;
                         if (!churchItems) return '';
                         return `
-                    <div class="bg-green-50 border-l-4 border-green-600 p-4 rounded">
-                        <h4 class="font-semibold text-green-800 mb-3"><i class="fas fa-church mr-2"></i>교회 정보</h4>
+                    <div class="bg-blue-100 border-l-4 border-blue-600 p-4 rounded">
+                        <h4 class="font-semibold text-blue-600 mb-3"><i class="fas fa-church mr-2"></i>교회 정보</h4>
                         <div class="space-y-2 font-size-desc text-gray-700">${churchItems}</div>
                     </div>`;
                     })()}
@@ -7606,8 +7606,8 @@ async function fillProfileViewPanelForUser(user) {
                             })
                             .join('');
                         return `
-                    <div class="bg-yellow-50 border-l-4 border-yellow-600 p-4 rounded">
-                        <h4 class="font-semibold text-yellow-800 mb-3"><i class="fas fa-cross mr-2"></i>신앙 고백</h4>
+                    <div class="bg-yellow-400 border-l-4 border-yellow-400 p-4 rounded">
+                        <h4 class="font-semibold text-yellow-400 mb-3"><i class="fas fa-cross mr-2"></i>신앙 고백</h4>
                         <div class="space-y-2 font-size-desc">${rows}</div>
                     </div>`;
                     })()}
@@ -8157,7 +8157,7 @@ async function showUserProfileCover(userId) {
         if (user.role === 'admin') {
             badge.innerHTML = '<div class="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="관리자"><i class="fas fa-crown text-white font-size-desc"></i></div>';
         } else if (user.role === 'moderator') {
-            badge.innerHTML = '<div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="운영자"><i class="fas fa-shield-alt text-white font-size-desc"></i></div>';
+            badge.innerHTML = '<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white shadow-lg" title="운영자"><i class="fas fa-shield-alt text-white font-size-desc"></i></div>';
         } else {
             badge.innerHTML = '';
         }
@@ -8208,7 +8208,7 @@ async function showUserProfileCover(userId) {
             if (user.location) {
                 locationElement.innerHTML = `
                     <div class="flex items-center space-x-2">
-                        <i class="fas fa-map-marker-alt text-green-600"></i>
+                        <i class="fas fa-map-marker-alt text-blue-600"></i>
                         <span class="font-size-desc text-gray-700">${user.location}</span>
                     </div>
                 `;
@@ -8303,7 +8303,7 @@ async function deleteCover() {
         // Reset preview to default
         const preview = document.getElementById('editCoverPreview');
         preview.style.backgroundImage = '';
-        preview.className = 'w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative';
+        preview.className = 'w-full h-32 rounded-lg bg-blue-500 flex items-center justify-center overflow-hidden relative';
         preview.innerHTML = '<span class="text-white font-size-desc font-medium">커버 사진을 선택하세요</span>';
         
         // Clear file input
@@ -9260,7 +9260,7 @@ function updateSidebarNotificationsList() {
                     : notification.post_content)
                 : '게시물';
             return `
-                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-green-50 border border-green-200'}">
+                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-blue-100 border border-blue-600'}">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
                             ${notification.from_user_avatar
@@ -9289,7 +9289,7 @@ function updateSidebarNotificationsList() {
                     : notification.post_content)
                 : '게시물';
             return `
-                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-yellow-50 border border-yellow-200'}">
+                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-yellow-400 border border-yellow-200'}">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
                             ${notification.from_user_avatar

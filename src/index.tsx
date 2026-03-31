@@ -729,8 +729,8 @@ app.get('/users/:id', async (c) => {
                         <!-- All Scores in Compact Single Line -->
                         <div class="flex items-center justify-center space-x-4 font-size-mini1">
                             <div class="flex items-center space-x-1">
-                                <i class="fas fa-book-bible text-yellow-600 font-size-mini1"></i>
-                                <span class="font-semibold text-yellow-600">${ user.scripture_score || 0}</span>
+                                <i class="fas fa-book-bible text-yellow-400 font-size-mini1"></i>
+                                <span class="font-semibold text-yellow-400">${ user.scripture_score || 0}</span>
                             </div>
                             <span class="text-gray-300">|</span>
                             <div class="flex items-center space-x-1">
@@ -739,8 +739,8 @@ app.get('/users/:id', async (c) => {
                             </div>
                             <span class="text-gray-300">|</span>
                             <div class="flex items-center space-x-1">
-                                <i class="fas fa-heart text-green-600 font-size-mini1"></i>
-                                <span class="font-semibold text-green-600">${ user.activity_score || 0}</span>
+                                <i class="fas fa-heart text-blue-600 font-size-mini1"></i>
+                                <span class="font-semibold text-blue-600">${ user.activity_score || 0}</span>
                             </div>
                             <span class="text-gray-300">|</span>
                             <div class="flex items-center space-x-1">
@@ -944,7 +944,7 @@ app.get('/verify-email', (c) => {
       <p class="text-gray-600 font-size-desc">잠시만 기다려주세요.</p>
     </div>
     <div id="success" class="hidden py-8">
-      <i class="fas fa-check-circle text-green-500 font-size-title mb-4"></i>
+      <i class="fas fa-check-circle text-blue-600 font-size-title mb-4"></i>
       <h1 class="font-size-title font-bold text-gray-800 mb-2">회원가입 완료!</h1>
       <p class="text-gray-600 mb-6">이제 로그인해주세요.</p>
       <a href="/" class="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">로그인하기</a>
@@ -1120,15 +1120,15 @@ app.get('/reset-password', (c) => {
         rules.classList.remove('hidden');
         ['length','lower','digit','noUpper'].forEach(id => {
           const el = document.getElementById('r-' + id);
-          el.className = 'flex items-center font-size-mini1 ' + (errs.includes(id) ? 'text-gray-400' : 'text-green-600');
-          el.querySelector('i').className = errs.includes(id) ? 'fas fa-circle text-[5px] mr-1.5' : 'fas fa-check-circle text-green-500 mr-1.5';
+          el.className = 'flex items-center font-size-mini1 ' + (errs.includes(id) ? 'text-gray-400' : 'text-blue-600');
+          el.querySelector('i').className = errs.includes(id) ? 'fas fa-circle text-[5px] mr-1.5' : 'fas fa-check-circle text-blue-600 mr-1.5';
         });
       } else rules.classList.add('hidden');
       const msg = document.getElementById('matchMsg');
       if (confirm.length > 0) {
         msg.classList.remove('hidden');
         msg.textContent = pw === confirm ? '✓ 비밀번호가 일치합니다' : '✗ 비밀번호가 일치하지 않습니다';
-        msg.className = 'font-size-desc mt-1 ' + (pw === confirm ? 'text-green-600' : 'text-red-600');
+        msg.className = 'font-size-desc mt-1 ' + (pw === confirm ? 'text-blue-600' : 'text-red-600');
       } else msg.classList.add('hidden');
     }
     async function submitReset(e) {
@@ -1153,7 +1153,7 @@ app.get('/reset-password', (c) => {
     function showToast(msg, type) {
       const el = document.getElementById('toast');
       el.textContent = msg;
-      el.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ' + (type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white');
+      el.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg ' + (type === 'success' ? 'bg-blue-600 text-white' : 'bg-red-600 text-white');
       el.classList.remove('hidden');
       setTimeout(() => el.classList.add('hidden'), 3000);
     }
@@ -5250,10 +5250,10 @@ app.get('/admin', (c) => {
                     </div>
                     
                     <!-- 말씀 -->
-                    <div class="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-yellow-600 font-size-title font-bold mb-1" id="versePostCount">0</div>
-                        <div class="text-yellow-700 font-size-desc font-medium">말씀</div>
-                        <div class="w-8 h-8 bg-yellow-200 rounded-full mx-auto mt-2"></div>
+                    <div class="bg-yellow-400 border-2 border-yellow-400 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-yellow-400 font-size-title font-bold mb-1" id="versePostCount">0</div>
+                        <div class="text-yellow-400 font-size-desc font-medium">말씀</div>
+                        <div class="w-8 h-8 bg-yellow-400 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 일상 -->
@@ -5264,10 +5264,10 @@ app.get('/admin', (c) => {
                     </div>
                     
                     <!-- 사역 -->
-                    <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-green-600 font-size-title font-bold mb-1" id="ministryPostCount">0</div>
-                        <div class="text-green-700 font-size-desc font-medium">사역</div>
-                        <div class="w-8 h-8 bg-green-200 rounded-full mx-auto mt-2"></div>
+                    <div class="bg-blue-100 border-2 border-blue-600 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-blue-600 font-size-title font-bold mb-1" id="ministryPostCount">0</div>
+                        <div class="text-blue-600 font-size-desc font-medium">사역</div>
+                        <div class="w-8 h-8 bg-blue-600 rounded-full mx-auto mt-2"></div>
                     </div>
                     
                     <!-- 찬양 -->
@@ -5359,7 +5359,7 @@ app.get('/admin', (c) => {
                         <i class="fas fa-user-friends text-purple-600 mr-2"></i>친구 관계 관리
                     </h2>
                     <div class="flex space-x-2">
-                        <button onclick="createRandomFriendships()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-size-desc">
+                        <button onclick="createRandomFriendships()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
                             <i class="fas fa-random mr-2"></i>랜덤 친구 생성
                         </button>
                         <button onclick="loadFriendships()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
@@ -5392,7 +5392,7 @@ app.get('/admin', (c) => {
             <!-- Friendship Graph Modal -->
             <div id="graphModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-                    <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex justify-between items-center">
+                    <div class="bg-blue-600 text-white p-6 flex justify-between items-center">
                         <div>
                             <h2 class="font-size-title font-bold" id="graphTitle">친구 네트워크</h2>
                             <p class="text-blue-600 font-size-desc mt-1" id="graphSubtitle"></p>
@@ -5408,11 +5408,11 @@ app.get('/admin', (c) => {
                                 <span>선택된 사용자</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded-full bg-green-500"></div>
+                                <div class="w-4 h-4 rounded-full bg-blue-600"></div>
                                 <span>친구 (수락됨)</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+                                <div class="w-4 h-4 rounded-full bg-yellow-400"></div>
                                 <span>대기 중</span>
                             </div>
                             <div class="flex items-center gap-2">
@@ -5434,7 +5434,7 @@ app.get('/admin', (c) => {
                         <i class="fas fa-newspaper text-blue-600 mr-2"></i>게시물 관리
                     </h2>
                     <div class="flex flex-wrap gap-2">
-                        <button onclick="createFakePosts()" class="bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition font-size-desc">
+                        <button onclick="createFakePosts()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
                             <i class="fas fa-plus mr-1"></i>게시물 생성
                         </button>
                         <button onclick="createFakeComments()" class="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition font-size-desc">
@@ -5443,7 +5443,7 @@ app.get('/admin', (c) => {
                         <button onclick="createFakeLikes()" class="bg-pink-500 text-white px-3 py-2 rounded-lg hover:bg-pink-600 transition font-size-desc">
                             <i class="fas fa-heart mr-1"></i>반응 생성
                         </button>
-                        <button onclick="simulateTimePass()" class="bg-gradient-to-r from-orange-500 to-red-600 text-white px-4 py-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition font-size-desc font-semibold shadow-lg">
+                        <button onclick="simulateTimePass()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-size-desc font-semibold shadow-lg">
                             <i class="fas fa-magic mr-2"></i>🌱 활동 시뮬레이션
                         </button>
                         <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
@@ -5640,7 +5640,7 @@ app.get('/admin', (c) => {
                             <td class="px-4 py-3 font-size-desc">
                                 <button 
                                     onclick="editUserScore(\${user.id}, 'scripture_score', \${user.scripture_score || 0}, '성경점수')"
-                                    class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-800 hover:bg-yellow-200 cursor-pointer transition">
+                                    class="inline-flex items-center px-2 py-1 rounded bg-yellow-400 text-yellow-400 hover:bg-yellow-400 cursor-pointer transition">
                                     <i class="fas fa-bible font-size-mini1 mr-1"></i>
                                     \${user.scripture_score || 0}
                                     <i class="fas fa-edit font-size-mini1 ml-1 opacity-50"></i>
@@ -5658,7 +5658,7 @@ app.get('/admin', (c) => {
                             <td class="px-4 py-3 font-size-desc">
                                 <button 
                                     onclick="editUserScore(\${user.id}, 'activity_score', \${user.activity_score || 0}, '활동점수')"
-                                    class="inline-flex items-center px-2 py-1 rounded bg-green-100 text-green-800 hover:bg-green-200 cursor-pointer transition">
+                                    class="inline-flex items-center px-2 py-1 rounded bg-blue-100 text-blue-600 hover:bg-blue-600 cursor-pointer transition">
                                     <i class="fas fa-chart-line font-size-mini1 mr-1"></i>
                                     \${user.activity_score || 0}
                                     <i class="fas fa-edit font-size-mini1 ml-1 opacity-50"></i>
@@ -5882,13 +5882,13 @@ app.get('/admin', (c) => {
                             typeColor = 'bg-red-100 text-red-600';
                         } else if (post.background_color === '#F5E398') {
                             postType = '말씀';
-                            typeColor = 'bg-yellow-100 text-yellow-800';
+                            typeColor = 'bg-yellow-400 text-yellow-400';
                         } else if (post.background_color === '#F5D4B3') {
                             postType = '일상';
                             typeColor = 'bg-orange-100 text-orange-800';
                         } else if (post.background_color === '#B3EDD8') {
                             postType = '사역';
-                            typeColor = 'bg-green-100 text-green-800';
+                            typeColor = 'bg-blue-100 text-blue-600';
                         } else if (post.background_color === '#C4E5F8') {
                             postType = '찬양';
                             typeColor = 'bg-sky-100 text-sky-800';
@@ -6217,9 +6217,9 @@ app.get('/admin', (c) => {
                     const tbody = document.getElementById('friendshipsTableBody');
                     tbody.innerHTML = response.data.friendships.map(friendship => {
                         const statusBadge = friendship.status === 'accepted' 
-                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-green-100 text-green-800">수락됨</span>'
+                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-blue-100 text-blue-600">수락됨</span>'
                             : friendship.status === 'pending'
-                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-yellow-100 text-yellow-800">대기중</span>'
+                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-yellow-400 text-yellow-400">대기중</span>'
                             : '<span class="px-2 py-1 rounded-full font-size-mini1 bg-red-100 text-red-600">거절됨</span>';
                         
                         const date = new Date(friendship.created_at);
@@ -7744,7 +7744,7 @@ app.get('/', (c) => {
                                         <span id="rewardTotalScore" class="font-size-base font-bold text-blue-600 tabular-nums">0</span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                        <div id="rewardProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                        <div id="rewardProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
                                     </div>
                                 </div>
 
@@ -7823,7 +7823,7 @@ app.get('/', (c) => {
                                         <span id="reward2TotalScore" class="font-size-base font-bold text-blue-600">0</span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div id="reward2ProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                        <div id="reward2ProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
                                     </div>
                                 </div>
 
@@ -7874,7 +7874,7 @@ app.get('/', (c) => {
                                         <span id="reward3TotalScore" class="font-size-base font-bold text-blue-600">0</span>
                                     </div>
                                     <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div id="reward3ProgressBar" class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                        <div id="reward3ProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
                                     </div>
                                 </div>
 
@@ -7947,13 +7947,13 @@ app.get('/', (c) => {
                                         </span>
                                     </div>
                                     <div class="flex items-center space-x-2">
-                                        <i class="fas fa-user-friends text-pink-600"></i>
+                                        <i class="fas fa-user-friends text-blue-600"></i>
                                         <span class="font-size-desc text-gray-700">
-                                            <span id="profileCoverFriendCount" class="font-bold text-pink-600">0</span> 친구
+                                            <span id="profileCoverFriendCount" class="font-bold text-blue-600">0</span> 친구
                                         </span>
                                     </div>
                                     <div class="flex items-center space-x-2">
-                                        <i class="fas fa-church text-purple-600"></i>
+                                        <i class="fas fa-church text-blue-600"></i>
                                         <span id="profileCoverChurch" class="font-size-desc text-gray-700">교회 정보</span>
                                     </div>
                                     <div id="profileCoverPosition" class="hidden">
@@ -7973,15 +7973,15 @@ app.get('/', (c) => {
                                     </div>
                                     <span class="text-gray-300">|</span>
                                     <div class="flex items-center gap-1">
-                                        <i class="fas fa-praying-hands text-purple-500"></i>
+                                        <i class="fas fa-praying-hands text-blue-600"></i>
                                         <span class="text-gray-500">기도</span>
-                                        <span id="profileCoverPrayerScore" class="font-bold text-purple-600">0</span>
+                                        <span id="profileCoverPrayerScore" class="font-bold text-blue-600">0</span>
                                     </div>
                                     <span class="text-gray-300">|</span>
                                     <div class="flex items-center gap-1">
-                                        <i class="fas fa-heart text-red-600"></i>
+                                        <i class="fas fa-heart text-blue-600"></i>
                                         <span class="text-gray-500">활동</span>
-                                        <span id="profileCoverActivityScore" class="font-bold text-red-600">0</span>
+                                        <span id="profileCoverActivityScore" class="font-bold text-blue-600">0</span>
                                     </div>
                                 </div>
                             </div>
@@ -8097,10 +8097,10 @@ app.get('/', (c) => {
                                 
                                 <!-- Image Preview (최대 4장) -->
                                 <div id="postImagePreviewContainer" class="hidden mt-3">
-                                    <div class="rounded-2xl border border-gray-300/90 bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 shadow-md ring-1 ring-gray-100/80">
+                                    <div class="rounded-2xl border border-gray-300/90 bg-white p-3 shadow-md ring-1 ring-gray-100/80">
                                         <div class="mb-2 flex items-center justify-between gap-2">
                                             <div class="flex min-w-0 items-center gap-2">
-                                                <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md">
+                                                <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md">
                                                     <i class="fas fa-images font-size-desc"></i>
                                                 </span>
                                                 <div class="min-w-0 leading-tight">
@@ -8480,7 +8480,7 @@ app.get('/', (c) => {
         <!-- 피드백 요청 → 관리자 앱 내 메신저로 전달 -->
         <div id="feedbackModal" class="hidden fixed inset-0 z-[116] bg-black/55 flex items-end sm:items-center justify-center p-0 sm:p-4" onclick="if(event.target===this) hideFeedbackModal()">
             <div class="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl border border-amber-100 overflow-hidden flex flex-col max-h-[92vh]" onclick="event.stopPropagation()">
-                <div class="px-5 py-4 border-b border-amber-100 flex items-center justify-between shrink-0 bg-gradient-to-r from-white to-amber-50/30">
+                <div class="px-5 py-4 border-b border-amber-100 flex items-center justify-between shrink-0 bg-white">
                     <h3 class="font-bold text-gray-900 font-size-title flex items-center gap-2.5">
                         <span class="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-600">
                             <i class="fas fa-lightbulb"></i>
@@ -8795,7 +8795,7 @@ app.get('/', (c) => {
                                 <i class="fas fa-image mr-1"></i>커버 선택
                             </label>
                             <p class="font-size-mini1 text-gray-500">가로형 권장 · 최대 10MB</p>
-                            <div id="signupCoverPreview" class="w-full h-20 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 border border-gray-300 flex items-center justify-center overflow-hidden">
+                            <div id="signupCoverPreview" class="w-full h-20 rounded-lg bg-blue-100 border border-gray-300 flex items-center justify-center overflow-hidden">
                                 <span class="text-gray-500 font-size-mini1">미리보기</span>
                             </div>
                         </div>
@@ -9191,7 +9191,7 @@ app.get('/', (c) => {
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">7종 포스팅 반응하기 (기도 제외)</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-size-desc font-bold">1μ</span>
+                                            <span class="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-size-desc font-bold">1μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
@@ -9203,13 +9203,13 @@ app.get('/', (c) => {
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">댓글 작성</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-size-desc font-bold">5μ</span>
+                                            <span class="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-size-desc font-bold">5μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700">댓글 받기</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full font-size-desc font-bold">5μ</span>
+                                            <span class="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-size-desc font-bold">5μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
@@ -9239,13 +9239,13 @@ app.get('/', (c) => {
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">오늘의 말씀 타이핑</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-size-desc font-bold">40μ</span>
+                                            <span class="inline-block bg-yellow-400 text-yellow-400 px-3 py-1 rounded-full font-size-desc font-bold">40μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
                                         <td class="border border-gray-300 px-4 py-3 font-size-desc text-gray-700 font-semibold">오늘의 말씀 시청</td>
                                         <td class="border border-gray-300 px-4 py-3 text-center">
-                                            <span class="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-size-desc font-bold">40μ</span>
+                                            <span class="inline-block bg-yellow-400 text-yellow-400 px-3 py-1 rounded-full font-size-desc font-bold">40μ</span>
                                         </td>
                                     </tr>
                                     <tr class="hover:bg-gray-50 transition">
@@ -9264,9 +9264,9 @@ app.get('/', (c) => {
                             </table>
                         </div>
                         
-                        <div class="mt-4 bg-yellow-50 rounded-lg p-4 border-2 border-yellow-300">
+                        <div class="mt-4 bg-yellow-400 rounded-lg p-4 border-2 border-yellow-400">
                             <p class="font-size-desc text-center text-gray-800 font-semibold">
-                                <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                                <i class="fas fa-trophy text-yellow-400 mr-2"></i>
                                 총 점수 200μ 이상 달성 시 리워드1 공개
                             </p>
                         </div>
@@ -9293,7 +9293,7 @@ app.get('/', (c) => {
                                 </div>
                             </div>
                             <div class="flex items-start">
-                                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-size-base font-semibold text-gray-800">소통하기</h4>
                                     <p class="font-size-desc text-gray-600">댓글, 좋아요, 기도하기 기능으로 형제 자매들과 교제하세요.</p>
@@ -9321,7 +9321,7 @@ app.get('/', (c) => {
                                 </div>
                             </div>
                             <div class="flex items-start">
-                                <i class="fas fa-check-circle text-yellow-500 mt-1 mr-3"></i>
+                                <i class="fas fa-check-circle text-yellow-400 mt-1 mr-3"></i>
                                 <div>
                                     <h4 class="font-size-base font-semibold text-gray-800">놀라운 보상</h4>
                                     <p class="font-size-desc text-gray-600">특정 점수 이상 획득 시 놀라운 리워드가 계속 주어집니다.</p>
@@ -9503,61 +9503,61 @@ app.get('/', (c) => {
                     <span class="login-reward-spark lr-s5"></span>
                     <span class="login-reward-spark lr-s6"></span>
                 </div>
-                <div class="relative z-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 px-4 py-3.5 text-white text-center border-b border-white/20">
+                <div class="relative z-10 bg-blue-600 px-4 py-3.5 text-white text-center border-b border-white/20">
                     <h2 id="loginRewardCelebrationTitle" class="login-reward-fanfare-title font-size-title font-bold leading-snug drop-shadow-sm">환영합니다</h2>
                 </div>
-                <div class="relative z-10 p-5 sm:p-6 space-y-4 bg-gradient-to-b from-white to-indigo-50/40 overflow-y-auto flex-1">
+                <div class="relative z-10 p-5 sm:p-6 space-y-4 bg-white overflow-y-auto flex-1">
                     <div class="text-center rounded-xl bg-white/80 border border-blue-600 px-3 py-3 shadow-sm">
-                        <p class="font-size-desc text-gray-600 mb-1">
-                            종합 μ <span class="text-gray-400">(성경+기도+활동)</span>
+                        <p class="font-size-desc text-black mb-1">
+                            종합 μ <span class="text-black">(성경+기도+활동)</span>
                         </p>
-                        <div id="loginRewardCelebrationTotal" class="font-size-title font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 tabular-nums">0</div>
-                        <p id="loginRewardCelebrationNextHint" class="font-size-mini1 text-violet-800 font-medium mt-2"></p>
+                        <div id="loginRewardCelebrationTotal" class="font-size-title font-extrabold text-black tabular-nums">0</div>
+                        <p id="loginRewardCelebrationNextHint" class="font-size-mini1 text-black font-medium mt-2"></p>
                     </div>
 
                     <div>
-                        <p class="font-size-mini1 font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                            <i class="fas fa-chart-column text-indigo-600"></i> μ 구성 · 상승 그래프
+                        <p class="font-size-mini1 font-bold text-black mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-chart-column text-blue-600"></i> μ 구성 · 상승 그래프
                         </p>
                         <div class="flex items-end justify-center gap-2 sm:gap-3 px-1 rounded-xl bg-white/70 border border-indigo-100 py-3">
                             <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                                 <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
-                                    <div id="loginRewardBarScripture" class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 min-h-0 shadow-sm" style="height:0%"></div>
+                                    <div id="loginRewardBarScripture" class="w-full rounded-t-lg bg-yellow-400 min-h-0 shadow-sm" style="height:0%"></div>
                                 </div>
-                                <span class="font-size-mini1 text-amber-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationScripture">0</span>μ</span>
-                                <span class="font-size-mini1 text-amber-800/90 font-medium">성경</span>
+                                <span class="font-size-mini1 text-black font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationScripture">0</span>μ</span>
+                                <span class="font-size-mini1 text-black font-medium">성경</span>
                             </div>
                             <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                                 <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
-                                    <div id="loginRewardBarPrayer" class="w-full rounded-t-lg bg-gradient-to-t from-purple-500 to-purple-400 min-h-0 shadow-sm" style="height:0%"></div>
+                                    <div id="loginRewardBarPrayer" class="w-full rounded-t-lg bg-blue-500 min-h-0 shadow-sm" style="height:0%"></div>
                                 </div>
-                                <span class="font-size-mini1 text-purple-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationPrayer">0</span>μ</span>
-                                <span class="font-size-mini1 text-purple-800/90 font-medium">기도</span>
+                                <span class="font-size-mini1 text-black font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationPrayer">0</span>μ</span>
+                                <span class="font-size-mini1 text-black font-medium">기도</span>
                             </div>
                             <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                                 <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-slate-100 border border-slate-200 overflow-hidden">
-                                    <div id="loginRewardBarActivity" class="w-full rounded-t-lg bg-gradient-to-t from-rose-500 to-rose-400 min-h-0 shadow-sm" style="height:0%"></div>
+                                    <div id="loginRewardBarActivity" class="w-full rounded-t-lg bg-red-500 min-h-0 shadow-sm" style="height:0%"></div>
                                 </div>
-                                <span class="font-size-mini1 text-rose-900 font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationActivity">0</span>μ</span>
-                                <span class="font-size-mini1 text-rose-800/90 font-medium">활동</span>
+                                <span class="font-size-mini1 text-black font-bold mt-1.5 tabular-nums"><span id="loginRewardCelebrationActivity">0</span>μ</span>
+                                <span class="font-size-mini1 text-black font-medium">활동</span>
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <p class="font-size-mini1 font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-                            <i class="fas fa-check-circle text-emerald-600"></i> 달성한 리워드
+                        <p class="font-size-mini1 font-bold text-black mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-check-circle text-blue-600"></i> 달성한 리워드
                         </p>
                         <ul id="loginRewardUnlockList" class="space-y-2 text-left list-none p-0 m-0"></ul>
                     </div>
 
                     <div class="text-center px-1 space-y-1.5">
-                        <p class="font-size-mini1 text-gray-700 leading-relaxed">
+                        <p class="font-size-mini1 text-black leading-relaxed">
                             "기뻐하고 즐거워하라 하늘에서 너희의 상이 큼이라"
                         </p>
-                        <p class="font-size-mini1 text-gray-500">마태복음 5:12</p>
+                        <p class="font-size-mini1 text-black">마태복음 5:12</p>
                     </div>
-                    <button type="button" onclick="hideLoginRewardCelebrationModal()" class="login-reward-fanfare-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-size-base font-bold hover:from-blue-700 hover:to-violet-700 transition shadow-lg shadow-indigo-500/25">
+                    <button type="button" onclick="hideLoginRewardCelebrationModal()" class="login-reward-fanfare-btn w-full py-3.5 rounded-xl bg-blue-600 text-white font-size-base font-bold hover:bg-blue-700 transition shadow-lg">
                         함께 지어져가요
                     </button>
                 </div>
@@ -9575,37 +9575,37 @@ app.get('/', (c) => {
                     <span class="milestone-spark milestone-spark-4"></span>
                     <span class="milestone-spark milestone-spark-5"></span>
                 </div>
-                <div id="milestoneCelebrationHeader" class="relative z-10 px-5 py-4 text-white text-center rounded-t-2xl border-b border-white/20 bg-gradient-to-r from-blue-600 to-indigo-600">
+                <div id="milestoneCelebrationHeader" class="relative z-10 px-5 py-4 text-white text-center rounded-t-2xl border-b border-white/20 bg-blue-600">
                     <p class="font-size-desc opacity-90">마일스톤 달성</p>
                     <h2 id="milestoneCelebrationTitle" class="font-size-title font-bold mt-1">200μ 달성!</h2>
                     <p id="milestoneCelebrationSubtitle" class="font-size-mini1 opacity-90 mt-1 leading-snug">리워드가 열렸습니다</p>
                 </div>
                 <div class="p-5 sm:p-6 space-y-4 relative z-10 overflow-y-auto flex-1">
                     <div class="text-center">
-                        <p class="font-size-desc text-gray-600 mb-1">종합 μ <span class="text-gray-400">(성경+기도+활동)</span></p>
-                        <div id="milestoneCelebrationBigMu" class="font-size-title font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600 tabular-nums">0μ</div>
+                        <p class="font-size-desc text-black mb-1">종합 μ <span class="text-black">(성경+기도+활동)</span></p>
+                        <div id="milestoneCelebrationBigMu" class="font-size-title font-extrabold text-black tabular-nums">0μ</div>
                     </div>
                     <div class="relative z-10 flex items-end justify-center gap-2 sm:gap-3 px-1">
                         <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                             <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-300 overflow-hidden">
-                                <div id="milestoneBarScripture" class="w-full rounded-t-lg bg-gradient-to-t from-amber-500 to-amber-400 min-h-0" style="height:0%"></div>
+                                <div id="milestoneBarScripture" class="w-full rounded-t-lg bg-amber-500 min-h-0" style="height:0%"></div>
                             </div>
-                            <span class="font-size-mini1 text-amber-800 font-semibold mt-1.5">성경</span>
+                            <span class="font-size-mini1 text-black font-semibold mt-1.5">성경</span>
                         </div>
                         <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                             <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-300 overflow-hidden">
-                                <div id="milestoneBarPrayer" class="w-full rounded-t-lg bg-gradient-to-t from-purple-500 to-purple-400 min-h-0" style="height:0%"></div>
+                                <div id="milestoneBarPrayer" class="w-full rounded-t-lg bg-purple-500 min-h-0" style="height:0%"></div>
                             </div>
-                            <span class="font-size-mini1 text-purple-800 font-semibold mt-1.5">기도</span>
+                            <span class="font-size-mini1 text-black font-semibold mt-1.5">기도</span>
                         </div>
                         <div class="flex flex-col items-center flex-1 max-w-[5rem]">
                             <div class="w-full h-28 flex flex-col justify-end rounded-t-lg bg-gray-100 border border-gray-300 overflow-hidden">
-                                <div id="milestoneBarActivity" class="w-full rounded-t-lg bg-gradient-to-t from-rose-500 to-rose-400 min-h-0" style="height:0%"></div>
+                                <div id="milestoneBarActivity" class="w-full rounded-t-lg bg-rose-500 min-h-0" style="height:0%"></div>
                             </div>
-                            <span class="font-size-mini1 text-rose-800 font-semibold mt-1.5">활동</span>
+                            <span class="font-size-mini1 text-black font-semibold mt-1.5">활동</span>
                         </div>
                     </div>
-                    <p id="milestoneCelebrationRewardHint" class="text-center font-size-mini1 text-gray-500 leading-relaxed"></p>
+                    <p id="milestoneCelebrationRewardHint" class="text-center font-size-mini1 text-black leading-relaxed"></p>
                     <button type="button" onclick="hideScoreMilestoneCelebrationModal()" class="w-full py-3 rounded-xl bg-blue-600 text-white font-size-base font-semibold hover:bg-blue-700 transition shadow-md">확인</button>
                 </div>
             </div>
@@ -9761,7 +9761,7 @@ app.get('/', (c) => {
                                 <p id="editAvatarNote" class="font-size-mini1 text-gray-500 mt-2">
                                     프로필: JPG, PNG (최대 5MB) / 커버: JPG, PNG (최대 10MB)
                                 </p>
-                                <div id="editCoverPreview" class="w-full h-32 rounded-lg bg-gradient-to-r from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
+                                <div id="editCoverPreview" class="w-full h-32 rounded-lg bg-blue-500 flex items-center justify-center overflow-hidden relative border-2 border-gray-300 mt-3">
                                     <span class="text-white font-size-desc font-semibold drop-shadow-lg">📸 커버 사진 미리보기</span>
                                 </div>
                             </div>
@@ -10047,7 +10047,7 @@ app.get('/', (c) => {
                     
                     if (!userInput) {
                         result.classList.remove('hidden');
-                        result.className = 'mt-2 font-size-desc text-yellow-600';
+                        result.className = 'mt-2 font-size-desc text-yellow-400';
                         result.textContent = '⚠️ 구절을 입력해주세요.';
                         return;
                     }
@@ -10057,7 +10057,7 @@ app.get('/', (c) => {
                     
                     if (isCorrect) {
                         result.classList.remove('hidden');
-                        result.className = 'mt-2 font-size-desc text-green-600 font-bold';
+                        result.className = 'mt-2 font-size-desc text-blue-600 font-bold';
                         result.textContent = '✅ 정확합니다! 말씀을 마음에 새기셨습니다.';
                         
                         // Clear input after success

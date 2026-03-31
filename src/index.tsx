@@ -2552,6 +2552,8 @@ app.get('/api/qt/bible', async (c) => {
     return c.json({ error: 'qtDate format must be YYYY-MM-DD' }, 400)
   }
 
+  const { DB } = c.env
+
   const simRaw = c.req.query('sim')
   const useSim = simRaw === '1' || simRaw === 'true'
   if (useSim) {
@@ -2572,6 +2574,22 @@ app.get('/api/qt/bible', async (c) => {
     }
   }
 
+  // ── DB 캐시 확인 ─────────────────────────────────────────────────────────
+  const cached = await DB.prepare(
+    'SELECT passage_ref, passage_title, reference, scripture FROM qt_bible_cache WHERE qt_date = ?'
+  ).bind(qtDate).first() as any
+  if (cached && cached.scripture) {
+    return c.json({
+      qtDate,
+      passageRef: cached.passage_ref,
+      passageTitle: cached.passage_title,
+      reference: cached.reference,
+      scripture: cached.scripture,
+      cached: true,
+    })
+  }
+
+  // ── 두란노에서 가져오기 ───────────────────────────────────────────────────
   const url = `https://www.duranno.com/qt/view/bible.asp?qtDate=${encodeURIComponent(qtDate)}`
 
   const resp = await fetch(url)
@@ -2653,6 +2671,20 @@ app.get('/api/qt/bible', async (c) => {
         .replace(/&gt;/g, '>')
         .replace(/\s+/g, ' ')
         .trim()
+
+  // ── DB에 캐시 저장 (본문이 있을 때만) ────────────────────────────────────
+  if (scripture) {
+    await DB.prepare(
+      `INSERT INTO qt_bible_cache (qt_date, passage_ref, passage_title, reference, scripture, cached_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(qt_date) DO UPDATE SET
+         passage_ref = excluded.passage_ref,
+         passage_title = excluded.passage_title,
+         reference = excluded.reference,
+         scripture = excluded.scripture,
+         cached_at = excluded.cached_at`
+    ).bind(qtDate, passageRef, passageTitle, reference, scripture).run()
+  }
 
   return c.json({ qtDate, passageRef, passageTitle, reference, scripture })
 })

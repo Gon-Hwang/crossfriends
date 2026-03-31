@@ -1,0 +1,1 @@
+ALTER TABLE qt_logs ADD COLUMN qt_score_awarded INTEGER NOT NULL DEFAULT 0;

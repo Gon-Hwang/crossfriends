@@ -2765,13 +2765,16 @@ app.post('/api/qt/logs/upsert', async (c) => {
     return c.json({ error: '적용과 마침기도 내용이 동일합니다. 다른 내용으로 작성해주세요.' }, 400)
   }
 
-  // 점수 지급 조건: 이전에 둘 다 없었는데 → 이번에 둘 다 완성될 때 +60
-  const prevHadBoth = !!(existing?.apply_text && String(existing.apply_text).trim() && existing?.closing_prayer_text && String(existing.closing_prayer_text).trim())
+  // 점수 지급 조건: qt_score_awarded 플래그가 0이고 이번에 둘 다 완성될 때 +60
+  const alreadyAwarded = !!(existing?.qt_score_awarded)
   const nowHasBoth = !!(nextApply.trim() && nextClose.trim())
+
+  const giveScore = !alreadyAwarded && nowHasBoth
 
   if (existing) {
     await DB.prepare(
-      `UPDATE qt_logs SET apply_text = ?, closing_prayer_text = ?, verse_reference_raw = ?, apply_post_id = ?, closing_post_id = ?, updated_at = CURRENT_TIMESTAMP
+      `UPDATE qt_logs SET apply_text = ?, closing_prayer_text = ?, verse_reference_raw = ?, apply_post_id = ?, closing_post_id = ?,
+       qt_score_awarded = CASE WHEN ? THEN 1 ELSE qt_score_awarded END, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     )
       .bind(
@@ -2780,54 +2783,51 @@ app.post('/api/qt/logs/upsert', async (c) => {
         nextVerse || null,
         nextApplyPost,
         nextClosePost,
+        giveScore ? 1 : 0,
         existing.id
       )
       .run()
     const row = await DB.prepare(
-      `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, created_at, updated_at FROM qt_logs WHERE id = ?`
+      `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, qt_score_awarded, created_at, updated_at FROM qt_logs WHERE id = ?`
     )
       .bind(existing.id)
       .first()
 
-    let qtScoreAwarded = false
     let newScriptureScore: number | null = null
-    if (!prevHadBoth && nowHasBoth) {
+    if (giveScore) {
       const userRow = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(userId).first() as any
       const updated = (parseInt(userRow?.scripture_score) || 0) + 60
       await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(updated, userId).run()
-      qtScoreAwarded = true
       newScriptureScore = updated
     }
 
     c.header('Cache-Control', 'private, no-store')
-    return c.json({ log: row, qt_score_awarded: qtScoreAwarded, new_scripture_score: newScriptureScore })
+    return c.json({ log: row, qt_score_awarded: giveScore, new_scripture_score: newScriptureScore })
   }
 
   const ins = await DB.prepare(
-    `INSERT INTO qt_logs (user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+    `INSERT INTO qt_logs (user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, qt_score_awarded, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
   )
-    .bind(userId, qtDate, nextApply || null, nextClose || null, nextVerse || null, nextApplyPost, nextClosePost)
+    .bind(userId, qtDate, nextApply || null, nextClose || null, nextVerse || null, nextApplyPost, nextClosePost, giveScore ? 1 : 0)
     .run()
 
   const row = await DB.prepare(
-    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, created_at, updated_at FROM qt_logs WHERE id = ?`
+    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, qt_score_awarded, created_at, updated_at FROM qt_logs WHERE id = ?`
   )
     .bind(ins.meta.last_row_id)
     .first()
 
-  let qtScoreAwarded = false
   let newScriptureScore: number | null = null
-  if (!prevHadBoth && nowHasBoth) {
+  if (giveScore) {
     const userRow = await DB.prepare('SELECT scripture_score FROM users WHERE id = ?').bind(userId).first() as any
     const updated = (parseInt(userRow?.scripture_score) || 0) + 60
     await DB.prepare('UPDATE users SET scripture_score = ? WHERE id = ?').bind(updated, userId).run()
-    qtScoreAwarded = true
     newScriptureScore = updated
   }
 
   c.header('Cache-Control', 'private, no-store')
-  return c.json({ log: row, qt_score_awarded: qtScoreAwarded, new_scripture_score: newScriptureScore })
+  return c.json({ log: row, qt_score_awarded: giveScore, new_scripture_score: newScriptureScore })
 })
 
 /** JSON POST 삭제 — 일부 환경에서 DELETE/쿼리가 불안정할 때 사용 */
@@ -5154,7 +5154,7 @@ app.get('/admin', (c) => {
                     <h1 class="font-size-title font-bold">
                         <i class="fas fa-shield-alt mr-2"></i>관리자 패널
                     </h1>
-                    <a href="/" onclick="sessionStorage.setItem('suppressLoginCelebration','1')" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition">
+                    <a href="/" onclick="sessionStorage.setItem('suppressLoginCelebration','1')" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition font-size-base">
                         <i class="fas fa-home"></i>
                     </a>
                 </div>
@@ -5268,13 +5268,13 @@ app.get('/admin', (c) => {
                         <i class="fas fa-users text-red-600 mr-2"></i>회원 관리
                     </h2>
                     <div class="flex space-x-2">
-                        <button onclick="resetAllScores()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition">
+                        <button onclick="resetAllScores()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-size-desc">
                             <i class="fas fa-undo mr-2"></i>모든 점수 초기화
                         </button>
-                        <button onclick="createFakeUsers()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                        <button onclick="createFakeUsers()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
                             <i class="fas fa-user-plus mr-2"></i>테스트 사용자 생성
                         </button>
-                        <button onclick="deleteFakeUsers()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                        <button onclick="deleteFakeUsers()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-size-desc">
                             <i class="fas fa-trash mr-2"></i>테스트 사용자 삭제
                         </button>
                     </div>
@@ -5327,13 +5327,13 @@ app.get('/admin', (c) => {
                         <i class="fas fa-user-friends text-purple-600 mr-2"></i>친구 관계 관리
                     </h2>
                     <div class="flex space-x-2">
-                        <button onclick="createRandomFriendships()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                        <button onclick="createRandomFriendships()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-size-desc">
                             <i class="fas fa-random mr-2"></i>랜덤 친구 생성
                         </button>
-                        <button onclick="loadFriendships()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                        <button onclick="loadFriendships()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
                             <i class="fas fa-sync-alt mr-2"></i>새로고침
                         </button>
-                        <button onclick="deleteAllFriendships()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                        <button onclick="deleteAllFriendships()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-size-desc">
                             <i class="fas fa-trash-alt mr-2"></i>모두 삭제
                         </button>
                     </div>
@@ -7900,7 +7900,7 @@ app.get('/', (c) => {
                                     <h2 id="profileCoverName" class="font-size-title font-bold text-gray-800">사용자 이름</h2>
                                 </div>
                                 
-                                <p id="profileCoverBio" class="text-gray-700 leading-relaxed">
+                                <p id="profileCoverBio" class="font-size-desc text-gray-700 leading-relaxed">
                                     <i class="fas fa-quote-left text-gray-400 mr-1"></i>
                                     <span>사용자 소개글이 여기에 표시됩니다.</span>
                                     <i class="fas fa-quote-right text-gray-400 ml-1"></i>
@@ -8407,7 +8407,7 @@ app.get('/', (c) => {
                         <div id="friendMessengerAvatar" class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center overflow-hidden">
                             <i class="fas fa-user font-size-mini1"></i>
                         </div>
-                        <h3 id="friendMessengerTitle" class="font-bold text-gray-800 truncate">메시지</h3>
+                        <h3 id="friendMessengerTitle" class="font-size-base font-bold text-gray-800 truncate">메시지</h3>
                     </div>
                     <button type="button" onclick="closeFriendMessenger()" class="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition">
                         <i class="fas fa-times"></i>
@@ -8527,7 +8527,7 @@ app.get('/', (c) => {
                         <textarea 
                             id="editPostContent"
                             rows="6"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                            class="w-full px-4 py-3 font-size-desc border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                             placeholder="무슨 생각을 하고 계신가요?"></textarea>
                     </div>
                     
@@ -8562,7 +8562,7 @@ app.get('/', (c) => {
                             class="hidden" />
                         <label 
                             for="editImageInput"
-                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition">
+                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition font-size-desc">
                             <i class="fas fa-upload mr-2"></i>이미지 선택
                         </label>
                         <p class="font-size-mini1 text-gray-500 mt-1">새 이미지를 선택하면 기존 이미지를 대체합니다</p>
@@ -8589,7 +8589,7 @@ app.get('/', (c) => {
                             class="hidden" />
                         <label 
                             for="editVideoInput"
-                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition">
+                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition font-size-desc">
                             <i class="fas fa-upload mr-2"></i>동영상 선택
                         </label>
                         <p class="font-size-mini1 text-gray-500 mt-1">새 동영상을 선택하면 기존 동영상을 대체합니다</p>
@@ -8610,13 +8610,13 @@ app.get('/', (c) => {
                     <div class="flex justify-end space-x-3 pt-4">
                         <button 
                             onclick="hideEditPostModal()"
-                            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-size-base">
                             <i class="fas fa-times mr-2"></i>취소
                         </button>
                         <button 
                             onclick="saveEditedPost()"
                             id="editPostSaveBtn"
-                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-size-base">
                             <i class="fas fa-save mr-2"></i>저장
                         </button>
                     </div>
@@ -8843,7 +8843,7 @@ app.get('/', (c) => {
                             id="signupChurch"
                             type="text"
                             placeholder="예) 서울중앙교회"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
@@ -8853,7 +8853,7 @@ app.get('/', (c) => {
                             id="signupPastor"
                             type="text"
                             placeholder="예) 김철수 목사"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
@@ -8897,7 +8897,7 @@ app.get('/', (c) => {
                         <label class="block font-size-desc font-semibold text-gray-700 mb-2">교회 직분 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <select 
                             id="signupPosition"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
                             <option value="구도자">구도자</option>
                             <option value="새가족">새가족</option>
@@ -8942,7 +8942,7 @@ app.get('/', (c) => {
                         <label class="block font-size-desc font-semibold text-gray-700 mb-2">결혼 <span class="font-size-mini1 text-gray-500">(선택)</span></label>
                         <select 
                             id="signupMaritalStatus"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
                             <option value="single">미혼</option>
                             <option value="married">기혼</option>
@@ -8956,7 +8956,7 @@ app.get('/', (c) => {
                             id="signupAddress"
                             type="text"
                             placeholder="예) 서울특별시 강남구 테헤란로 123"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                         <p class="font-size-mini1 text-gray-500 mt-1">도로명 주소 또는 지번 주소를 입력해주세요</p>
                     </div>
@@ -8968,7 +8968,7 @@ app.get('/', (c) => {
                             type="tel"
                             placeholder="예) 010-1234-5678"
                             pattern="[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                         <p class="font-size-mini1 text-gray-500 mt-1">하이픈(-)을 포함하여 입력해주세요</p>
                     </div>
@@ -9525,7 +9525,7 @@ app.get('/', (c) => {
                         </p>
                         <p class="font-size-mini1 text-gray-500">마태복음 5:12</p>
                     </div>
-                    <button type="button" onclick="hideLoginRewardCelebrationModal()" class="login-reward-fanfare-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-bold hover:from-blue-700 hover:to-violet-700 transition shadow-lg shadow-indigo-500/25">
+                    <button type="button" onclick="hideLoginRewardCelebrationModal()" class="login-reward-fanfare-btn w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-size-base font-bold hover:from-blue-700 hover:to-violet-700 transition shadow-lg shadow-indigo-500/25">
                         함께 지어져가요
                     </button>
                 </div>
@@ -9574,7 +9574,7 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     <p id="milestoneCelebrationRewardHint" class="text-center font-size-mini1 text-gray-500 leading-relaxed"></p>
-                    <button type="button" onclick="hideScoreMilestoneCelebrationModal()" class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-md">확인</button>
+                    <button type="button" onclick="hideScoreMilestoneCelebrationModal()" class="w-full py-3 rounded-xl bg-blue-600 text-white font-size-base font-semibold hover:bg-blue-700 transition shadow-md">확인</button>
                 </div>
             </div>
         </div>
@@ -9596,7 +9596,7 @@ app.get('/', (c) => {
                 </div>
                 
                 <div class="mt-6 flex justify-end">
-                    <button onclick="hideViewProfileModal(); void showEditProfileModal();" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <button onclick="hideViewProfileModal(); void showEditProfileModal();" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-size-base">
                         <i class="fas fa-edit mr-2"></i>프로필 수정하기
                     </button>
                 </div>
@@ -9622,7 +9622,7 @@ app.get('/', (c) => {
                             id="editEmail"
                             type="email"
                             disabled
-                            class="w-full p-3 border rounded-lg bg-gray-100 cursor-not-allowed"
+                            class="w-full p-3 font-size-desc border rounded-lg bg-gray-100 cursor-not-allowed"
                         />
                         <p class="font-size-mini1 text-gray-500 mt-1">이메일은 변경할 수 없습니다.</p>
                     </div>
@@ -9657,7 +9657,7 @@ app.get('/', (c) => {
                             id="editName"
                             type="text"
                             placeholder="홍길동"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
@@ -9665,7 +9665,7 @@ app.get('/', (c) => {
                         <label class="block font-size-desc font-semibold text-gray-700 mb-2">성별</label>
                         <select 
                             id="editGender"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
                             <option value="남성">남성</option>
                             <option value="여성">여성</option>
@@ -9700,13 +9700,13 @@ app.get('/', (c) => {
                                     <div class="flex space-x-2">
                                         <label 
                                             for="editAvatar"
-                                            class="cursor-pointer inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
+                                            class="cursor-pointer inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-size-base font-semibold">
                                             <i class="fas fa-upload mr-2"></i>프로필 사진 변경
                                         </label>
                                         <button 
                                             type="button"
                                             onclick="deleteAvatar()"
-                                            class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold">
+                                            class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-size-base font-semibold">
                                             <i class="fas fa-trash mr-2"></i>프로필 사진 삭제
                                         </button>
                                     </div>
@@ -9715,13 +9715,13 @@ app.get('/', (c) => {
                                     <div class="flex space-x-2">
                                         <label 
                                             for="editCover"
-                                            class="cursor-pointer inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold">
+                                            class="cursor-pointer inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-size-base font-semibold">
                                             <i class="fas fa-image mr-2"></i>커버 사진 변경
                                         </label>
                                         <button 
                                             type="button"
                                             onclick="deleteCover()"
-                                            class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold">
+                                            class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-size-base font-semibold">
                                             <i class="fas fa-trash mr-2"></i>커버 사진 삭제
                                         </button>
                                     </div>
@@ -9742,7 +9742,7 @@ app.get('/', (c) => {
                             id="editChurch"
                             type="text"
                             placeholder="예) 서울중앙교회"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
@@ -9752,7 +9752,7 @@ app.get('/', (c) => {
                             id="editPastor"
                             type="text"
                             placeholder="예) 김철수 목사"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
                         />
                     </div>
                     
@@ -9760,7 +9760,7 @@ app.get('/', (c) => {
                         <label class="block font-size-desc font-semibold text-gray-700 mb-2">교회 직분</label>
                         <select 
                             id="editPosition"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
                             <option value="담임목사">담임목사</option>
                             <option value="부목사">부목사</option>
@@ -9805,7 +9805,7 @@ app.get('/', (c) => {
                         <label class="block font-size-desc font-semibold text-gray-700 mb-2">결혼</label>
                         <select 
                             id="editMaritalStatus"
-                            class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
+                            class="w-full p-3 font-size-desc border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none">
                             <option value="">선택하세요</option>
                             <option value="single">미혼</option>
                             <option value="married">기혼</option>
@@ -9925,7 +9925,7 @@ app.get('/', (c) => {
                 
                 <button 
                     onclick="handleEditProfile()"
-                    class="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
+                    class="w-full mt-6 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-size-base font-semibold">
                     저장하기
                 </button>
             </div>

@@ -4118,6 +4118,9 @@ function hydrateQtPanelSavedState(panel, qtDate) {
     const applySrv = row && row.apply_text ? String(row.apply_text).trim() : '';
     const closeSrv = row && row.closing_prayer_text ? String(row.closing_prayer_text).trim() : '';
 
+    const visSel = qf(panel, 'visibilitySelect');
+    if (visSel && row && row.visibility) visSel.value = String(row.visibility);
+
     const applyLocSub = localStorage.getItem(getQtStorageKey('apply_submitted', qtDate)) || '';
     const prayLocSub = localStorage.getItem(getQtStorageKey('prayer_submitted', qtDate)) || '';
     const applyDraft = localStorage.getItem(getQtStorageKey('apply', qtDate)) || '';
@@ -4226,6 +4229,30 @@ function validateQtContent(text, label) {
     return null;
 }
 
+async function saveQtVisibilityForPanel(panel) {
+    if (!currentUserId || !panel) return;
+    const qtDate = panelQtDate(panel);
+    const row = qtLogsByDate[qtDate];
+    if (!row || !row.id) return; // 저장된 로그 없으면 다음 저장 시 함께 반영
+    const sel = qf(panel, 'visibilitySelect');
+    if (!sel) return;
+    try {
+        const payload = {
+            user_id: currentUserId,
+            qt_date: qtDate,
+            visibility: sel.value,
+            verse_reference_raw: row.verse_reference_raw || ''
+        };
+        if (row.apply_text) payload.apply_text = row.apply_text;
+        if (row.closing_prayer_text) payload.closing_prayer_text = row.closing_prayer_text;
+        const up = await axios.post('/api/qt/logs/upsert', payload);
+        if (up.data && up.data.log) mergeQtLogRowIntoCache(up.data.log);
+        showToast('공개 설정이 저장됐어요.', 'success');
+    } catch (e) {
+        showToast('저장에 실패했습니다.', 'error');
+    }
+}
+
 async function sendQtApplyPostForPanel(panel) {
     if (!currentUserId) {
         showToast('로그인이 필요합니다.', 'error');
@@ -4244,6 +4271,7 @@ async function sendQtApplyPostForPanel(panel) {
 
     const verseRef = getQtVerseReferenceForPanel(panel);
     const row = qtLogsByDate[qtDate] || {};
+    const visSel = qf(panel, 'visibilitySelect');
 
     try {
         // 일반 피드에는 올리지 않고 QT 로그만 저장 (과거 연동 포스트 ID는 해제)
@@ -4253,7 +4281,8 @@ async function sendQtApplyPostForPanel(panel) {
             apply_text: content,
             verse_reference_raw: verseRef || (row.verse_reference_raw ? String(row.verse_reference_raw) : ''),
             apply_post_id: null,
-            closing_post_id: null
+            closing_post_id: null,
+            visibility: visSel ? visSel.value : (row.visibility || 'public')
         };
         if (row.closing_prayer_text) payload.closing_prayer_text = row.closing_prayer_text;
 
@@ -4300,6 +4329,7 @@ async function sendQtPrayerPostForPanel(panel) {
 
     const verseRef = getQtVerseReferenceForPanel(panel);
     const row = qtLogsByDate[qtDate] || {};
+    const visSel2 = qf(panel, 'visibilitySelect');
 
     // 적용과 동일한 내용인지 클라이언트에서도 체크
     if (row.apply_text && row.apply_text.trim() === content) {
@@ -4315,7 +4345,8 @@ async function sendQtPrayerPostForPanel(panel) {
             closing_prayer_text: content,
             verse_reference_raw: verseRef || row.verse_reference_raw || '',
             apply_post_id: null,
-            closing_post_id: null
+            closing_post_id: null,
+            visibility: visSel2 ? visSel2.value : (row.visibility || 'public')
         };
         if (row.apply_text) payload.apply_text = row.apply_text;
 

@@ -2786,7 +2786,7 @@ app.get('/api/qt/logs', async (c) => {
   if (!userId) return c.json({ error: 'user_id required' }, 400)
 
   const { results } = await DB.prepare(
-    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, created_at, updated_at
+    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, visibility, created_at, updated_at
      FROM qt_logs WHERE user_id = ? ORDER BY qt_date DESC`
   )
     .bind(userId)
@@ -2838,6 +2838,13 @@ app.post('/api/qt/logs/upsert', async (c) => {
       : existing?.closing_post_id != null
         ? Number(existing.closing_post_id)
         : null
+  const allowedVisibility = ['public', 'friends', 'private']
+  const nextVisibility =
+    body.visibility !== undefined && allowedVisibility.includes(String(body.visibility))
+      ? String(body.visibility)
+      : existing?.visibility != null
+        ? String(existing.visibility)
+        : 'public'
 
   if (!nextApply.trim() && !nextClose.trim()) {
     return c.json({ error: 'apply_text or closing_prayer_text required' }, 400)
@@ -2864,7 +2871,7 @@ app.post('/api/qt/logs/upsert', async (c) => {
 
   if (existing) {
     await DB.prepare(
-      `UPDATE qt_logs SET apply_text = ?, closing_prayer_text = ?, verse_reference_raw = ?, apply_post_id = ?, closing_post_id = ?,
+      `UPDATE qt_logs SET apply_text = ?, closing_prayer_text = ?, verse_reference_raw = ?, apply_post_id = ?, closing_post_id = ?, visibility = ?,
        qt_score_awarded = CASE WHEN ? THEN 1 ELSE qt_score_awarded END, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     )
@@ -2874,12 +2881,13 @@ app.post('/api/qt/logs/upsert', async (c) => {
         nextVerse || null,
         nextApplyPost,
         nextClosePost,
+        nextVisibility,
         giveScore ? 1 : 0,
         existing.id
       )
       .run()
     const row = await DB.prepare(
-      `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, qt_score_awarded, created_at, updated_at FROM qt_logs WHERE id = ?`
+      `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, visibility, qt_score_awarded, created_at, updated_at FROM qt_logs WHERE id = ?`
     )
       .bind(existing.id)
       .first()
@@ -2897,14 +2905,14 @@ app.post('/api/qt/logs/upsert', async (c) => {
   }
 
   const ins = await DB.prepare(
-    `INSERT INTO qt_logs (user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, qt_score_awarded, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+    `INSERT INTO qt_logs (user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, visibility, qt_score_awarded, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
   )
-    .bind(userId, qtDate, nextApply || null, nextClose || null, nextVerse || null, nextApplyPost, nextClosePost, giveScore ? 1 : 0)
+    .bind(userId, qtDate, nextApply || null, nextClose || null, nextVerse || null, nextApplyPost, nextClosePost, nextVisibility, giveScore ? 1 : 0)
     .run()
 
   const row = await DB.prepare(
-    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, qt_score_awarded, created_at, updated_at FROM qt_logs WHERE id = ?`
+    `SELECT id, user_id, qt_date, apply_text, closing_prayer_text, verse_reference_raw, apply_post_id, closing_post_id, visibility, qt_score_awarded, created_at, updated_at FROM qt_logs WHERE id = ?`
   )
     .bind(ins.meta.last_row_id)
     .first()
@@ -8182,6 +8190,11 @@ app.get('/', (c) => {
                                 <h2 class="font-size-title font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT Log</h2>
                                 <div class="flex items-center gap-2 flex-wrap justify-end">
                                     <div class="font-size-desc text-gray-600" data-qt-field="dateLabel"></div>
+                                    <select data-qt-field="visibilitySelect" onchange="saveQtVisibilityForPanel(this.closest('.qt-panel-instance'))" class="h-7 px-1.5 border border-gray-300 rounded-md font-size-mini1 font-medium text-gray-600 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none leading-none" title="QT 공개 범위">
+                                        <option value="public">전체 공개</option>
+                                        <option value="friends">친구에게만</option>
+                                        <option value="private">비공개</option>
+                                    </select>
                                     <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 찬양">
                                         <i class="fas fa-music font-size-desc leading-none" aria-hidden="true"></i>
                                     </button>

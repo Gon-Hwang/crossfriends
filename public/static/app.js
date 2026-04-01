@@ -6397,14 +6397,14 @@ async function refreshComments(postId) {
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1">
-                            <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="rounded-lg p-3">
                                 <p class="font-semibold font-size-desc text-gray-800 cursor-pointer hover:text-blue-600 transition inline-block" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
                                 <p class="font-size-desc text-gray-700 mt-1">${comment.content}</p>
                             </div>
                             <div class="flex items-center space-x-4 mt-1">
                                 <p class="font-size-mini1 text-gray-500">${formatDate(comment.created_at)}</p>
-                                <button 
-                                    onclick="toggleCommentLike(${comment.id}, ${postId})" 
+                                <button
+                                    onclick="toggleCommentLike(${comment.id}, ${postId})"
                                     class="flex items-center space-x-1 font-size-mini1 ${isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'} transition"
                                     title="좋아요">
                                     <i class="fas fa-heart"></i>
@@ -6415,18 +6415,18 @@ async function refreshComments(postId) {
                     </div>
                 `;
             });
-            
+
             const html = `
-                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-300">
+                <div class="mt-4 space-y-3" style="width: calc(100% + 48px); margin-left: -48px;">
                     ${commentsHtml}
                     <div class="flex space-x-2 mt-3 items-end">
-                        <textarea 
+                        <textarea
                             id="comment-input-${postId}"
                             rows="1"
                             placeholder="댓글을 작성하세요..."
-                            class="flex-1 p-2 border rounded-lg font-size-desc resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="flex-1 p-2 border rounded-lg font-size-desc resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none bg-transparent"
                         ></textarea>
-                        <button 
+                        <button
                             id="comment-submit-${postId}"
                             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-paper-plane"></i>
@@ -6434,9 +6434,9 @@ async function refreshComments(postId) {
                     </div>
                 </div>
             `;
-            
+
             commentsDiv.innerHTML = html;
-            
+
             // Re-add event listeners after HTML is updated
             const submitBtn = document.getElementById(`comment-submit-${postId}`);
             const inputField = document.getElementById(`comment-input-${postId}`);
@@ -6558,21 +6558,19 @@ function copyPostLink(postId) {
     togglePostMenu(postId);
 }
 
-// Edit post
+// ── 게시물 수정 모달 ──────────────────────────────────────────
 let currentEditingPostId = null;
 let selectedEditBackgroundColor = null;
-
-// Removed duplicate editPost function - using inline editing instead
+let editPostNewImageFiles = [];
+let editPostExistingImages = []; // [{url, toRemove}]
+let editPostNewVideoFile = null;
+let editPostVideoCleared = false;
 
 function selectEditBackgroundColor(color, element) {
     selectedEditBackgroundColor = color;
-    
-    // Remove ring from all buttons
     document.querySelectorAll('.edit-color-selector-btn').forEach(btn => {
         btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
     });
-    
-    // Add ring to selected button
     element.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
 }
 
@@ -6580,99 +6578,264 @@ function closeEditPostModal() {
     document.getElementById('editPostModal').classList.add('hidden');
     currentEditingPostId = null;
     selectedEditBackgroundColor = null;
-    
-    // Reset form
-    document.getElementById('editPostContent').value = '';
-    document.getElementById('editPostVerse').value = '';
-    document.querySelectorAll('.edit-color-selector-btn').forEach(btn => {
-        btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
-    });
+    editPostNewImageFiles = [];
+    editPostExistingImages = [];
+    editPostNewVideoFile = null;
+    editPostVideoCleared = false;
 }
 
-async function submitEditPost() {
-    if (!currentEditingPostId) {
-        alert('수정할 게시물을 선택해주세요.');
-        return;
+// 사진 슬롯 UI 갱신 (공통)
+function refreshEditPhotoUI() {
+    const activeCount = editPostExistingImages.filter(i => !i.toRemove).length;
+    const newCount = editPostNewImageFiles.length;
+    const total = activeCount + newCount;
+    // 추가 가능 장수: 기존(남은것) 기준으로 계산 (새 사진은 항상 replace 방식)
+    const canAddMore = Math.max(0, 4 - activeCount);
+
+    const slotInfo = document.getElementById('editPhotoSlotInfo');
+    const labelText = document.getElementById('editImageLabelText');
+    const inputLabel = document.getElementById('editImageInputLabel');
+    const input = document.getElementById('editImageInput');
+
+    if (slotInfo) slotInfo.textContent = `${total} / 4장`;
+
+    if (canAddMore === 0) {
+        if (labelText) labelText.textContent = '사진 추가 불가 (최대 4장)';
+        if (inputLabel) {
+            inputLabel.style.opacity = '0.5';
+            inputLabel.style.cursor = 'not-allowed';
+            inputLabel.removeAttribute('for');
+        }
+        if (input) input.disabled = true;
+    } else {
+        if (labelText) labelText.textContent = `사진 선택 (최대 ${canAddMore}장 추가)`;
+        if (inputLabel) {
+            inputLabel.style.opacity = '';
+            inputLabel.style.cursor = '';
+            inputLabel.setAttribute('for', 'editImageInput');
+        }
+        if (input) input.disabled = false;
     }
-    
-    const content = document.getElementById('editPostContent').value.trim();
-    if (!content) {
-        alert('내용을 입력해주세요.');
-        return;
+}
+
+// 기존 사진 렌더링
+function renderEditExistingImages() {
+    const section = document.getElementById('editExistingImagesSection');
+    const container = document.getElementById('editExistingImagesContainer');
+    if (!section || !container) return;
+    const active = editPostExistingImages.filter(img => !img.toRemove);
+    if (active.length === 0) {
+        section.style.display = 'none';
+        container.innerHTML = '';
+    } else {
+        section.style.display = 'block';
+        container.innerHTML = active.map(img => `
+            <div class="relative">
+                <img src="${toCanonicalSiteUrl(img.url)}" class="w-20 h-20 object-cover rounded-lg border border-gray-300" />
+                <button type="button" onclick="removeEditExistingImage('${img.url.replace(/'/g, "\\'")}')"
+                    class="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-700 transition">
+                    <i class="fas fa-times" style="font-size:9px;"></i>
+                </button>
+            </div>
+        `).join('');
     }
-    
-    try {
-        await axios.put(`/api/posts/${currentEditingPostId}`, {
-            content: content,
-            background_color: selectedEditBackgroundColor
+    refreshEditPhotoUI();
+}
+
+function removeEditExistingImage(url) {
+    const img = editPostExistingImages.find(i => i.url === url);
+    if (img) img.toRemove = true;
+    renderEditExistingImages();
+}
+
+// 새 사진 선택
+function handleEditImageSelect(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    const activeCount = editPostExistingImages.filter(i => !i.toRemove).length;
+    const canAdd = Math.max(0, 4 - activeCount);
+    editPostNewImageFiles = files.slice(0, canAdd);
+
+    const container = document.getElementById('editNewImagePreviewContainer');
+    const clearBtn = document.getElementById('editClearNewImagesBtn');
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (editPostNewImageFiles.length === 0) {
+        container.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+    } else {
+        container.style.display = 'flex';
+        if (clearBtn) clearBtn.style.display = '';
+        editPostNewImageFiles.forEach(file => {
+            const url = URL.createObjectURL(file);
+            const div = document.createElement('div');
+            div.className = 'relative';
+            div.innerHTML = `<img src="${url}" class="w-20 h-20 object-cover rounded-lg border border-gray-300" />`;
+            container.appendChild(div);
         });
-        
-        // Show success message
-        const successMsg = document.createElement('div');
-        successMsg.className = 'fixed top-20 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50';
-        successMsg.innerHTML = '<i class="fas fa-check-circle mr-2"></i>게시물이 수정되었습니다!';
-        document.body.appendChild(successMsg);
-        
-        setTimeout(() => {
-            successMsg.remove();
-        }, 2000);
-        
-        // Close modal and reload posts
-        closeEditPostModal();
-        loadPosts();
-    } catch (error) {
-        console.error('Error updating post:', error);
-        alert('게시물 수정에 실패했습니다.');
     }
+    refreshEditPhotoUI();
 }
 
-// Delete post
-// Edit post (inline editing)
+function clearEditNewImages() {
+    editPostNewImageFiles = [];
+    const input = document.getElementById('editImageInput');
+    if (input) { input.value = ''; input.disabled = false; }
+    const container = document.getElementById('editNewImagePreviewContainer');
+    if (container) { container.style.display = 'none'; container.innerHTML = ''; }
+    const clearBtn = document.getElementById('editClearNewImagesBtn');
+    if (clearBtn) clearBtn.style.display = 'none';
+    refreshEditPhotoUI();
+}
+
+// 기존 동영상 삭제
+function removeEditExistingVideo() {
+    editPostVideoCleared = true;
+    const section = document.getElementById('editExistingVideoSection');
+    if (section) section.classList.add('hidden');
+}
+
+// 새 동영상 선택
+function handleEditVideoSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    editPostNewVideoFile = file;
+    editPostVideoCleared = false;
+    const container = document.getElementById('editNewVideoPreviewContainer');
+    const videoEl = document.getElementById('editNewVideoEl');
+    if (videoEl) videoEl.src = URL.createObjectURL(file);
+    if (container) container.classList.remove('hidden');
+    // 기존 동영상 영역 숨기기
+    const existingSection = document.getElementById('editExistingVideoSection');
+    if (existingSection) existingSection.classList.add('hidden');
+}
+
+function clearEditNewVideo() {
+    editPostNewVideoFile = null;
+    const input = document.getElementById('editVideoInput');
+    if (input) input.value = '';
+    const container = document.getElementById('editNewVideoPreviewContainer');
+    if (container) container.classList.add('hidden');
+}
+
+// 게시물 수정 모달 열기
 async function editPost(postId) {
-    // Close post menu
     togglePostMenu(postId);
-    
-    // Hide display, show edit form
-    document.getElementById(`post-content-display-${postId}`).classList.add('hidden');
-    document.getElementById(`post-content-edit-${postId}`).classList.remove('hidden');
-    
-    // Focus on textarea
-    const textarea = document.getElementById(`post-edit-textarea-${postId}`);
-    if (textarea) {
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    currentEditingPostId = postId;
+
+    try {
+        const response = await axios.get(`/api/posts/${postId}`);
+        const post = response.data.post || response.data;
+
+        // 상태 초기화
+        editPostNewImageFiles = [];
+        editPostNewVideoFile = null;
+        editPostVideoCleared = false;
+
+        // 내용
+        document.getElementById('editPostContent').value = post.content || '';
+
+        // 배경색 버튼 선택 표시
+        selectedEditBackgroundColor = post.background_color || null;
+        document.querySelectorAll('.edit-color-selector-btn').forEach(btn => {
+            btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
+        });
+        if (post.background_color) {
+            const targetBtn = document.querySelector(`.edit-color-selector-btn[data-edit-color="${post.background_color}"]`);
+            if (targetBtn) targetBtn.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
+        }
+
+        // 기존 사진 (단일 URL 또는 JSON 배열 형식 모두 지원)
+        const imageUrls = parsePostImageUrls(post.image_url);
+        editPostExistingImages = imageUrls.map(url => ({ url, toRemove: false }));
+        renderEditExistingImages();
+
+        // 새 사진 미리보기 초기화
+        clearEditNewImages();
+
+        // 기존 동영상
+        const existingVideoSection = document.getElementById('editExistingVideoSection');
+        const existingVideoEl = document.getElementById('editExistingVideoEl');
+        if (post.video_url && existingVideoSection && existingVideoEl) {
+            existingVideoEl.src = toCanonicalSiteUrl(post.video_url);
+            existingVideoSection.classList.remove('hidden');
+        } else if (existingVideoSection) {
+            existingVideoSection.classList.add('hidden');
+        }
+
+        // 새 동영상 미리보기 초기화
+        clearEditNewVideo();
+        const editVideoInput = document.getElementById('editVideoInput');
+        if (editVideoInput) editVideoInput.value = '';
+
+        // 모달 열기
+        document.getElementById('editPostModal').classList.remove('hidden');
+    } catch (error) {
+        console.error('Failed to load post:', error);
+        showToast('게시물을 불러오는데 실패했습니다.', 'error');
     }
 }
 
-// Cancel post edit
-function cancelPostEdit(postId) {
-    // Show display, hide edit form
-    document.getElementById(`post-content-display-${postId}`).classList.remove('hidden');
-    document.getElementById(`post-content-edit-${postId}`).classList.add('hidden');
-}
+// 게시물 수정 저장
+async function saveEditedPost() {
+    if (!currentEditingPostId) return;
 
-// Save post edit
-async function savePostEdit(postId) {
-    const textarea = document.getElementById(`post-edit-textarea-${postId}`);
-    const content = textarea.value.trim();
-    
+    const content = document.getElementById('editPostContent').value.trim();
     if (!content) {
         showToast('내용을 입력해주세요.', 'error');
         return;
     }
-    
+
+    const saveBtn = document.getElementById('editPostSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>저장 중...';
+    }
+
     try {
-        await axios.put(`/api/posts/${postId}`, {
-            content
-        });
-        
+        // 남은 기존 사진 URL 계산
+        const remainingImages = editPostExistingImages.filter(i => !i.toRemove).map(i => i.url);
+        // 서버 형식 맞춤: 0장=null, 1장=plain string, 2장+=JSON array
+        const imageUrlForDb = remainingImages.length === 0 ? null
+            : remainingImages.length === 1 ? remainingImages[0]
+            : JSON.stringify(remainingImages);
+
+        const updateBody = {
+            content,
+            background_color: selectedEditBackgroundColor,
+            image_url: imageUrlForDb,
+        };
+        if (editPostVideoCleared) updateBody.video_url = null;
+
+        await axios.put(`/api/posts/${currentEditingPostId}`, updateBody);
+
+        // 새 사진 업로드
+        for (let i = 0; i < editPostNewImageFiles.length; i++) {
+            const formData = new FormData();
+            formData.append('image', editPostNewImageFiles[i]);
+            formData.append('order', String(remainingImages.length + i));
+            await axios.post(`/api/posts/${currentEditingPostId}/image`, formData);
+        }
+
+        // 새 동영상 업로드
+        if (editPostNewVideoFile) {
+            const formData = new FormData();
+            formData.append('video', editPostNewVideoFile);
+            await axios.post(`/api/posts/${currentEditingPostId}/video`, formData);
+        }
+
         showToast('게시물이 수정되었습니다.', 'success');
-        
-        // Reload posts to show updated content
+        closeEditPostModal();
         loadPosts();
     } catch (error) {
         console.error('Failed to update post:', error);
         showToast('게시물 수정에 실패했습니다.', 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save mr-1"></i>저장';
+        }
     }
 }
 
@@ -6816,7 +6979,7 @@ async function loadComments(postId) {
                             ${roleBadgeHtml}
                         </div>
                         <div class="flex-1">
-                            <div class="bg-gray-50 rounded-lg p-3">
+                            <div class="rounded-lg p-3">
                                 <div class="flex justify-between items-start">
                                     <p class="font-semibold font-size-desc text-gray-800 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${comment.user_id}, \`${comment.user_name}\`)" title="클릭하여 ${comment.user_name} 님의 포스팅만 보기">${comment.user_name}</p>
                                     ${canEdit ? `
@@ -6849,7 +7012,7 @@ async function loadComments(postId) {
                                         type="text" 
                                         id="comment-edit-input-${comment.id}"
                                         value="${comment.content.replace(/"/g, '&quot;')}"
-                                        class="w-full p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                                        class="w-full p-2 border rounded-lg font-size-desc focus:ring-2 focus:ring-blue-600 focus:outline-none bg-transparent"
                                     />
                                     <div class="flex space-x-2 mt-2">
                                         <button 
@@ -6881,16 +7044,16 @@ async function loadComments(postId) {
             });
             
             const html = `
-                <div class="mt-4 space-y-3 pl-4 border-l-2 border-gray-300">
+                <div class="mt-4 space-y-3" style="width: calc(100% + 48px); margin-left: -48px;">
                     ${commentsHtml}
                     <div class="flex space-x-2 mt-3 items-end">
-                        <textarea 
+                        <textarea
                             id="comment-input-${postId}"
                             rows="1"
                             placeholder="댓글을 작성하세요..."
-                            class="flex-1 p-2 border rounded-lg font-size-desc resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                            class="flex-1 p-2 border rounded-lg font-size-desc resize-none overflow-hidden leading-relaxed focus:ring-2 focus:ring-blue-600 focus:outline-none bg-transparent"
                         ></textarea>
-                        <button 
+                        <button
                             id="comment-submit-${postId}"
                             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-paper-plane"></i>
@@ -6898,7 +7061,7 @@ async function loadComments(postId) {
                     </div>
                 </div>
             `;
-            
+
             commentsDiv.innerHTML = html;
             commentsDiv.classList.remove('hidden');
             setPostToolbarCommentActive(postId, true);
@@ -9702,6 +9865,15 @@ window.toggleLike = toggleLike;
 window.deletePost = deletePost;
 window.sharePost = sharePost;
 window.editPost = editPost;
+window.saveEditedPost = saveEditedPost;
+window.closeEditPostModal = closeEditPostModal;
+window.selectEditBackgroundColor = selectEditBackgroundColor;
+window.handleEditImageSelect = handleEditImageSelect;
+window.clearEditNewImages = clearEditNewImages;
+window.removeEditExistingImage = removeEditExistingImage;
+window.handleEditVideoSelect = handleEditVideoSelect;
+window.clearEditNewVideo = clearEditNewVideo;
+window.removeEditExistingVideo = removeEditExistingVideo;
 window.loadComments = loadComments;
 window.createComment = createComment;
 window.toggleCommentLike = toggleCommentLike;

@@ -3954,12 +3954,12 @@ function setQtSectionBtnActive(panel, sectionKey, active) {
     const b = panel.querySelector(`[data-qt-sec-btn="${sectionKey}"]`);
     if (!b) return;
     if (active) {
-        // 인라인 스타일로 확실하게 활성화 표시 (Tailwind CDN 클래스 미생성 대비)
         b.style.backgroundColor = 'rgb(254,226,226)'; // red-100
         b.style.color = 'rgb(220,38,38)';              // red-600
         b.style.borderColor = 'rgb(220,38,38)';        // red-600
     } else {
-        // 인라인 스타일 전부 제거 → 원래 HTML 클래스(bg-gray-100 등)로 복귀
+        // 인라인 스타일 제거 → HTML 기본 클래스(gray-100 등)로 복귀
+        // hover는 이제 gray-200으로 변경돼 있어 빨간 잔상 없음
         b.style.backgroundColor = '';
         b.style.color = '';
         b.style.borderColor = '';

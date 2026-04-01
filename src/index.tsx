@@ -8230,17 +8230,17 @@ app.get('/', (c) => {
                                 <p class="font-bold text-red-600 font-size-desc whitespace-pre-line leading-relaxed" data-qt-field="verseRef"></p>
                             </div>
                             <div class="flex flex-nowrap gap-1 sm:gap-2 mb-4 overflow-x-auto">
-                                <button type="button" data-qt-act="toggle-section" data-section="prayer" data-qt-sec-btn="prayer" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-600 hover:border-red-600 hover:text-red-600 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="prayer" data-qt-sec-btn="prayer" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 whitespace-nowrap flex items-center justify-center text-center">
                                     시작기도
                                 </button>
-                                <button type="button" data-qt-act="toggle-section" data-section="read" data-qt-sec-btn="read" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-600 hover:border-red-600 hover:text-red-600 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="read" data-qt-sec-btn="read" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 whitespace-nowrap flex items-center justify-center text-center">
                                     <span class="sm:hidden">읽기·묵상</span>
                                     <span class="hidden sm:inline">읽기와 묵상</span>
                                 </button>
-                                <button type="button" data-qt-act="toggle-section" data-section="apply" data-qt-sec-btn="apply" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-600 hover:border-red-600 hover:text-red-600 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="apply" data-qt-sec-btn="apply" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 whitespace-nowrap flex items-center justify-center text-center">
                                     적용
                                 </button>
-                                <button type="button" data-qt-act="toggle-section" data-section="prayer2" data-qt-sec-btn="prayer2" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-red-600 hover:border-red-600 hover:text-red-600 whitespace-nowrap">
+                                <button type="button" data-qt-act="toggle-section" data-section="prayer2" data-qt-sec-btn="prayer2" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 whitespace-nowrap flex items-center justify-center text-center">
                                     마침기도
                                 </button>
                             </div>

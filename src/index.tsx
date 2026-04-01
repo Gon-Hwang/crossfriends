@@ -333,6 +333,53 @@ app.use('/api/*', cors())
 // Serve static files
 app.use('/static/*', serveStatic({ root: './public' }))
 
+// 1장 이미지 레이아웃 테스트 페이지
+app.get('/test-images', (c) => c.html(`<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>이미지 1장 레이아웃 테스트</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:#f3f4f6;padding:20px;font-family:sans-serif}.post-card{background:white;border-radius:12px;padding:24px;margin:0 auto 24px;box-shadow:0 2px 8px rgba(0,0,0,.1);max-width:640px}.label{font-weight:bold;margin-bottom:12px;font-size:14px;color:#374151}</style>
+</head><body>
+<h1 style="text-align:center;font-size:20px;font-weight:bold;margin-bottom:24px;">1장 이미지 레이아웃 테스트</h1>
+
+<div class="post-card">
+  <div class="label">🔵 L — 가로형 (Landscape 800×450) · 좌우 끝까지</div>
+  <div style="display:flex;justify-content:center;align-items:center;overflow:hidden;width:100%;margin:0 -24px;width:calc(100% + 48px);">
+    <img src="/static/test-landscape.png" style="display:block;" onload="fit(this)" onerror="this.parentNode.innerHTML='<span style=color:red>❌ 로드 실패</span>'"/>
+  </div>
+</div>
+
+<div class="post-card">
+  <div class="label">🩷 P — 세로형 (Portrait 450×800) · 위아래 끝까지</div>
+  <div style="display:flex;justify-content:center;align-items:center;overflow:hidden;width:100%;margin:0 -24px;width:calc(100% + 48px);">
+    <img src="/static/test-portrait.png" style="display:block;" onload="fit(this)" onerror="this.parentNode.innerHTML='<span style=color:red>❌ 로드 실패</span>'"/>
+  </div>
+</div>
+
+<div class="post-card">
+  <div class="label">🟢 S — 정사각형 (Square 600×600) · 좌우 끝까지</div>
+  <div style="display:flex;justify-content:center;align-items:center;overflow:hidden;width:100%;margin:0 -24px;width:calc(100% + 48px);">
+    <img src="/static/test-square.png" style="display:block;" onload="fit(this)" onerror="this.parentNode.innerHTML='<span style=color:red>❌ 로드 실패</span>'"/>
+  </div>
+</div>
+
+<script>
+function fit(img) {
+  var r = img.naturalWidth / img.naturalHeight;
+  var info = document.createElement('div');
+  info.style.cssText = 'font-size:11px;color:#9ca3af;text-align:center;padding:4px 0;';
+  info.textContent = img.naturalWidth + 'x' + img.naturalHeight + ' | ratio=' + r.toFixed(2);
+  img.parentNode.parentNode.appendChild(info);
+  if (r < 0.85) {
+    img.style.height = '80vh'; img.style.width = 'auto'; img.style.maxWidth = '100%';
+  } else {
+    img.style.width = '100%'; img.style.height = 'auto';
+  }
+}
+</script>
+</body></html>`))
+
+
 // =====================
 // API Routes - Users
 // =====================

@@ -5164,6 +5164,13 @@ function getPostImageUrls(post, prefix = '') {
     return urls.slice(0, POST_MAX_IMAGE_COUNT);
 }
 
+// ── 1장 이미지 로드 후 → 원본 비율 유지 + 가로 100% 꽉 채우기 ─────────
+function postImg1Load(img) {
+    // L/P/S 모두 가로 100% 꽉 채우고 원본 비율로 높이 자동 결정
+    img.style.width = '100%';
+    img.style.height = 'auto';
+}
+
 function renderPostImagesHtml(urls, opts = {}) {
     const list = (Array.isArray(urls) ? urls.filter(Boolean) : []).slice(0, POST_MAX_IMAGE_COUNT).map((u) => toCanonicalSiteUrl(u));
     if (!list.length) return '';
@@ -5175,9 +5182,15 @@ function renderPostImagesHtml(urls, opts = {}) {
     const safeBgColor = /^#[0-9A-Fa-f]{6}$/.test(bgColor) ? bgColor : '#FFFFFF';
 
     if (list.length === 1) {
+        // 가로/세로/정사각형 모두 포스팅 화면에 최대한 채우고 항상 중앙 정렬
+        const baseStyle = 'display:block;';
+        const combinedStyle = wrapperStyle ? baseStyle + wrapperStyle : baseStyle;
         return `
-            <div class="${wrapperClass}" ${wrapperStyle ? `style="${wrapperStyle}"` : ''}>
-                <img src="${list[0]}" alt="${altPrefix}" class="${singleClass} post-media-image" style="background-color:${safeBgColor};" onerror="this.style.display='none'" />
+            <div class="${wrapperClass}" style="${combinedStyle}">
+                <img src="${list[0]}" alt="${altPrefix}" class="post-media-image"
+                     style="display:block;background-color:${safeBgColor};"
+                     onload="postImg1Load(this)"
+                     onerror="this.style.display='none'" />
             </div>
         `;
     }
@@ -5853,9 +5866,43 @@ function renderPostImagePreviewFiles(files) {
     const grid = document.createElement('div');
 
     if (n === 1) {
-        grid.appendChild(
-            createPostImagePreviewCell(list[0], 0, 'shadow-lg ring-2 ring-white/90', 'w-full max-h-64 object-contain')
-        );
+        // 1장: 방향 감지 후 최대한 채우기 + 중앙 정렬 (inline 처리)
+        const previewBg1 = /^#[0-9A-Fa-f]{6}$/.test(String(selectedBackgroundColor || '')) ? selectedBackgroundColor : '#F3F4F6';
+        const wrap1 = document.createElement('div');
+        wrap1.className = 'relative w-full overflow-hidden rounded-xl bg-gray-100 shadow-md ring-1 ring-gray-200 transition hover:ring-blue-300/50 flex items-center justify-center';
+        const src1 = URL.createObjectURL(list[0]);
+        const img1 = document.createElement('img');
+        img1.src = src1;
+        img1.alt = '미리보기 1';
+        img1.className = 'block';
+        img1.style.backgroundColor = previewBg1;
+        img1.onload = function () {
+            URL.revokeObjectURL(src1);
+            var r = this.naturalWidth / this.naturalHeight;
+            if (r < 0.85) {
+                // P (세로형): 위아래 기준, 가로 자동
+                this.style.maxHeight = '520px';
+                this.style.width = 'auto';
+                this.style.maxWidth = '100%';
+            } else {
+                // L (가로형) + S (정사각형): 좌우 끝까지
+                this.style.width = '100%';
+                this.style.height = 'auto';
+            }
+        };
+        const badge1 = document.createElement('span');
+        badge1.className = 'absolute bottom-2 left-2 z-[1] flex h-6 min-w-[1.5rem] items-center justify-center rounded-md bg-black/50 px-1.5 font-size-mini1 font-bold text-white backdrop-blur-sm';
+        badge1.textContent = '1';
+        const btn1 = document.createElement('button');
+        btn1.type = 'button';
+        btn1.className = 'absolute top-2 right-2 z-[2] flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white shadow backdrop-blur-sm transition hover:bg-red-600';
+        btn1.title = '이 사진만 제거';
+        btn1.innerHTML = '<i class="fas fa-times font-size-mini1"></i>';
+        btn1.onclick = (e) => { e.stopPropagation(); removePostImageAtIndex(0); };
+        wrap1.appendChild(img1);
+        wrap1.appendChild(badge1);
+        wrap1.appendChild(btn1);
+        grid.appendChild(wrap1);
     } else if (n === 2) {
         grid.className = 'grid grid-cols-2 gap-2';
         grid.appendChild(createPostImagePreviewCell(list[0], 0, 'aspect-square', 'h-full w-full object-cover'));

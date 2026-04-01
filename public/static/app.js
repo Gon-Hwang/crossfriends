@@ -4421,20 +4421,22 @@ const WORSHIP_SONGS = [
     { id: '5JvEYRcuJNE', title: '부르신 곳에서 | 예람워십' },
     { id: 'sdxy2vqrXwY', title: 'Carol Ann - Michael W. Smith' },
 ];
-let qtWorshipCurrentIdx = 0;
 let qtWorshipPlayer = null;   // YT.Player (전역 단일 인스턴스)
 let qtWorshipPlayerReady = false;
+let qtWorshipLoadedIdx = 0;   // 현재 플레이어에 로드된 곡 인덱스
 let qtWorshipState = { muted: false, volume: 80, playing: false };
 
 function getWorshipSong(idx) {
     return WORSHIP_SONGS[((idx % WORSHIP_SONGS.length) + WORSHIP_SONGS.length) % WORSHIP_SONGS.length];
 }
 
-function syncWorshipTitle() {
-    const song = getWorshipSong(qtWorshipCurrentIdx);
-    document.querySelectorAll('.qt-panel-instance [data-qt-field="worshipTitle"]').forEach(el => {
-        el.textContent = song.title;
-    });
+// 패널에 지정된 곡 인덱스 반환 (패널 순서 기반)
+function getWorshipSongIdxForPanel(panel) {
+    const stack = document.getElementById('qtPanelsStack');
+    if (!stack) return 0;
+    const panels = Array.from(stack.querySelectorAll('.qt-panel-instance'));
+    const idx = panels.indexOf(panel);
+    return idx >= 0 ? idx % WORSHIP_SONGS.length : 0;
 }
 
 // 아이콘을 재생 상태에 따라 동기화 (열려 있는 모든 패널)
@@ -4446,17 +4448,26 @@ function syncWorshipPlayIcons() {
 }
 
 // 전역 마운트에 플레이어를 한 번만 생성
-function ensureQtWorshipPlayer() {
-    if (qtWorshipPlayer) return;
+function ensureQtWorshipPlayer(songIdx) {
+    const idx = songIdx ?? qtWorshipLoadedIdx;
+    if (qtWorshipPlayer) {
+        // 이미 생성됐지만 다른 곡이면 교체
+        if (idx !== qtWorshipLoadedIdx && qtWorshipPlayerReady) {
+            qtWorshipLoadedIdx = idx;
+            try { qtWorshipPlayer.loadVideoById(getWorshipSong(idx).id); } catch (_) {}
+        }
+        return;
+    }
     if (!isYoutubeIframeApiReady()) return;
     const mount = document.getElementById('qtWorshipYtGlobal');
     if (!mount) return;
     const div = document.createElement('div');
     mount.appendChild(div);
+    qtWorshipLoadedIdx = idx;
     qtWorshipPlayer = new YT.Player(div, {
         height: '1',
         width: '1',
-        videoId: getWorshipSong(qtWorshipCurrentIdx).id,
+        videoId: getWorshipSong(idx).id,
         playerVars: { playsinline: 1, rel: 0, controls: 0, autoplay: 0 },
         events: {
             onReady(e) {
@@ -4466,37 +4477,12 @@ function ensureQtWorshipPlayer() {
             },
             onStateChange(e) {
                 const PS = (typeof YT !== 'undefined' && YT.PlayerState)
-                    ? YT.PlayerState : { PLAYING: 1, ENDED: 0 };
-                if (e.data === PS.ENDED) {
-                    // 곡 끝나면 다음 곡으로 자동 전환
-                    qtWorshipCurrentIdx = (qtWorshipCurrentIdx + 1) % WORSHIP_SONGS.length;
-                    syncWorshipTitle();
-                    try {
-                        qtWorshipPlayer.loadVideoById(getWorshipSong(qtWorshipCurrentIdx).id);
-                    } catch (_) {}
-                    return;
-                }
+                    ? YT.PlayerState : { PLAYING: 1 };
                 qtWorshipState.playing = (e.data === PS.PLAYING);
                 syncWorshipPlayIcons();
             }
         }
     });
-}
-
-// 다음 곡으로 이동
-function qtWorshipNextSong() {
-    qtWorshipCurrentIdx = (qtWorshipCurrentIdx + 1) % WORSHIP_SONGS.length;
-    syncWorshipTitle();
-    if (!qtWorshipPlayer || !qtWorshipPlayerReady) { ensureQtWorshipPlayer(); return; }
-    try { qtWorshipPlayer.loadVideoById(getWorshipSong(qtWorshipCurrentIdx).id); } catch (_) {}
-}
-
-// 이전 곡으로 이동
-function qtWorshipPrevSong() {
-    qtWorshipCurrentIdx = (qtWorshipCurrentIdx - 1 + WORSHIP_SONGS.length) % WORSHIP_SONGS.length;
-    syncWorshipTitle();
-    if (!qtWorshipPlayer || !qtWorshipPlayerReady) { ensureQtWorshipPlayer(); return; }
-    try { qtWorshipPlayer.loadVideoById(getWorshipSong(qtWorshipCurrentIdx).id); } catch (_) {}
 }
 
 // 다른 모든 패널의 찬양 UI를 닫는다 (단일 UI 원칙)
@@ -4513,8 +4499,13 @@ function openQtWorshipForPanel(panel) {
     if (!wrap) return;
     closeAllWorshipWraps(panel);   // 다른 패널 찬양 UI 닫기
     wrap.classList.remove('hidden');
-    ensureQtWorshipPlayer();       // 플레이어가 없으면 생성 (전역 마운트에)
-    syncWorshipTitle();
+    const songIdx = getWorshipSongIdxForPanel(panel);
+    ensureQtWorshipPlayer(songIdx); // 패널 지정곡 로드
+
+    // 이 패널의 곡 제목 표시
+    const song = getWorshipSong(songIdx);
+    const titleEl = wrap.querySelector('[data-qt-field="worshipTitle"]');
+    if (titleEl) titleEl.textContent = song.title;
     // 볼륨·음소거 UI를 현재 상태로 동기화
     const volBar = qf(panel, 'worshipVolumeBar');
     if (volBar) volBar.value = qtWorshipState.volume;
@@ -9955,8 +9946,6 @@ window.toggleQtPanel = toggleQtPanel;
 window.showQtSection = showQtSection;
 window.toggleQtWorshipPlay = toggleQtWorshipPlay;
 window.toggleQtWorshipMute = toggleQtWorshipMute;
-window.qtWorshipNextSong = qtWorshipNextSong;
-window.qtWorshipPrevSong = qtWorshipPrevSong;
 window.setQtWorshipVolume = setQtWorshipVolume;
 window.setQtWorshipVolumeFromPanel = setQtWorshipVolumeFromPanel;
 window.showQtAlarmModal = showQtAlarmModal;

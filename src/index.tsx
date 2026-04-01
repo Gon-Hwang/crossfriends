@@ -8208,7 +8208,7 @@ app.get('/', (c) => {
                     <template id="qtPanelTemplate">
                         <div class="qt-panel-instance bg-white rounded-xl shadow-lg border-2 border-red-600 p-4 sm:p-6" data-qt-date="" data-qt-log-id="">
                             <div class="flex items-start justify-between gap-2 mb-4 flex-wrap">
-                                <h2 class="font-size-title font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT</h2>
+                                <h2 class="font-size-title font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT Log</h2>
                                 <div class="flex items-center gap-2 flex-wrap justify-end">
                                     <div class="font-size-desc text-gray-600" data-qt-field="dateLabel"></div>
                                     <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-red-100 text-red-600 border border-red-600 hover:bg-red-100" title="QT 찬양">
@@ -8245,22 +8245,22 @@ app.get('/', (c) => {
                                 </button>
                             </div>
                             <div class="qt-section hidden p-4 bg-red-100 rounded-lg border border-red-600 mb-4" data-qt-section="prayer">
-                                <p class="text-gray-800 font-size-desc leading-relaxed">오늘 당신을 위한 생명의 양식입니다. 먼저 기도하며 오늘의 말씀을 잘 깨닿고 하나님의 인도함과 보호하심을 구하는 기도를 먼저 하십시오.</p>
+                                <p class="text-gray-800 font-size-base leading-relaxed">오늘 당신을 위한 생명의 양식입니다. 먼저 기도하며 오늘의 말씀을 잘 깨닿고 하나님의 인도함과 보호하심을 구하는 기도를 먼저 하십시오.</p>
                             </div>
                             <div class="qt-section hidden p-4 bg-gray-50 rounded-lg border border-gray-300 mb-4" data-qt-section="read">
-                                <div class="text-gray-800 font-size-desc leading-relaxed whitespace-pre-line" data-qt-field="scriptureText"></div>
+                                <div class="text-gray-800 font-size-base leading-relaxed whitespace-pre-line" data-qt-field="scriptureText"></div>
                             </div>
                             <div class="qt-section hidden" data-qt-section="apply">
                                 <div class="flex items-end gap-3" data-qt-field="applyComposer">
                                     <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-300 px-3 py-2">
-                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-0 font-size-desc border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="applyInput" oninput="qtAutoGrow(this)"></textarea>
+                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 적용하는 내용을 기록하세요..." class="w-full p-0 font-size-base border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="applyInput" oninput="qtAutoGrow(this)"></textarea>
                                     </div>
                                     <button type="button" data-qt-act="send-apply" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-600 text-white flex items-center justify-center transition shadow-sm" title="전송">
                                         <i class="fas fa-paper-plane"></i>
                                     </button>
                                 </div>
                                 <div class="hidden relative bg-white rounded-xl border-2 border-red-600 p-3 mb-2" data-qt-field="applySavedView">
-                                    <p class="font-size-desc text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="applySavedText"></p>
+                                    <p class="font-size-base text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="applySavedText"></p>
                                     <button type="button" data-qt-act="edit-apply" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-600 text-red-600 bg-white hover:bg-red-100 font-size-mini1 font-semibold transition shadow-md">
                                         <i class="fas fa-pen mr-1"></i>수정
                                     </button>
@@ -8269,14 +8269,14 @@ app.get('/', (c) => {
                             <div class="qt-section hidden mt-5" data-qt-section="prayer2">
                                 <div class="flex items-end gap-3" data-qt-field="prayerComposer">
                                     <div class="flex-1 min-w-0 bg-white rounded-xl border-2 border-gray-300 px-3 py-2">
-                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-0 font-size-desc border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="prayerInput" oninput="qtAutoGrow(this)"></textarea>
+                                        <textarea rows="1" placeholder="오늘 묵상한 말씀을 하루에 적용하는 기도 제목을 적어보세요..." class="w-full p-0 font-size-base border-0 focus:ring-0 focus:outline-none resize-none overflow-hidden leading-relaxed" data-qt-field="prayerInput" oninput="qtAutoGrow(this)"></textarea>
                                     </div>
                                     <button type="button" data-qt-act="send-prayer" class="shrink-0 w-12 h-12 rounded-2xl bg-red-600 hover:bg-red-600 text-white flex items-center justify-center transition shadow-sm" title="전송">
                                         <i class="fas fa-paper-plane"></i>
                                     </button>
                                 </div>
                                 <div class="hidden relative bg-white rounded-xl border-2 border-red-600 p-3" data-qt-field="prayerSavedView">
-                                    <p class="font-size-desc text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="prayerSavedText"></p>
+                                    <p class="font-size-base text-gray-800 leading-relaxed whitespace-pre-wrap" data-qt-field="prayerSavedText"></p>
                                     <button type="button" data-qt-act="edit-prayer" class="absolute -bottom-4 right-3 px-3.5 py-1.5 rounded-full border border-red-600 text-red-600 bg-white hover:bg-red-100 font-size-mini1 font-semibold transition shadow-md">
                                         <i class="fas fa-pen mr-1"></i>수정
                                     </button>
@@ -10031,48 +10031,11 @@ app.get('/', (c) => {
                 }
             };
             
-            // Handle Typing Enter
-            window.handleTypingEnter = async function(event) {
+            // Handle Typing Enter — 전송 버튼과 동일하게 checkTyping() 호출
+            window.handleTypingEnter = function(event) {
                 if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
-                    
-                    const input = document.getElementById('typingInput');
-                    const result = document.getElementById('typingResult');
-                    const verseText = document.getElementById('verseText');
-                    
-                    if (!input || !result || !verseText) return;
-                    
-                    const userInput = input.value.trim();
-                    const correctVerse = verseText.textContent.trim();
-                    
-                    if (!userInput) {
-                        result.classList.remove('hidden');
-                        result.className = 'mt-2 font-size-desc text-yellow-400';
-                        result.textContent = '⚠️ 구절을 입력해주세요.';
-                        return;
-                    }
-                    
-                    // Simple comparison
-                    const isCorrect = userInput === correctVerse;
-                    
-                    if (isCorrect) {
-                        result.classList.remove('hidden');
-                        result.className = 'mt-2 font-size-desc text-blue-600 font-bold';
-                        result.textContent = '✅ 정확합니다! 말씀을 마음에 새기셨습니다.';
-                        
-                        // Clear input after success
-                        setTimeout(() => {
-                            input.value = '';
-                            result.classList.add('hidden');
-                        }, 3000);
-                        
-                        // TODO: Award points if needed
-                        console.log('말씀 타이핑 성공!');
-                    } else {
-                        result.classList.remove('hidden');
-                        result.className = 'mt-2 font-size-desc text-red-600';
-                        result.textContent = '❌ 다시 한 번 확인해보세요.';
-                    }
+                    if (typeof checkTyping === 'function') checkTyping();
                 }
             };
             

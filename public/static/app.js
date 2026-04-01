@@ -571,38 +571,49 @@ const bibleVerses = [
     }
 ];
 
-let currentVerseIndex = 0;
-
-// Rotate bible verse
-function rotateBibleVerse() {
-    currentVerseIndex = (currentVerseIndex + 1) % bibleVerses.length;
-    const verse = bibleVerses[currentVerseIndex];
-    
-    // Update verse reference
-    const verseRefElement = document.getElementById('verseReference');
-    if (verseRefElement) {
-        verseRefElement.textContent = verse.reference;
-    }
-    
-    // Update verse text with fade animation
-    const verseTextElement = document.getElementById('verseText');
-    if (verseTextElement) {
-        // Fade out
-        verseTextElement.style.opacity = '0';
-        verseTextElement.style.transition = 'opacity 0.5s ease-in-out';
-        
-        setTimeout(() => {
-            verseTextElement.textContent = verse.text;
-            // Fade in
-            verseTextElement.style.opacity = '1';
-        }, 500);
-    }
-    
-    console.log('성경 구절 변경:', verse.reference);
+// 오늘 날짜(YYYY-MM-DD)를 시드로 구절 인덱스 결정 → 모든 사용자 동일 구절, 자정 교체
+function getDailyVerseIndex() {
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    return seed % bibleVerses.length;
 }
 
-// Start bible verse rotation (every 5 minutes = 300000ms)
-setInterval(rotateBibleVerse, 5 * 60 * 1000);
+let currentVerseIndex = getDailyVerseIndex();
+
+function applyVerse(verse, animate) {
+    const verseRefElement = document.getElementById('verseReference');
+    const verseTextElement = document.getElementById('verseText');
+    if (!verse) return;
+    if (verseRefElement) verseRefElement.textContent = verse.reference;
+    if (verseTextElement) {
+        if (animate) {
+            verseTextElement.style.opacity = '0';
+            verseTextElement.style.transition = 'opacity 0.5s ease-in-out';
+            setTimeout(() => {
+                verseTextElement.textContent = verse.text;
+                verseTextElement.style.opacity = '1';
+            }, 500);
+        } else {
+            verseTextElement.textContent = verse.text;
+        }
+    }
+}
+
+// 페이지 로드 시 오늘의 구절 적용
+applyVerse(bibleVerses[currentVerseIndex], false);
+
+// 자정에 구절 교체 (남은 시간 계산)
+function scheduleDailyVerseChange() {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    const msUntilMidnight = midnight - now;
+    setTimeout(() => {
+        currentVerseIndex = getDailyVerseIndex();
+        applyVerse(bibleVerses[currentVerseIndex], true);
+        scheduleDailyVerseChange(); // 다음 날 자정 예약
+    }, msUntilMidnight);
+}
+scheduleDailyVerseChange();
 
 // =====================
 // YouTube Video Tracking
@@ -1307,9 +1318,10 @@ function showFloatingScore(element, text) {
 
 // Calculate similarity between two strings (accuracy)
 function calculateAccuracy(original, typed) {
-    // Remove extra whitespaces and trim
-    const cleanOriginal = original.replace(/\\s+/g, ' ').trim();
-    const cleanTyped = typed.replace(/\\s+/g, ' ').trim();
+    // Strip punctuation (.,!?;:'"·「」『』 등) then normalize whitespace
+    const stripPunct = s => s.replace(/[.,!?;:'"·「」『』。、，。…\-\(\)\[\]]/g, '').replace(/\s+/g, ' ').trim();
+    const cleanOriginal = stripPunct(original);
+    const cleanTyped = stripPunct(typed);
     
     // Calculate Levenshtein distance
     const matrix = [];
@@ -3941,17 +3953,13 @@ function setQtComposeViewForPanel(panel, kind, initialText) {
 function setQtSectionBtnActive(panel, sectionKey, active) {
     const b = panel.querySelector(`[data-qt-sec-btn="${sectionKey}"]`);
     if (!b) return;
-    b.classList.toggle('bg-red-100', active);
-    b.classList.toggle('text-red-600', active);
-    b.classList.toggle('border-red-600', active);
-    b.classList.toggle('bg-gray-100', !active);
-    b.classList.toggle('text-gray-700', !active);
-    b.classList.toggle('border-gray-300', !active);
-    if (!active) {
-        b.style.backgroundColor = 'rgb(243,244,246)';
-        b.style.color = 'rgb(55,65,81)';
-        b.style.borderColor = 'rgb(209,213,219)';
+    if (active) {
+        // 인라인 스타일로 확실하게 활성화 표시 (Tailwind CDN 클래스 미생성 대비)
+        b.style.backgroundColor = 'rgb(254,226,226)'; // red-100
+        b.style.color = 'rgb(220,38,38)';              // red-600
+        b.style.borderColor = 'rgb(220,38,38)';        // red-600
     } else {
+        // 인라인 스타일 전부 제거 → 원래 HTML 클래스(bg-gray-100 등)로 복귀
         b.style.backgroundColor = '';
         b.style.color = '';
         b.style.borderColor = '';
@@ -4134,7 +4142,22 @@ async function showQtSectionForPanel(panel, sectionKey) {
     const willOpen = target.classList.contains('hidden');
     target.classList.toggle('hidden', !willOpen);
     setQtSectionBtnActive(panel, sectionKey, willOpen);
-    if (!willOpen) return;
+    if (!willOpen) {
+        // 닫을 때 섹션 내부 상태 원상복귀
+        if (sectionKey === 'apply') {
+            const composer = qf(panel, 'applyComposer');
+            const savedView = qf(panel, 'applySavedView');
+            if (composer) composer.classList.remove('hidden');
+            if (savedView) savedView.classList.add('hidden');
+        }
+        if (sectionKey === 'prayer2') {
+            const composer = qf(panel, 'prayerComposer');
+            const savedView = qf(panel, 'prayerSavedView');
+            if (composer) composer.classList.remove('hidden');
+            if (savedView) savedView.classList.add('hidden');
+        }
+        return;
+    }
 
     window.__activeQtDate = panelQtDate(panel);
 
@@ -7641,13 +7664,13 @@ async function fillProfileViewPanelForUser(user) {
                         if (!showEducationInfo) return '';
                         let educationItems = '';
                         if (user.elementary_school && user.elementary_school.trim()) {
-                            educationItems += `<div><p class="font-medium text-gray-800 mb-1">초등학교:</p><p class="ml-2">${user.elementary_school}</p></div>`;
+                            educationItems += `<div><p class="font-bold text-gray-800 mb-1">초등학교:</p><p class="ml-2">${user.elementary_school}</p></div>`;
                         }
                         if (user.middle_school && user.middle_school.trim()) {
-                            educationItems += `<div><p class="font-medium text-gray-800 mb-1">중학교:</p><p class="ml-2">${user.middle_school}</p></div>`;
+                            educationItems += `<div><p class="font-bold text-gray-800 mb-1">중학교:</p><p class="ml-2">${user.middle_school}</p></div>`;
                         }
                         if (user.high_school && user.high_school.trim()) {
-                            educationItems += `<div><p class="font-medium text-gray-800 mb-1">고등학교:</p><p class="ml-2">${user.high_school}</p></div>`;
+                            educationItems += `<div><p class="font-bold text-gray-800 mb-1">고등학교:</p><p class="ml-2">${user.high_school}</p></div>`;
                         }
                         if (user.universities !== null) {
                             let universities = [];
@@ -7667,7 +7690,7 @@ async function fillProfileViewPanelForUser(user) {
                                     })
                                     .join('');
                                 if (univItems) {
-                                    educationItems += `<div><p class="font-medium text-gray-800 mb-1">대학교:</p>${univItems}</div>`;
+                                    educationItems += `<div><p class="font-bold text-gray-800 mb-1">대학교:</p>${univItems}</div>`;
                                 }
                             }
                         }
@@ -7689,7 +7712,7 @@ async function fillProfileViewPanelForUser(user) {
                                     })
                                     .join('');
                                 if (mastersItems) {
-                                    educationItems += `<div><p class="font-medium text-gray-800 mb-1">석사:</p>${mastersItems}</div>`;
+                                    educationItems += `<div><p class="font-bold text-gray-800 mb-1">석사:</p>${mastersItems}</div>`;
                                 }
                             }
                         }
@@ -7711,14 +7734,14 @@ async function fillProfileViewPanelForUser(user) {
                                     })
                                     .join('');
                                 if (phdItems) {
-                                    educationItems += `<div><p class="font-medium text-gray-800 mb-1">박사:</p>${phdItems}</div>`;
+                                    educationItems += `<div><p class="font-bold text-gray-800 mb-1">박사:</p>${phdItems}</div>`;
                                 }
                             }
                         }
                         if (!educationItems || educationItems.trim() === '') return '';
                         return `
                     <div class="bg-orange-50 border-l-4 border-orange-600 p-4 rounded">
-                        <h4 class="font-semibold text-orange-800 mb-3"><i class="fas fa-graduation-cap mr-2"></i>학교 정보</h4>
+                        <h4 class="font-semibold text-blue-600 mb-3"><i class="fas fa-graduation-cap mr-2"></i>학교 정보</h4>
                         <div class="space-y-3 font-size-desc text-gray-700">${educationItems}</div>
                     </div>`;
                     })()}
@@ -7795,7 +7818,15 @@ function goToHome() {
     if (postFocusOverlay) postFocusOverlay.classList.add('hidden');
 
     const rightSidebar = document.getElementById('rightSidebar');
-    if (rightSidebar) rightSidebar.classList.remove('reactors-only', 'mobile-fullscreen-overlay');
+    if (rightSidebar) {
+        rightSidebar.classList.remove('reactors-only', 'mobile-fullscreen-overlay');
+        rightSidebar.style.top = '';
+        rightSidebar.style.bottom = '';
+    }
+    const mobileSidebarBackdrop = document.getElementById('mobileSidebarBackdrop');
+    if (mobileSidebarBackdrop) mobileSidebarBackdrop.classList.add('hidden');
+    isFriendsPanelOpen = false;
+    isNotificationActive = false;
     const reactorsTab = document.getElementById('reactorsTabContent');
     if (reactorsTab) reactorsTab.classList.add('hidden');
 

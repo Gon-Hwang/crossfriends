@@ -8154,7 +8154,7 @@ app.get('/', (c) => {
                                         </label>
                                     </div>
                                     <div class="flex items-center space-x-3">
-                                        <div class="flex flex-col items-end w-[108px] sm:w-[126px]">
+                                        <div class="flex flex-col items-end w-[88px] sm:w-[106px]">
                                             <select id="newPostVisibility" class="w-full h-7 px-2 border border-gray-300 rounded-md font-size-mini1 font-medium text-gray-600 leading-none bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                                 <option value="public">전체 공개</option>
                                                 <option value="friends">친구에게만</option>
@@ -8182,7 +8182,7 @@ app.get('/', (c) => {
                                 <h2 class="font-size-title font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT Log</h2>
                                 <div class="flex items-center gap-2 flex-wrap justify-end">
                                     <div class="font-size-desc text-gray-600" data-qt-field="dateLabel"></div>
-                                    <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-red-100 text-red-600 border border-red-600 hover:bg-red-100" title="QT 찬양">
+                                    <button type="button" data-qt-field="qtWorshipBtn" data-qt-act="worship" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 찬양">
                                         <i class="fas fa-music font-size-desc leading-none" aria-hidden="true"></i>
                                     </button>
                                     <button type="button" data-qt-field="qtAlarmBtn" data-qt-act="alarm" class="hidden inline-flex items-center justify-center h-7 min-w-[1.75rem] px-2 rounded-lg font-size-mini1 font-medium leading-none transition bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200" title="QT 알람 설정">

@@ -8074,6 +8074,8 @@ function goToHome() {
         setSocialHeaderButtonActive(window.matchMedia('(max-width: 1023px)').matches ? 'none' : 'friends');
     }
 
+    const mainFeedPart1 = document.getElementById('mainFeedPart1');
+    if (mainFeedPart1) mainFeedPart1.classList.remove('hidden');
     const postsFeed = document.getElementById('postsFeed');
     const postsFeedWrapper = document.getElementById('postsFeedWrapper');
     if (postsFeed) postsFeed.classList.remove('hidden');

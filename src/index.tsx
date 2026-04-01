@@ -8255,11 +8255,21 @@ app.get('/', (c) => {
                             </div>
                             <div class="hidden mt-2 relative" data-qt-field="worshipWrap">
                                 <div class="flex items-center gap-3 p-3 bg-gray-100 rounded-xl border border-gray-300">
-                                    <button type="button" data-qt-act="worship-play" class="w-12 h-12 flex items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-600 transition flex-shrink-0">
+                                    <!-- 이전 곡 -->
+                                    <button type="button" onclick="qtWorshipPrevSong()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-200 transition flex-shrink-0" title="이전 곡">
+                                        <i class="fas fa-step-backward" style="font-size:11px;"></i>
+                                    </button>
+                                    <!-- 재생/일시정지 -->
+                                    <button type="button" data-qt-act="worship-play" class="w-12 h-12 flex items-center justify-center rounded-full bg-red-600 text-white hover:bg-red-700 transition flex-shrink-0">
                                         <i class="fas fa-play" data-qt-field="worshipPlayIcon"></i>
                                     </button>
+                                    <!-- 다음 곡 -->
+                                    <button type="button" onclick="qtWorshipNextSong()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-300 text-gray-600 hover:bg-gray-200 transition flex-shrink-0" title="다음 곡">
+                                        <i class="fas fa-step-forward" style="font-size:11px;"></i>
+                                    </button>
                                     <div class="flex-1 min-w-0">
-                                        <div class="font-size-desc font-medium text-gray-800 truncate">찬양</div>
+                                        <!-- 곡 제목 -->
+                                        <div class="font-size-desc font-semibold text-gray-800 truncate" data-qt-field="worshipTitle">찬양</div>
                                         <div class="flex items-center gap-2 mt-1">
                                             <button type="button" data-qt-act="worship-mute" class="text-gray-600 hover:text-gray-800 p-0.5 flex-shrink-0" title="음소거">
                                                 <i class="fas fa-volume-up font-size-desc" data-qt-field="worshipMuteIcon"></i>

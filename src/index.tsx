@@ -5,6 +5,137 @@ import type { Bindings, Post, Comment, User, PrayerRequest, PrayerResponse } fro
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+// =====================================================================
+// Web Push (RFC 8030 / 8291 / 8292) — Cloudflare Workers Web Crypto API
+// =====================================================================
+
+function _concatUint8(...arrays: Uint8Array[]): Uint8Array {
+  const total = arrays.reduce((s, a) => s + a.length, 0)
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const a of arrays) { out.set(a, offset); offset += a.length }
+  return out
+}
+
+function _urlB64ToU8(b64: string): Uint8Array {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4)
+  const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'))
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
+}
+
+function _u8ToUrlB64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+async function _hkdfExtract(salt: Uint8Array, ikm: Uint8Array): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey('raw', salt, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, ikm))
+}
+
+async function _hkdfExpand(prk: Uint8Array, info: Uint8Array, len: number): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey('raw', prk, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, _concatUint8(info, new Uint8Array([1])))).slice(0, len)
+}
+
+async function _encryptWebPushPayload(
+  message: string, p256dhB64: string, authB64: string
+): Promise<Uint8Array> {
+  const enc = new TextEncoder()
+  const clientPub = _urlB64ToU8(p256dhB64)
+  const authSecret = _urlB64ToU8(authB64)
+
+  const serverKP = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])
+  const serverPubRaw = new Uint8Array(await crypto.subtle.exportKey('raw', serverKP.publicKey))
+
+  const clientKey = await crypto.subtle.importKey('raw', clientPub, { name: 'ECDH', namedCurve: 'P-256' }, false, [])
+  const sharedSecret = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: clientKey }, serverKP.privateKey, 256))
+
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+
+  // RFC 8291 key derivation
+  const prkKey = await _hkdfExtract(authSecret, sharedSecret)
+  const ikm = await _hkdfExpand(prkKey, _concatUint8(enc.encode('WebPush: info\0'), clientPub, serverPubRaw), 32)
+  const prk = await _hkdfExtract(salt, ikm)
+  const cek = await _hkdfExpand(prk, enc.encode('Content-Encoding: aes128gcm\0'), 16)
+  const nonce = await _hkdfExpand(prk, enc.encode('Content-Encoding: nonce\0'), 12)
+
+  const aesKey = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt'])
+  const ciphertext = new Uint8Array(await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce, tagLength: 128 }, aesKey,
+    _concatUint8(enc.encode(message), new Uint8Array([2]))
+  ))
+
+  // RFC 8188 binary header: salt(16) + rs(4BE) + idlen(1) + serverPub(65) + ciphertext
+  const rsBytes = new Uint8Array(4)
+  new DataView(rsBytes.buffer).setUint32(0, ciphertext.length + 1, false)
+  return _concatUint8(salt, rsBytes, new Uint8Array([65]), serverPubRaw, ciphertext)
+}
+
+async function _signVapidJwt(privB64: string, pubB64: string, audience: string, subject: string): Promise<string> {
+  const enc = new TextEncoder()
+  const header = _u8ToUrlB64(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })))
+  const payload = _u8ToUrlB64(enc.encode(JSON.stringify({
+    aud: audience, exp: Math.floor(Date.now() / 1000) + 43200, sub: subject
+  })))
+  const sigInput = `${header}.${payload}`
+
+  const privBytes = _urlB64ToU8(privB64)
+  const pubBytes = _urlB64ToU8(pubB64)
+  const jwk = {
+    kty: 'EC', crv: 'P-256',
+    d: _u8ToUrlB64(privBytes),
+    x: _u8ToUrlB64(pubBytes.slice(1, 33)),
+    y: _u8ToUrlB64(pubBytes.slice(33, 65)),
+    key_ops: ['sign']
+  }
+  const signingKey = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign'])
+  const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, signingKey, enc.encode(sigInput)))
+  return `${sigInput}.${_u8ToUrlB64(sig)}`
+}
+
+async function sendWebPush(
+  DB: any, env: any, userId: number,
+  notification: { title: string; body: string }
+): Promise<void> {
+  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = env
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return
+  try {
+    const { results: subs } = await DB.prepare(
+      'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?'
+    ).bind(userId).all()
+    if (!subs || subs.length === 0) return
+
+    const payload = JSON.stringify({ title: notification.title, body: notification.body, icon: '/static/icon-192.png' })
+
+    await Promise.allSettled(subs.map(async (sub: any) => {
+      try {
+        const body = await _encryptWebPushPayload(payload, sub.p256dh, sub.auth)
+        const audience = new URL(sub.endpoint).origin
+        const jwt = await _signVapidJwt(VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, audience, VAPID_SUBJECT || 'mailto:admin@crossfriends.com')
+        const res = await fetch(sub.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Content-Encoding': 'aes128gcm',
+            'Authorization': `vapid t=${jwt},k=${VAPID_PUBLIC_KEY}`,
+            'TTL': '86400',
+          },
+          body
+        })
+        if (res.status === 410 || res.status === 404) {
+          await DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(sub.endpoint).run()
+        }
+      } catch (e) {
+        console.error('Web push send failed:', e)
+      }
+    }))
+  } catch (e) {
+    console.error('sendWebPush error:', e)
+  }
+}
+
+// =====================================================================
+
 /** XSS 방지용 텍스트 이스케이프 */
 function sanitizeText(s: string | null | undefined): string {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
@@ -2020,6 +2151,11 @@ app.post('/api/posts/:id/comments', async (c) => {
       INSERT INTO notifications (user_id, from_user_id, type, post_id, comment_id, created_at)
       VALUES (?, ?, 'comment', ?, ?, ?)
     `).bind(post.user_id, user_id, postId, result.meta.last_row_id, now).run()
+    const commenter = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
+    sendWebPush(DB, c.env, post.user_id, {
+      title: '새 댓글',
+      body: `${commenter?.name || '누군가'}님이 회원님의 게시물에 댓글을 남겼습니다.`
+    })
   }
   
   return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, updated_scores: updatedScores }, 201)
@@ -2201,6 +2337,8 @@ app.post('/api/posts/:id/like', async (c) => {
           INSERT INTO notifications (user_id, from_user_id, type, post_id, created_at)
           VALUES (?, ?, 'like', ?, ?)
         `).bind(post.user_id, user_id, postId, now).run()
+        const liker1 = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
+        sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker1?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` })
       }
     }
     // 말씀 포스팅이면 성경 점수 처리
@@ -2225,6 +2363,8 @@ app.post('/api/posts/:id/like', async (c) => {
           INSERT INTO notifications (user_id, from_user_id, type, post_id, created_at)
           VALUES (?, ?, 'like', ?, ?)
         `).bind(post.user_id, user_id, postId, now).run()
+        const liker2 = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
+        sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker2?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` })
       }
     }
     // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 처리
@@ -2251,6 +2391,8 @@ app.post('/api/posts/:id/like', async (c) => {
             INSERT INTO notifications (user_id, from_user_id, type, post_id, created_at)
             VALUES (?, ?, 'like', ?, ?)
           `).bind(post.user_id, user_id, postId, now).run()
+          const liker3 = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
+          sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker3?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` })
         }
       }
     }
@@ -4941,6 +5083,12 @@ app.post('/api/feedback', async (c) => {
       }
     }
 
+    const senderUser = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(userId).first() as any
+    sendWebPush(DB, c.env, receiverId, {
+      title: '새 피드백',
+      body: `${senderUser?.name || '누군가'}님이 피드백 메시지를 보냈습니다.`
+    })
+
     c.header('Cache-Control', 'private, no-store')
     return c.json({ success: true, message: '피드백이 전달되었습니다' })
   } catch (error) {
@@ -5007,6 +5155,12 @@ app.post('/api/friend-request', async (c) => {
       INSERT INTO friendships (user_id, friend_id, status, created_at, updated_at)
       VALUES (?, ?, 'pending', ?, ?)
     `).bind(fromId, toId, now, now).run()
+
+    const fromUser = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(fromId).first() as any
+    sendWebPush(DB, c.env, toId, {
+      title: '친구 요청',
+      body: `${fromUser?.name || '누군가'}님이 친구 요청을 보냈습니다.`
+    })
     
     return c.json({ success: true, message: '친구 제안을 보냈습니다' })
   } catch (error) {

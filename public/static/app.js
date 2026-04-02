@@ -9794,6 +9794,45 @@ function updateSidebarNotificationsList() {
             `;
         }
 
+        if (notification.type === 'system') {
+            return `
+                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-red-50 border border-red-200'}">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center border border-red-200">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-size-desc text-gray-900 font-semibold mb-0.5">시스템 알림</p>
+                        <p class="font-size-mini1 text-gray-700 mt-1 leading-snug">${escapeHtml(notification.message || '관리자로부터 시스템 알림이 있습니다.')}</p>
+                        <p class="font-size-mini1 text-gray-400 mt-1">${formatNotificationTime(notification.created_at)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (notification.type === 'invite_redeemed') {
+            return `
+                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-green-50 border border-green-200'}">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
+                            ${notification.from_user_avatar
+                                ? `<img src="${toCanonicalSiteUrl(notification.from_user_avatar)}" alt="${notification.from_user_name}" class="w-full h-full object-cover">`
+                                : `<i class="fas fa-user text-gray-600"></i>`
+                            }
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-size-desc text-gray-900 font-semibold mb-0.5">초대 수락됨 🎉</p>
+                        <p class="font-size-mini1 text-gray-700 mt-1 leading-snug">
+                            <span class="font-bold">${escapeHtml(notification.from_user_name || '새 회원')}</span>님이 회원님의 초대로 가입했습니다!
+                        </p>
+                        <p class="font-size-mini1 text-gray-400 mt-1">${formatNotificationTime(notification.created_at)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
         return `
             <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition ${notification.is_read ? 'opacity-60' : 'bg-blue-50'}">
                 <div class="flex-shrink-0">

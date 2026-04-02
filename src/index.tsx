@@ -4667,6 +4667,8 @@ app.get('/api/notifications/:userId', async (c) => {
     post_id: n.post_id,
     comment_id: n.comment_id,
     post_content: n.post_content,
+    comment_content: n.comment_content,
+    message: n.message,
     preview_text: extras.preview_text ?? '',
     friend_message_id: extras.friend_message_id ?? null,
     created_at: n.created_at,
@@ -4687,12 +4689,15 @@ app.get('/api/notifications/:userId', async (c) => {
         n.created_at,
         n.preview_text,
         n.friend_message_id,
+        n.message,
         u.name as from_user_name,
         u.avatar_url as from_user_avatar,
-        p.content as post_content
+        p.content as post_content,
+        cm.content as comment_content
       FROM notifications n
       JOIN users u ON u.id = n.from_user_id
       LEFT JOIN posts p ON p.id = n.post_id
+      LEFT JOIN comments cm ON cm.id = n.comment_id
       WHERE n.user_id = ?
       ORDER BY n.created_at DESC
       LIMIT 50
@@ -4710,12 +4715,15 @@ app.get('/api/notifications/:userId', async (c) => {
         n.is_read,
         n.created_at,
         n.preview_text,
+        n.message,
         u.name as from_user_name,
         u.avatar_url as from_user_avatar,
-        p.content as post_content
+        p.content as post_content,
+        cm.content as comment_content
       FROM notifications n
       JOIN users u ON u.id = n.from_user_id
       LEFT JOIN posts p ON p.id = n.post_id
+      LEFT JOIN comments cm ON cm.id = n.comment_id
       WHERE n.user_id = ?
       ORDER BY n.created_at DESC
       LIMIT 50
@@ -4731,6 +4739,7 @@ app.get('/api/notifications/:userId', async (c) => {
         n.comment_id,
         n.is_read,
         n.created_at,
+        n.message,
         u.name as from_user_name,
         u.avatar_url as from_user_avatar,
         p.content as post_content

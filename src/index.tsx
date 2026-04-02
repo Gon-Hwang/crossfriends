@@ -2983,6 +2983,43 @@ app.delete('/api/qt/logs/:id', async (c) => {
   return c.json({ success: true })
 })
 
+// 피드용 공개 QT 로그 조회 (전체공개 + 친구공개)
+app.get('/api/qt/logs/feed', async (c) => {
+  const { DB } = c.env
+  const viewerId = Number(c.req.query('user_id') || 0)
+  if (!viewerId) return c.json({ logs: [] })
+
+  const { results } = await DB.prepare(`
+    SELECT
+      ql.id, ql.user_id, ql.qt_date, ql.apply_text, ql.closing_prayer_text,
+      ql.verse_reference_raw, ql.visibility, ql.updated_at,
+      u.name AS user_name, u.avatar_url, u.church, u.role AS user_role
+    FROM qt_logs ql
+    JOIN users u ON u.id = ql.user_id
+    WHERE ql.user_id != ?
+      AND (ql.apply_text IS NOT NULL OR ql.closing_prayer_text IS NOT NULL)
+      AND (
+        ql.visibility = 'public'
+        OR (
+          ql.visibility = 'friends'
+          AND EXISTS (
+            SELECT 1 FROM friendships f
+            WHERE f.status = 'accepted'
+              AND (
+                (f.user_id = ql.user_id AND f.friend_id = ?)
+                OR (f.friend_id = ql.user_id AND f.user_id = ?)
+              )
+          )
+        )
+      )
+    ORDER BY ql.qt_date DESC, ql.updated_at DESC
+    LIMIT 50
+  `).bind(viewerId, viewerId, viewerId).all()
+
+  c.header('Cache-Control', 'private, no-store, max-age=0')
+  return c.json({ logs: results || [] })
+})
+
 // =====================
 // User Scores API Routes
 // =====================
@@ -5263,39 +5300,39 @@ app.get('/admin', (c) => {
         <div class="max-w-7xl mx-auto px-4 py-8">
             <!-- Stats Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
+                <div class="bg-blue-600 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-blue-600 font-size-desc">총 회원</p>
+                            <p class="text-blue-200 font-size-desc">총 회원</p>
                             <p class="font-size-title font-bold" id="totalUsers">0</p>
                         </div>
                         <i class="fas fa-users font-size-title opacity-50"></i>
                     </div>
                 </div>
                 
-                <div class="bg-blue-500 text-white rounded-xl shadow-lg p-6">
+                <div class="bg-blue-600 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-blue-600 font-size-desc">총 게시물</p>
+                            <p class="text-blue-200 font-size-desc">총 게시물</p>
                             <p class="font-size-title font-bold" id="totalPosts">0</p>
                         </div>
                         <i class="fas fa-file-alt font-size-title opacity-50"></i>
                     </div>
                 </div>
                 
-                <div class="bg-purple-500 text-white rounded-xl shadow-lg p-6">
+                <div class="bg-blue-600 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-purple-100 font-size-desc">총 댓글</p>
+                            <p class="text-blue-200 font-size-desc">총 댓글</p>
                             <p class="font-size-title font-bold" id="totalComments">0</p>
                         </div>
                         <i class="fas fa-comments font-size-title opacity-50"></i>
                     </div>
                 </div>
-                <div class="bg-pink-500 text-white rounded-xl shadow-lg p-6">
+                <div class="bg-blue-600 text-white rounded-xl shadow-lg p-6">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-pink-100 font-size-desc">총 친구 관계</p>
+                            <p class="text-blue-200 font-size-desc">총 친구 관계</p>
                             <p class="font-size-title font-bold" id="totalFriendships">0</p>
                         </div>
                         <i class="fas fa-user-friends font-size-title opacity-50"></i>
@@ -5315,42 +5352,42 @@ app.get('/admin', (c) => {
                         <div class="text-red-600 font-size-desc font-medium">중보 기도</div>
                         <div class="w-8 h-8 bg-red-600 rounded-full mx-auto mt-2"></div>
                     </div>
-                    
-                    <!-- 말씀 -->
-                    <div class="bg-yellow-400 border-2 border-yellow-400 rounded-lg p-4 text-center hover:shadow-md transition">
-                        <div class="text-yellow-400 font-size-title font-bold mb-1" id="versePostCount">0</div>
-                        <div class="text-yellow-400 font-size-desc font-medium">말씀</div>
-                        <div class="w-8 h-8 bg-yellow-400 rounded-full mx-auto mt-2"></div>
-                    </div>
-                    
+
                     <!-- 일상 -->
                     <div class="bg-orange-50 border-2 border-orange-200 rounded-lg p-4 text-center hover:shadow-md transition">
                         <div class="text-orange-600 font-size-title font-bold mb-1" id="dailyPostCount">0</div>
                         <div class="text-orange-700 font-size-desc font-medium">일상</div>
                         <div class="w-8 h-8 bg-orange-200 rounded-full mx-auto mt-2"></div>
                     </div>
-                    
+
+                    <!-- 말씀 -->
+                    <div class="bg-yellow-100 border-2 border-yellow-300 rounded-lg p-4 text-center hover:shadow-md transition">
+                        <div class="text-yellow-700 font-size-title font-bold mb-1" id="versePostCount">0</div>
+                        <div class="text-yellow-700 font-size-desc font-medium">말씀</div>
+                        <div class="w-8 h-8 bg-yellow-300 rounded-full mx-auto mt-2"></div>
+                    </div>
+
                     <!-- 사역 -->
                     <div class="bg-blue-100 border-2 border-blue-600 rounded-lg p-4 text-center hover:shadow-md transition">
                         <div class="text-blue-600 font-size-title font-bold mb-1" id="ministryPostCount">0</div>
                         <div class="text-blue-600 font-size-desc font-medium">사역</div>
                         <div class="w-8 h-8 bg-blue-600 rounded-full mx-auto mt-2"></div>
                     </div>
-                    
+
                     <!-- 찬양 -->
                     <div class="bg-sky-50 border-2 border-sky-200 rounded-lg p-4 text-center hover:shadow-md transition">
                         <div class="text-sky-600 font-size-title font-bold mb-1" id="praisePostCount">0</div>
                         <div class="text-sky-700 font-size-desc font-medium">찬양</div>
                         <div class="w-8 h-8 bg-sky-200 rounded-full mx-auto mt-2"></div>
                     </div>
-                    
+
                     <!-- 교회 -->
                     <div class="bg-violet-50 border-2 border-violet-200 rounded-lg p-4 text-center hover:shadow-md transition">
                         <div class="text-violet-600 font-size-title font-bold mb-1" id="churchPostCount">0</div>
                         <div class="text-violet-700 font-size-desc font-medium">교회</div>
                         <div class="w-8 h-8 bg-violet-200 rounded-full mx-auto mt-2"></div>
                     </div>
-                    
+
                     <!-- 자유 -->
                     <div class="bg-white border-2 border-gray-300 rounded-lg p-4 text-center hover:shadow-md transition">
                         <div class="text-gray-700 font-size-title font-bold mb-1" id="freePostCount">0</div>
@@ -5367,10 +5404,10 @@ app.get('/admin', (c) => {
                         <i class="fas fa-users text-red-600 mr-2"></i>회원 관리
                     </h2>
                     <div class="flex space-x-2">
-                        <button onclick="resetAllScores()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-size-desc">
+                        <button onclick="resetAllScores()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-undo mr-2"></i>모든 점수 초기화
                         </button>
-                        <button onclick="createFakeUsers()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
+                        <button onclick="createFakeUsers()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-user-plus mr-2"></i>테스트 사용자 생성
                         </button>
                         <button onclick="deleteFakeUsers()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-size-desc">
@@ -5426,10 +5463,10 @@ app.get('/admin', (c) => {
                         <i class="fas fa-user-friends text-purple-600 mr-2"></i>친구 관계 관리
                     </h2>
                     <div class="flex space-x-2">
-                        <button onclick="createRandomFriendships()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
+                        <button onclick="createRandomFriendships()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-random mr-2"></i>랜덤 친구 생성
                         </button>
-                        <button onclick="loadFriendships()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
+                        <button onclick="loadFriendships()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-sync-alt mr-2"></i>새로고침
                         </button>
                         <button onclick="deleteAllFriendships()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition font-size-desc">
@@ -5501,19 +5538,19 @@ app.get('/admin', (c) => {
                         <i class="fas fa-newspaper text-blue-600 mr-2"></i>게시물 관리
                     </h2>
                     <div class="flex flex-wrap gap-2">
-                        <button onclick="createFakePosts()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
+                        <button onclick="createFakePosts()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-plus mr-1"></i>게시물 생성
                         </button>
-                        <button onclick="createFakeComments()" class="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition font-size-desc">
+                        <button onclick="createFakeComments()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-comment mr-1"></i>댓글 생성
                         </button>
-                        <button onclick="createFakeLikes()" class="bg-pink-500 text-white px-3 py-2 rounded-lg hover:bg-pink-600 transition font-size-desc">
+                        <button onclick="createFakeLikes()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-heart mr-1"></i>반응 생성
                         </button>
-                        <button onclick="simulateTimePass()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition font-size-desc font-semibold shadow-lg">
+                        <button onclick="simulateTimePass()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc font-semibold shadow-lg">
                             <i class="fas fa-magic mr-2"></i>🌱 활동 시뮬레이션
                         </button>
-                        <button onclick="loadAdminPosts()" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition font-size-desc">
+                        <button onclick="loadAdminPosts()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition font-size-desc">
                             <i class="fas fa-sync-alt mr-1"></i>새로고침
                         </button>
                         <button onclick="deleteAllPosts()" class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-600 transition font-size-desc">
@@ -5707,7 +5744,7 @@ app.get('/admin', (c) => {
                             <td class="px-4 py-3 font-size-desc">
                                 <button 
                                     onclick="editUserScore(\${user.id}, 'scripture_score', \${user.scripture_score || 0}, '성경점수')"
-                                    class="inline-flex items-center px-2 py-1 rounded bg-yellow-400 text-yellow-400 hover:bg-yellow-400 cursor-pointer transition">
+                                    class="inline-flex items-center px-2 py-1 rounded bg-yellow-100 text-yellow-700 hover:bg-yellow-200 cursor-pointer transition">
                                     <i class="fas fa-bible font-size-mini1 mr-1"></i>
                                     \${user.scripture_score || 0}
                                     <i class="fas fa-edit font-size-mini1 ml-1 opacity-50"></i>
@@ -5949,7 +5986,7 @@ app.get('/admin', (c) => {
                             typeColor = 'bg-red-100 text-red-600';
                         } else if (post.background_color === '#F5E398') {
                             postType = '말씀';
-                            typeColor = 'bg-yellow-400 text-yellow-400';
+                            typeColor = 'bg-yellow-100 text-yellow-600';
                         } else if (post.background_color === '#F5D4B3') {
                             postType = '일상';
                             typeColor = 'bg-orange-100 text-orange-800';
@@ -6198,7 +6235,7 @@ app.get('/admin', (c) => {
                         const statusBadge = friendship.status === 'accepted' 
                             ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-blue-100 text-blue-600">수락됨</span>'
                             : friendship.status === 'pending'
-                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-yellow-400 text-yellow-400">대기중</span>'
+                            ? '<span class="px-2 py-1 rounded-full font-size-mini1 bg-yellow-100 text-yellow-700">대기중</span>'
                             : '<span class="px-2 py-1 rounded-full font-size-mini1 bg-red-100 text-red-600">거절됨</span>';
                         
                         const date = new Date(friendship.created_at);
@@ -6651,6 +6688,15 @@ app.get('/', (c) => {
             .font-size-base { font-size: 1rem; }
             .font-size-desc { font-size: 0.875rem; }
             .font-size-mini1 { font-size: 0.75rem; }
+            .qt-sec-btn-active {
+                background-color: rgb(254,226,226) !important;
+                color: rgb(220,38,38) !important;
+                border-color: rgb(220,38,38) !important;
+            }
+            .qt-sec-btn-active:hover {
+                background-color: rgb(254,202,202) !important;
+                border-color: rgb(185,28,28) !important;
+            }
             .basic-reward-badge,
             .reward-one-badge,
             .reward-two-badge,

@@ -3953,17 +3953,11 @@ function setQtComposeViewForPanel(panel, kind, initialText) {
 function setQtSectionBtnActive(panel, sectionKey, active) {
     const b = panel.querySelector(`[data-qt-sec-btn="${sectionKey}"]`);
     if (!b) return;
-    if (active) {
-        b.style.backgroundColor = 'rgb(254,226,226)'; // red-100
-        b.style.color = 'rgb(220,38,38)';              // red-600
-        b.style.borderColor = 'rgb(220,38,38)';        // red-600
-    } else {
-        // 인라인 스타일 제거 → HTML 기본 클래스(gray-100 등)로 복귀
-        // hover는 이제 gray-200으로 변경돼 있어 빨간 잔상 없음
-        b.style.backgroundColor = '';
-        b.style.color = '';
-        b.style.borderColor = '';
-    }
+    b.classList.toggle('qt-sec-btn-active', active);
+    // 혹시 남아있는 인라인 스타일 제거
+    b.style.backgroundColor = '';
+    b.style.color = '';
+    b.style.borderColor = '';
 }
 
 function resetAllQtSectionButtonStyles() {
@@ -7298,6 +7292,122 @@ async function deleteComment(commentId, postId) {
 }
 
 // Load posts
+function setQtFeedBtnActive(btn, active) {
+    btn.classList.toggle('qt-sec-btn-active', active);
+    btn.style.backgroundColor = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+}
+
+async function toggleQtFeedScripture(btn, qtDate) {
+    const card = btn.closest('[data-qt-feed-id]');
+    if (!card) return;
+    const section = card.querySelector('.qt-feed-scripture-section');
+    if (!section) return;
+
+    const isHidden = section.classList.contains('hidden');
+    if (!isHidden) {
+        section.classList.add('hidden');
+        setQtFeedBtnActive(btn, false);
+        return;
+    }
+
+    const textEl = section.querySelector('.qt-feed-scripture-text');
+    if (textEl && !textEl.dataset.loaded) {
+        textEl.textContent = '성경본문을 불러오는 중...';
+        section.classList.remove('hidden');
+        try {
+            const data = await loadQtBibleForDate(qtDate);
+            textEl.textContent = (data.scripture || '').trim() || '성경본문을 찾을 수 없습니다.';
+            textEl.dataset.loaded = '1';
+        } catch (e) {
+            textEl.textContent = '성경본문을 불러오지 못했습니다.';
+        }
+    } else {
+        section.classList.remove('hidden');
+    }
+    setQtFeedBtnActive(btn, true);
+}
+
+function toggleQtFeedSection(btn, sectionClass) {
+    const card = btn.closest('[data-qt-feed-id]');
+    if (!card) return;
+    const section = card.querySelector('.' + sectionClass);
+    if (!section) return;
+    const isHidden = section.classList.contains('hidden');
+    section.classList.toggle('hidden', !isHidden);
+    setQtFeedBtnActive(btn, isHidden);
+}
+
+function renderQtFeedCardHtml(log) {
+    const avatarHtml = log.user_role === 'admin'
+        ? '<i class="fas fa-crown text-yellow-400 font-size-title"></i>'
+        : log.avatar_url
+            ? `<img src="${toCanonicalSiteUrl(log.avatar_url)}" alt="Profile" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=&quot;fas fa-user&quot;></i>'" />`
+            : '<i class="fas fa-user"></i>';
+
+    const safeName = (log.user_name || '').replace(/'/g, "\\'");
+
+    const verseHtml = log.verse_reference_raw
+        ? `<div class="border-l-4 border-red-600 pl-3 py-1 mb-4">
+               <p class="font-bold text-red-600 font-size-desc whitespace-pre-line leading-relaxed">${log.verse_reference_raw}</p>
+           </div>`
+        : '';
+
+
+    const visibilityLabel = log.visibility === 'friends'
+        ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-blue-100 text-blue-600"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
+        : `<span class="inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-gray-100 text-gray-500"><i class="fas fa-globe mr-1"></i>전체공개</span>`;
+
+    return `
+        <div class="bg-white rounded-xl shadow-lg border-2 border-red-600 p-4 sm:p-6 transition-all duration-300 hover:shadow-xl" data-qt-feed-id="${log.id}">
+            <!-- 헤더 -->
+            <div class="flex items-start justify-between gap-2 mb-4 flex-wrap">
+                <div class="flex items-center gap-3">
+                    <div onclick="showUserProfileModal(${log.user_id})" class="w-9 h-9 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-300 transition">${avatarHtml}</div>
+                    <div>
+                        <h2 class="font-size-title font-bold text-red-600"><i class="fas fa-book-open text-red-600 mr-2"></i>QT Log</h2>
+                        <p class="font-size-desc text-gray-600 cursor-pointer hover:text-blue-600 transition" onclick="filterByUser(${log.user_id}, '${safeName}')">${log.user_name}${log.church ? ' · ' + log.church : ''}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap justify-end">
+                    <span class="font-size-desc text-gray-600">${log.qt_date}</span>
+                    ${visibilityLabel}
+                </div>
+            </div>
+            <!-- 말씀 참조 -->
+            ${verseHtml}
+            <!-- 섹션 버튼 -->
+            <div class="flex flex-nowrap gap-1 sm:gap-2 mb-4 overflow-x-auto">
+                <button type="button"
+                    onclick="toggleQtFeedScripture(this, '${log.qt_date}')"
+                    class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 whitespace-nowrap flex items-center justify-center text-center">
+                    <span class="sm:hidden">읽기·묵상</span>
+                    <span class="hidden sm:inline">읽기와 묵상</span>
+                </button>
+                ${log.apply_text ? `<button type="button" onclick="toggleQtFeedSection(this, 'qt-feed-apply-section')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 whitespace-nowrap flex items-center justify-center text-center">적용</button>` : ''}
+                ${log.closing_prayer_text ? `<button type="button" onclick="toggleQtFeedSection(this, 'qt-feed-prayer-section')" class="flex-1 min-w-0 px-2 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium font-size-desc transition bg-gray-100 text-gray-700 border-2 border-gray-300 hover:bg-gray-200 hover:border-gray-400 whitespace-nowrap flex items-center justify-center text-center">마침기도</button>` : ''}
+            </div>
+            <!-- 성경본문 (숨김 → 버튼 클릭 시 펼침) -->
+            <div class="qt-feed-scripture-section hidden p-4 bg-gray-50 rounded-lg border border-gray-300 mb-4">
+                <div class="qt-feed-scripture-text text-gray-800 font-size-base leading-relaxed whitespace-pre-line"></div>
+            </div>
+            <!-- 적용 (숨김 → 버튼 클릭 시 펼침) -->
+            ${log.apply_text ? `<div class="qt-feed-apply-section hidden mb-5">
+               <div class="bg-white rounded-xl border-2 border-red-600 p-3">
+                   <p class="font-size-base text-gray-800 leading-relaxed whitespace-pre-wrap">${log.apply_text}</p>
+               </div>
+           </div>` : ''}
+            <!-- 마침기도 (숨김 → 버튼 클릭 시 펼침) -->
+            ${log.closing_prayer_text ? `<div class="qt-feed-prayer-section hidden mt-1">
+               <div class="bg-white rounded-xl border-2 border-red-600 p-3">
+                   <p class="font-size-base text-gray-800 leading-relaxed whitespace-pre-wrap">${log.closing_prayer_text}</p>
+               </div>
+           </div>` : ''}
+        </div>
+    `;
+}
+
 async function loadPosts() {
     try {
         const feed = document.getElementById('postsFeed');
@@ -7316,11 +7426,20 @@ async function loadPosts() {
         }
 
         console.log('🔍 Full query:', queryParams);
-        const response = await axios.get(`/api/posts?${queryParams}`);
+
+        // 공개 QT 피드도 병렬로 가져오기 (필터 없을 때만)
+        const [response, qtFeedResp] = await Promise.all([
+            axios.get(`/api/posts?${queryParams}`),
+            (!filterUserId && currentUserId)
+                ? axios.get(`/api/qt/logs/feed?user_id=${currentUserId}`).catch(() => ({ data: { logs: [] } }))
+                : Promise.resolve({ data: { logs: [] } })
+        ]);
         const posts = response.data.posts;
+        const qtLogs = qtFeedResp.data.logs || [];
         
-        let postsHtml = '';
+        const feedItems = [];
         posts.forEach(post => {
+            let postHtml = '';
             console.log('🔍 Post ID:', post.id, 'is_prayer_request:', post.is_prayer_request, 'type:', typeof post.is_prayer_request);
             const isLiked = post.is_liked > 0;
             
@@ -7371,7 +7490,7 @@ async function loadPosts() {
             const postCardImageUrlsJson = encodeURIComponent(JSON.stringify(getPostImageUrls(post)));
             const postCardVideoUrlAttr = post.video_url ? encodeURIComponent(toCanonicalSiteUrl(post.video_url)) : '';
 
-            postsHtml += `
+            postHtml += `
                 <div class="bg-white rounded-xl shadow-md border-2 border-gray-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-gray-500 hover:-translate-y-1" data-post-card-id="${post.id}" data-image-urls="${postCardImageUrlsJson}" data-video-url="${postCardVideoUrlAttr}" ${backgroundStyle}>
                     <div class="flex items-start space-x-4">
                         <div class="admin-badge-container">
@@ -7465,9 +7584,17 @@ async function loadPosts() {
                     </div>
                 </div>
             `;
+            feedItems.push({ sortDate: new Date(post.created_at).getTime(), html: postHtml });
         });
-        
-        feed.innerHTML = postsHtml;
+
+        // QT 피드 아이템 추가
+        qtLogs.forEach(log => {
+            feedItems.push({ sortDate: new Date(log.updated_at || log.qt_date).getTime(), html: renderQtFeedCardHtml(log) });
+        });
+
+        // 날짜 내림차순 정렬 후 렌더링
+        feedItems.sort((a, b) => b.sortDate - a.sortDate);
+        feed.innerHTML = feedItems.map(i => i.html).join('');
     } catch (error) {
         console.error('Error loading posts:', error);
     }

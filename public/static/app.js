@@ -6820,6 +6820,10 @@ async function editPost(postId) {
         const editVideoInput = document.getElementById('editVideoInput');
         if (editVideoInput) editVideoInput.value = '';
 
+        // 게시 범위
+        const editVisibilitySel = document.getElementById('editPostVisibility');
+        if (editVisibilitySel) editVisibilitySel.value = post.visibility_scope === 'friends' ? 'friends' : 'public';
+
         // 모달 열기
         document.getElementById('editPostModal').classList.remove('hidden');
     } catch (error) {
@@ -6852,10 +6856,12 @@ async function saveEditedPost() {
             : remainingImages.length === 1 ? remainingImages[0]
             : JSON.stringify(remainingImages);
 
+        const editVisibilitySel = document.getElementById('editPostVisibility');
         const updateBody = {
             content,
             background_color: selectedEditBackgroundColor,
             image_url: imageUrlForDb,
+            visibility_scope: editVisibilitySel ? editVisibilitySel.value : 'public',
         };
         if (editPostVideoCleared) updateBody.video_url = null;
 

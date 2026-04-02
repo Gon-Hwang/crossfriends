@@ -1843,6 +1843,11 @@ app.put('/api/posts/:id', async (c) => {
     setClauses.push('video_url = ?')
     values.push(body.video_url ?? null)
   }
+  if ('visibility_scope' in body) {
+    const scope = body.visibility_scope === 'friends' ? 'friends' : 'public'
+    setClauses.push('visibility_scope = ?')
+    values.push(scope)
+  }
 
   values.push(id)
   await DB.prepare(`UPDATE posts SET ${setClauses.join(', ')} WHERE id = ?`).bind(...values).run()
@@ -8708,6 +8713,17 @@ app.get('/', (c) => {
                             class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer transition font-size-desc">
                             <i class="fas fa-video mr-2"></i>동영상 선택
                         </label>
+                    </div>
+
+                    <!-- 게시 범위 -->
+                    <div>
+                        <label class="block font-size-desc font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-globe mr-2"></i>게시 범위
+                        </label>
+                        <select id="editPostVisibility" class="w-full h-9 px-3 border border-gray-300 rounded-lg font-size-desc font-medium text-gray-600 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="public">전체 공개</option>
+                            <option value="friends">친구에게만</option>
+                        </select>
                     </div>
 
                     <!-- 저장/취소 -->

@@ -9250,6 +9250,10 @@ function openFriendMessenger(friendId, friendName, friendAvatarUrl, scrollToMess
         showLoginModal();
         return;
     }
+    // 메신저 열 때 마지막 확인 시각 저장 → 미읽은 메시지 dot 해제
+    localStorage.setItem('lastMessagesOpenedAt', new Date().toISOString());
+    hasUnreadMessages = false;
+    updateNotificationBadge();
     friendMessengerTargetId = Number(friendId);
 
     const modal = document.getElementById('friendMessengerModal');
@@ -9325,6 +9329,7 @@ async function sendFriendMessage() {
 let notificationsList = [];
 let isNotificationActive = false;
 let isFriendsPanelOpen = false;
+let hasUnreadMessages = false; // 미읽은 메시지 여부
 
 function setSocialHeaderButtonActive(kind) {
     const friendsBtns = [document.getElementById('friendsListBtn'), document.getElementById('friendsListBtnMobile')];
@@ -9952,7 +9957,7 @@ function formatNotificationTime(dateString) {
 function updateNotificationBadge() {
     const badge = document.getElementById('notificationDot');
     const badgeMob = document.getElementById('notificationDotMobile');
-    const hasUnread = notificationsList && notificationsList.some((n) => !n.is_read);
+    const hasUnread = (notificationsList && notificationsList.some((n) => !n.is_read)) || hasUnreadMessages;
     if (hasUnread) {
         if (badge) badge.classList.remove('hidden');
         if (badgeMob) badgeMob.classList.remove('hidden');
@@ -9962,29 +9967,27 @@ function updateNotificationBadge() {
     }
 }
 
+// 미읽은 메시지 체크
+async function checkUnreadMessages() {
+    if (!currentUserId) return;
+    try {
+        const since = localStorage.getItem('lastMessagesOpenedAt') || new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+        const res = await axios.get(`/api/messages/unread-count/${currentUserId}?since=${encodeURIComponent(since)}`);
+        const prev = hasUnreadMessages;
+        hasUnreadMessages = (res.data?.count || 0) > 0;
+        if (prev !== hasUnreadMessages) updateNotificationBadge();
+    } catch { /* silent fail */ }
+}
+
 // Check for new notifications in background (without marking as read)
 async function checkNotificationsInBackground() {
-    if (!currentUserId) {
-        console.log('⏭️ checkNotificationsInBackground: No user logged in');
-        return;
-    }
-    
-    console.log('🔍 checkNotificationsInBackground: Checking for user', currentUserId);
-    
+    if (!currentUserId) return;
     try {
         const response = await axios.get(`/api/notifications/${currentUserId}`);
         const newNotifications = response.data.notifications || [];
-        
-        console.log('📬 Received notifications:', newNotifications.length);
-        console.log('📬 Unread:', newNotifications.filter(n => !n.is_read).length);
-        
-        // Update local list without marking as read
         notificationsList = newNotifications;
-        
-        // Update badge to show/hide red dot
+        await checkUnreadMessages();
         updateNotificationBadge();
-        
-        console.log('✅ Background notification check complete');
     } catch (error) {
         console.error('❌ Failed to check notifications in background:', error);
     }

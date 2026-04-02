@@ -2152,10 +2152,10 @@ app.post('/api/posts/:id/comments', async (c) => {
       VALUES (?, ?, 'comment', ?, ?, ?)
     `).bind(post.user_id, user_id, postId, result.meta.last_row_id, now).run()
     const commenter = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
-    sendWebPush(DB, c.env, post.user_id, {
+    c.executionCtx.waitUntil(sendWebPush(DB, c.env, post.user_id, {
       title: '새 댓글',
       body: `${commenter?.name || '누군가'}님이 회원님의 게시물에 댓글을 남겼습니다.`
-    })
+    }))
   }
   
   return c.json({ id: result.meta.last_row_id, post_id: postId, user_id, content, updated_scores: updatedScores }, 201)
@@ -2338,7 +2338,7 @@ app.post('/api/posts/:id/like', async (c) => {
           VALUES (?, ?, 'like', ?, ?)
         `).bind(post.user_id, user_id, postId, now).run()
         const liker1 = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
-        sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker1?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` })
+        c.executionCtx.waitUntil(sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker1?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` }))
       }
     }
     // 말씀 포스팅이면 성경 점수 처리
@@ -2364,7 +2364,7 @@ app.post('/api/posts/:id/like', async (c) => {
           VALUES (?, ?, 'like', ?, ?)
         `).bind(post.user_id, user_id, postId, now).run()
         const liker2 = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
-        sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker2?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` })
+        c.executionCtx.waitUntil(sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker2?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` }))
       }
     }
     // 일상, 사역, 찬양, 교회, 자유 포스팅이면 활동 점수 처리
@@ -2392,7 +2392,7 @@ app.post('/api/posts/:id/like', async (c) => {
             VALUES (?, ?, 'like', ?, ?)
           `).bind(post.user_id, user_id, postId, now).run()
           const liker3 = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(user_id).first() as any
-          sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker3?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` })
+          c.executionCtx.waitUntil(sendWebPush(DB, c.env, post.user_id, { title: '새 반응', body: `${liker3?.name || '누군가'}님이 회원님의 게시물을 좋아합니다.` }))
         }
       }
     }
@@ -4838,6 +4838,23 @@ app.get('/api/messages/media/:filename', async (c) => {
   return serveR2Object(c, `messages/${safe}`)
 })
 
+// 미읽은 메시지 개수
+app.get('/api/messages/unread-count/:userId', async (c) => {
+  const { DB } = c.env
+  const userId = Number(c.req.param('userId'))
+  const since = c.req.query('since') || new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+  if (!Number.isFinite(userId)) return c.json({ count: 0 })
+  try {
+    await ensureFriendMessagesTable(DB)
+    const row = await DB.prepare(
+      `SELECT COUNT(*) as cnt FROM friend_messages WHERE receiver_id = ? AND created_at > ?`
+    ).bind(userId, since).first() as any
+    return c.json({ count: row?.cnt || 0 })
+  } catch {
+    return c.json({ count: 0 })
+  }
+})
+
 // Get 1:1 messages between two users
 app.get('/api/messages/:userId/:friendId', async (c) => {
   const { DB } = c.env
@@ -4946,10 +4963,10 @@ app.post('/api/messages', async (c) => {
 
     const senderInfo = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(senderId).first() as any
     const pushBody = imageUrl ? '📷 사진을 보냈습니다.' : videoUrl ? '🎥 동영상을 보냈습니다.' : (content.length > 50 ? content.slice(0, 50) + '...' : content)
-    sendWebPush(DB, c.env, receiverId, {
+    c.executionCtx.waitUntil(sendWebPush(DB, c.env, receiverId, {
       title: `💬 ${senderInfo?.name || '친구'}님의 메시지`,
       body: pushBody
-    })
+    }))
 
     return c.json({ success: true, message: '메시지를 보냈습니다' })
   } catch (error) {
@@ -5100,10 +5117,10 @@ app.post('/api/feedback', async (c) => {
     }
 
     const senderUser = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(userId).first() as any
-    sendWebPush(DB, c.env, receiverId, {
+    c.executionCtx.waitUntil(sendWebPush(DB, c.env, receiverId, {
       title: '새 피드백',
       body: `${senderUser?.name || '누군가'}님이 피드백 메시지를 보냈습니다.`
-    })
+    }))
 
     c.header('Cache-Control', 'private, no-store')
     return c.json({ success: true, message: '피드백이 전달되었습니다' })
@@ -5173,10 +5190,10 @@ app.post('/api/friend-request', async (c) => {
     `).bind(fromId, toId, now, now).run()
 
     const fromUser = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(fromId).first() as any
-    sendWebPush(DB, c.env, toId, {
+    c.executionCtx.waitUntil(sendWebPush(DB, c.env, toId, {
       title: '친구 요청',
       body: `${fromUser?.name || '누군가'}님이 친구 요청을 보냈습니다.`
-    })
+    }))
     
     return c.json({ success: true, message: '친구 제안을 보냈습니다' })
   } catch (error) {

@@ -1619,7 +1619,7 @@ app.post('/api/posts', async (c) => {
     // already exists
   }
   const { user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color, visibility_scope } = await c.req.json()
-  const scope = visibility_scope === 'friends' ? 'friends' : 'public'
+  const scope = ['friends', 'private'].includes(visibility_scope) ? visibility_scope : 'public'
   
   const result = await DB.prepare(
     'INSERT INTO posts (user_id, content, image_url, verse_reference, shared_post_id, is_prayer_request, background_color, visibility_scope) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
@@ -1844,7 +1844,7 @@ app.put('/api/posts/:id', async (c) => {
     values.push(body.video_url ?? null)
   }
   if ('visibility_scope' in body) {
-    const scope = body.visibility_scope === 'friends' ? 'friends' : 'public'
+    const scope = ['friends', 'private'].includes(body.visibility_scope) ? body.visibility_scope : 'public'
     setClauses.push('visibility_scope = ?')
     values.push(scope)
   }
@@ -8217,6 +8217,7 @@ app.get('/', (c) => {
                                             <select id="newPostVisibility" class="w-full h-7 px-2 border border-gray-300 rounded-md font-size-mini1 font-medium text-gray-600 leading-none bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                                 <option value="public">전체 공개</option>
                                                 <option value="friends">친구에게만</option>
+                                                <option value="private">비공개</option>
                                             </select>
                                             <button 
                                                 id="createPostBtn"
@@ -8723,6 +8724,7 @@ app.get('/', (c) => {
                         <select id="editPostVisibility" class="w-full h-9 px-3 border border-gray-300 rounded-lg font-size-desc font-medium text-gray-600 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
                             <option value="public">전체 공개</option>
                             <option value="friends">친구에게만</option>
+                            <option value="private">비공개</option>
                         </select>
                     </div>
 

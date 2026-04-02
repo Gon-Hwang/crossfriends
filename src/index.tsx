@@ -4944,6 +4944,13 @@ app.post('/api/messages', async (c) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `).bind(senderId, receiverId, content || '', imageUrl, videoUrl, now).run()
 
+    const senderInfo = await DB.prepare('SELECT name FROM users WHERE id = ?').bind(senderId).first() as any
+    const pushBody = imageUrl ? '📷 사진을 보냈습니다.' : videoUrl ? '🎥 동영상을 보냈습니다.' : (content.length > 50 ? content.slice(0, 50) + '...' : content)
+    sendWebPush(DB, c.env, receiverId, {
+      title: `💬 ${senderInfo?.name || '친구'}님의 메시지`,
+      body: pushBody
+    })
+
     return c.json({ success: true, message: '메시지를 보냈습니다' })
   } catch (error) {
     console.error('Failed to send friend message:', error)

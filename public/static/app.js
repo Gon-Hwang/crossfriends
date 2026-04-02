@@ -9632,6 +9632,42 @@ function ensureSidebarNotificationsClickDelegation() {
     });
 }
 
+// 알림 클릭 시 해당 컨텐츠로 이동
+async function handleNotificationClick(type, postId, fromUserId) {
+    // 알림 패널 닫기
+    const notificationsContent = document.getElementById('notificationsTabContent');
+    if (notificationsContent) notificationsContent.classList.add('hidden');
+    isNotificationActive = false;
+    closeMobileSidebarPanel();
+
+    if (type === 'comment' || type === 'like') {
+        if (!postId) return;
+        // 필터 초기화 후 메인 피드로 이동
+        if (filterUserId) { filterUserId = null; }
+        const profileView = document.getElementById('profileView');
+        if (profileView) profileView.classList.add('hidden');
+        const mainFeedPart1 = document.getElementById('mainFeedPart1');
+        if (mainFeedPart1) mainFeedPart1.classList.remove('hidden');
+        const newPostCard = document.getElementById('newPostCard');
+        if (newPostCard) newPostCard.classList.remove('hidden');
+        // 포스트 로드 후 해당 게시물로 스크롤 + 참여 패널 열기
+        await loadPosts();
+        await new Promise(r => setTimeout(r, 400));
+        const card = document.querySelector(`[data-post-card-id="${postId}"]`);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.style.transition = 'box-shadow 0.3s';
+            card.style.boxShadow = '0 0 0 3px rgb(59,130,246)';
+            setTimeout(() => { card.style.boxShadow = ''; }, 2500);
+        }
+        await openPostEngagementPanel(type === 'comment' ? 'comment' : 'react', postId);
+    } else if (type === 'invite_redeemed' || type === 'system') {
+        if (!fromUserId) return;
+        await showUserProfileModal(fromUserId);
+    }
+}
+window.handleNotificationClick = handleNotificationClick;
+
 // Update sidebar notifications list UI
 function updateSidebarNotificationsList() {
     const container = document.getElementById('sidebarNotificationsList');
@@ -9694,7 +9730,7 @@ function updateSidebarNotificationsList() {
                 ? (notification.post_content.length > 30 ? notification.post_content.substring(0, 30) + '...' : notification.post_content)
                 : '게시물';
             return `
-                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-blue-50 border border-blue-300'}">
+                <div class="flex items-start space-x-3 p-3 rounded-lg cursor-pointer hover:brightness-95 transition ${notification.is_read ? 'bg-gray-50' : 'bg-blue-50 border border-blue-300'}" onclick="handleNotificationClick('comment', ${notification.post_id || 'null'}, ${notification.from_user_id})" title="클릭하여 해당 게시물 댓글 보기">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
                             ${notification.from_user_avatar
@@ -9720,7 +9756,7 @@ function updateSidebarNotificationsList() {
                     : notification.post_content)
                 : '게시물';
             return `
-                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-yellow-50 border border-yellow-300'}">
+                <div class="flex items-start space-x-3 p-3 rounded-lg cursor-pointer hover:brightness-95 transition ${notification.is_read ? 'bg-gray-50' : 'bg-yellow-50 border border-yellow-300'}" onclick="handleNotificationClick('like', ${notification.post_id || 'null'}, ${notification.from_user_id})" title="클릭하여 해당 게시물 반응 보기">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
                             ${notification.from_user_avatar
@@ -9789,7 +9825,7 @@ function updateSidebarNotificationsList() {
         if (notification.type === 'system') {
             const msgText = notification.message || '관리자로부터 시스템 알림이 있습니다.';
             return `
-                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-red-50 border border-red-200'}">
+                <div class="flex items-start space-x-3 p-3 rounded-lg cursor-pointer hover:brightness-95 transition ${notification.is_read ? 'bg-gray-50' : 'bg-red-50 border border-red-200'}" onclick="handleNotificationClick('system', null, ${notification.from_user_id})" title="클릭하여 요청자 프로필 보기">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center border border-red-200">
                             <i class="fas fa-exclamation-circle"></i>
@@ -9806,7 +9842,7 @@ function updateSidebarNotificationsList() {
 
         if (notification.type === 'invite_redeemed') {
             return `
-                <div class="flex items-start space-x-3 p-3 rounded-lg ${notification.is_read ? 'bg-gray-50' : 'bg-green-50 border border-green-200'}">
+                <div class="flex items-start space-x-3 p-3 rounded-lg cursor-pointer hover:brightness-95 transition ${notification.is_read ? 'bg-gray-50' : 'bg-green-50 border border-green-200'}" onclick="handleNotificationClick('invite_redeemed', null, ${notification.from_user_id})" title="클릭하여 가입자 프로필 보기">
                     <div class="flex-shrink-0">
                         <div class="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center">
                             ${notification.from_user_avatar

@@ -1455,6 +1455,34 @@ function resetTyping() {
     document.getElementById('typingInput').value = '';
     document.getElementById('typingResult').classList.add('hidden');
     document.getElementById('typingInput').focus();
+    clearTypingDraft();
+}
+
+// 타이핑 임시저장 키 (사용자+날짜 기준)
+function _typingDraftKey() {
+    const today = new Date().toISOString().slice(0, 10);
+    return `typingDraft_${currentUserId || 'guest'}_${today}`;
+}
+
+// 타이핑 내용 localStorage 저장
+function saveTypingDraft(value) {
+    try { localStorage.setItem(_typingDraftKey(), value); } catch {}
+}
+
+// 타이핑 내용 복원
+function restoreTypingDraft() {
+    try {
+        const saved = localStorage.getItem(_typingDraftKey());
+        if (saved) {
+            const input = document.getElementById('typingInput');
+            if (input) input.value = saved;
+        }
+    } catch {}
+}
+
+// 타이핑 임시저장 삭제 (수동 리셋 시)
+function clearTypingDraft() {
+    try { localStorage.removeItem(_typingDraftKey()); } catch {}
 }
 
 // Email History Management
@@ -4951,7 +4979,7 @@ function logout() {
         updatePostIndicators();
     }
 
-    // Clear typing input
+    // Clear typing input UI (localStorage 초안은 유지 - 재로그인 시 복원)
     const typingInput = document.getElementById('typingInput');
     const typingResult = document.getElementById('typingResult');
     if (typingInput) typingInput.value = '';
@@ -7718,6 +7746,7 @@ async function finishAutoLoginSession(user, { showCelebration = true, logPrefix 
     await loadNotifications(false);
     startNotificationPolling();
     loadPosts();
+    restoreTypingDraft();
     console.log(logPrefix + ':', currentUser.name, '(역할:', currentUser.role + ')');
     if (showCelebration) await showLoginRewardCelebrationModal(currentUser);
 }

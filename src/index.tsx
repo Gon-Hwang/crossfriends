@@ -7899,6 +7899,7 @@ app.get('/', (c) => {
                                             class="flex-1 p-3 border-2 border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-600 focus:outline-none font-size-base"
                                             rows="3"
                                             onkeydown="handleTypingEnter(event)"
+                                            oninput="saveTypingDraft(this.value)"
                                         ></textarea>
                                         <button
                                             onclick="checkTyping()"

@@ -7493,7 +7493,7 @@ async function loadPosts() {
                 ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-blue-100 text-blue-600" style="position:relative;top:-2px"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
                 : post.visibility_scope === 'private'
                 ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-gray-100 text-gray-500" style="position:relative;top:-2px"><i class="fas fa-lock mr-1"></i>비공개</span>`
-                : `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-green-100 text-green-600" style="position:relative;top:-2px"><i class="fas fa-globe mr-1"></i>전체공개</span>`;
+                : `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-blue-100 text-blue-600" style="position:relative;top:-2px"><i class="fas fa-globe mr-1"></i>전체공개</span>`;
             
             const postCardImageUrlsJson = encodeURIComponent(JSON.stringify(getPostImageUrls(post)));
             const postCardVideoUrlAttr = post.video_url ? encodeURIComponent(toCanonicalSiteUrl(post.video_url)) : '';

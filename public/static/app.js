@@ -1734,7 +1734,7 @@ async function showEditProfileModal(targetUserId) {
                         </span>
                         <div class="mt-3 mb-4 font-size-mini1 text-gray-500">
                             <p>회원 ID: #${user.id}</p>
-                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <p>가입일: ${parseDbDate(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                         </div>
                         
                         <div class="space-y-2 border-t pt-4">
@@ -7608,9 +7608,20 @@ async function loadPosts() {
     }
 }
 
+// SQLite "YYYY-MM-DD HH:MM:SS" 형식을 Safari 포함 모든 브라우저에서 올바르게 파싱
+function parseDbDate(dateString) {
+    if (!dateString) return new Date(0);
+    // "2025-03-30 12:34:56" → "2025-03-30T12:34:56Z" (UTC 명시)
+    const s = String(dateString).trim();
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(s)) {
+        return new Date(s.replace(' ', 'T') + (s.endsWith('Z') ? '' : 'Z'));
+    }
+    return new Date(s);
+}
+
 // Format date
 function formatDate(dateString) {
-    const date = new Date(dateString);
+    const date = parseDbDate(dateString);
     const now = new Date();
     const diff = Math.floor((now - date) / 1000); // seconds
 
@@ -7948,7 +7959,7 @@ async function fillProfileViewPanelForUser(user) {
                         <span class="inline-block px-3 py-1 rounded-full font-size-desc font-semibold ${roleColor}">${roleName}</span>
                         ${user.bio ? `<p class="font-size-desc text-gray-600 mt-3 px-2">${user.bio}</p>` : ''}
                         <div class="mt-4 font-size-mini1 text-gray-500 space-y-1">
-                            <p>가입일: ${new Date(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            <p>가입일: ${parseDbDate(user.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                             <p><i class="fas fa-user-friends text-blue-600 mr-1"></i>친구 ${friendCount}명</p>
                         </div>
                         ${friendActionHtml ? `<div class="mt-3">${friendActionHtml}</div>` : ''}
@@ -9021,7 +9032,7 @@ function parsePostImageUrls(imageUrlValue) {
 
 function formatFriendMessengerTime(ts) {
     if (!ts) return '';
-    const d = new Date(ts);
+    const d = parseDbDate(ts);
     if (Number.isNaN(d.getTime())) return '';
     const hh = String(d.getHours()).padStart(2, '0');
     const mm = String(d.getMinutes()).padStart(2, '0');
@@ -9939,7 +9950,7 @@ window.openFeedbackFromNotification = openFeedbackFromNotification;
 
 // Format notification time
 function formatNotificationTime(dateString) {
-    const date = new Date(dateString);
+    const date = parseDbDate(dateString);
     const now = new Date();
     const diff = now - date;
     const seconds = Math.floor(diff / 1000);

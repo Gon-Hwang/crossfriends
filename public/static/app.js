@@ -7362,7 +7362,7 @@ function renderQtFeedCardHtml(log) {
 
 
     const visibilityLabel = log.visibility === 'friends'
-        ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-blue-100 text-blue-600"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
+        ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-gray-100 text-gray-500"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
         : `<span class="inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-gray-100 text-gray-500"><i class="fas fa-globe mr-1"></i>전체공개</span>`;
 
     return `
@@ -7490,7 +7490,7 @@ async function loadPosts() {
             // Background color style
             const backgroundStyle = post.background_color ? `style="background-color: ${post.background_color};"` : '';
             const visibilityBadgeHtml = post.visibility_scope === 'friends'
-                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-blue-100 text-blue-600" style="position:relative;top:-2px"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
+                ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-gray-100 text-gray-500" style="position:relative;top:-2px"><i class="fas fa-user-friends mr-1"></i>친구공개</span>`
                 : post.visibility_scope === 'private'
                 ? `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-gray-100 text-gray-500" style="position:relative;top:-2px"><i class="fas fa-lock mr-1"></i>비공개</span>`
                 : `<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full font-size-mini1 font-semibold bg-gray-100 text-gray-500" style="position:relative;top:-2px"><i class="fas fa-globe mr-1"></i>전체공개</span>`;
